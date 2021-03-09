@@ -63,3 +63,10 @@ strbuf_len(const StrBuf *ss)
 {
 	return ss->len;
 }
+
+void
+strbuf_reset(StrBuf *ss)
+{
+	ss->len = 0;
+	ss->buf[0] = '\0';
+}
