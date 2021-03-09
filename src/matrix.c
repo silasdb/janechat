@@ -54,6 +54,18 @@ matrix_send_message(const char *roomid, const char *msg)
 }
 
 void
+matrix_set_server(char *s)
+{
+	matrix_server = s;
+}
+
+void
+matrix_set_token(char *tok)
+{
+	token = tok;
+}
+
+void
 matrix_sync()
 {
 	StrBuf *url = strbuf_new();
@@ -185,6 +197,7 @@ process_matrix_response(const char *output)
 		token = strdup(J_GETSTR(tok));
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
 		event->type = EVENT_LOGGED_IN;
+		event->login.token = strdup(token);
 		enqueue_event(event);
 		return;
 	}
@@ -297,6 +310,7 @@ matrix_free_event(MatrixEvent *event)
 		free(event->error.error);
 		break;
 	case EVENT_LOGGED_IN:
+		free(event->login.token);
 		break;
 	}
 	free(event);

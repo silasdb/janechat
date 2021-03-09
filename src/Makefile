@@ -3,8 +3,14 @@
 CC ?= gcc
 CFLAGS += -std=c11 -Wall -Wpedantic
 
-janechat: Hash.o StrBuf.o main.o matrix.o utils.o
-	$(CC) ${LDFLAGS} -o $@ StrBuf.o Hash.o main.o matrix.o utils.o
+janechat: Hash.o StrBuf.o cache.o main.o matrix.o utils.o
+	$(CC) ${LDFLAGS} -o $@ \
+		Hash.o \
+		StrBuf.o \
+		cache.o \
+		main.o \
+		matrix.o \
+		utils.o
 
 Hash.o: Hash.c Hash.h
 	$(CC) ${CFLAGS} -c -o Hash.o Hash.c
@@ -12,7 +18,10 @@ Hash.o: Hash.c Hash.h
 StrBuf.o: StrBuf.c StrBuf.h
 	$(CC) ${CFLAGS} -c -o StrBuf.o StrBuf.c
 
-main.o: main.c Hash.h StrBuf.h
+cache.o: cache.h cache.c
+	$(CC) ${CFLAGS} -c -o cache.o cache.c
+
+main.o: Hash.h StrBuf.h cache.h
 	$(CC) ${CFLAGS} -c -o main.o main.c
 
 matrix.o: matrix.h StrBuf.h utils.h
