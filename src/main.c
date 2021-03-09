@@ -1,12 +1,9 @@
 #include <assert.h>
-#include <fcntl.h>  
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
-#include <unistd.h>
 #include <unistd.h>
 
 #include "Hash.h"
@@ -17,7 +14,6 @@
 Hash *roomnames;
 Hash *roomids;
 
-char *get_password();
 void alarm_handler();
 void process_input(char *s);
 void usage();
@@ -49,7 +45,7 @@ main(int argc, char *argv[])
 	user = argv[1];
 	server = argv[1]+offset+1;
 	char *password;
-	password = get_password();
+	password = getpass("Password: ");
 
 	matrix_login(server, user, password);
 	memset(password, 0x0, strlen(password)); // TODO: is this optimized out?
@@ -129,50 +125,6 @@ usage()
 {
 	fprintf(stderr, "usage: janechat @username:server\n");
 	exit(1);
-}
-
-char *
-get_password()
-{
-	struct termios term;
-	tcflag_t lflag;
-
-	/* Check if we are in a terminal */
-	if (isatty(STDIN_FILENO) == 0) {
-		fprintf(stderr, "This is not a terminal.\n");
-		exit(1);
-	}
-
-	/* Get terminal configuration */
-	if (tcgetattr(STDIN_FILENO, &term) < 0) {
-		fprintf(stderr, "Cannot get attributes of this terminal.\n");
-		exit(1);
-	}
-	lflag = term.c_lflag;
-
-	/* Disable echo of characters */
-	term.c_lflag &= ~ECHO;
-
-	/* Configure the terminal */
-	if (tcsetattr(STDIN_FILENO, TCSANOW, &term) < 0) {
-		fprintf(stderr, "Cannot set new attributes for this terminal.\n");
-		exit(1);
-	}
-
-	printf("%s", "Password: ");
-
-	/* Read user password and store it in "password" variable. */
-	char *password;
-	password = read_line();
-
-	/* Set back original terminal configuration. */
-	term.c_lflag = lflag;
-	if (tcsetattr(STDIN_FILENO, TCSANOW, &term) < 0) {
-		fprintf(stderr, "Cannot set original attributes of this terminal.\n");
-		exit(1);
-	}
-
-	return password;
 }
 
 void
