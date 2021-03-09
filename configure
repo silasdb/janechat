@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+cat >config.mk <<-EOF
+	LDFLAGS += $(pkg-config --libs json-c)
+	CFLAGS += $(pkg-config --cflags json-c)
+	LDFLAGS += $(pkg-config --libs ncurses)
+	CFLAGS += $(pkg-config --cflags ncurses)
+EOF
