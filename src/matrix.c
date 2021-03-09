@@ -12,6 +12,10 @@
 #define DEBUG_REQUEST 0
 #define DEBUG_RESPONSE 0
 
+/* Shorten some json-c function names */
+#define J_GETSTR json_object_get_string
+#define J_OBJGET json_object_object_get
+
 char *next_batch = NULL;
 char *token = NULL;
 const char *matrix_server = NULL;
@@ -86,7 +90,7 @@ matrix_login(const char *server, const char *user, const char *password)
 static void
 process_direct_event(char *sender, json_object *roomid)
 {
-	char *id = strdup(json_object_get_string(roomid));
+	char *id = strdup(J_GETSTR(roomid));
 	MatrixEvent *event = malloc(sizeof(MatrixEvent));
 	event->type = EVENT_ROOM;
 	event->room.id = id;
@@ -97,14 +101,14 @@ process_direct_event(char *sender, json_object *roomid)
 static void
 process_room_event(json_object *item, const char *roomid)
 {
-	json_object *type = json_object_object_get(item, "type");
+	json_object *type = J_OBJGET(item, "type");
 	assert(type != NULL);
-	if (strcmp(json_object_get_string(type), "m.room.name") == 0) {
-		json_object *content = json_object_object_get(item, "content");
+	if (strcmp(J_GETSTR(type), "m.room.name") == 0) {
+		json_object *content = J_OBJGET(item, "content");
 		assert(content != NULL);
-		json_object *nam = json_object_object_get(content, "name");
+		json_object *nam = J_OBJGET(content, "name");
 		assert(nam != NULL);
-		const char *name = json_object_get_string(nam);
+		const char *name = J_GETSTR(nam);
 		char *id = strdup(roomid);
 		char *nn = strdup(name);
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
@@ -118,34 +122,35 @@ process_room_event(json_object *item, const char *roomid)
 static void
 process_timeline_event(json_object *item, const char *roomid)
 {
-	json_object *type = json_object_object_get(item, "type");
+	json_object *type = J_OBJGET(item, "type");
 	assert(type != NULL);
-	if ((strcmp(json_object_get_string(type), "m.room.message") != 0)
-	&& (strcmp(json_object_get_string(type), "m.room.encrypted") != 0))
+	if ((strcmp(J_GETSTR(type), "m.room.message") != 0)
+	&& (strcmp(J_GETSTR(type), "m.room.encrypted") != 0))
 		return;
-	json_object *sender = json_object_object_get(item, "sender");
+	json_object *sender = J_OBJGET(item, "sender");
 	assert(sender != NULL);
-	json_object *content = json_object_object_get(item, "content");
+	json_object *content = J_OBJGET(item, "content");
 	assert(content != NULL);
-	if (strcmp(json_object_get_string(type), "m.room.message") == 0) {
-		json_object *msgtype = json_object_object_get(content, "msgtype");
+	if (strcmp(J_GETSTR(type), "m.room.message") == 0) {
+		json_object *msgtype = J_OBJGET(content, "msgtype");
 		assert(msgtype != NULL);
-		if (strcmp(json_object_get_string(msgtype), "m.text") != 0) {
-			printf("==== TODO: Type not supported: %s====\n", json_object_get_string(msgtype));
+		if (strcmp(J_GETSTR(msgtype), "m.text") != 0) {
+			printf("==== TODO: Type not supported: %s====\n",
+				J_GETSTR(msgtype));
 			return;
 		}
-		json_object *body = json_object_object_get(content, "body");
+		json_object *body = J_OBJGET(content, "body");
 		assert(body != NULL);
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
 		event->type = EVENT_MSG;
-		event->msg.sender = strdup(json_object_get_string(sender));
+		event->msg.sender = strdup(J_GETSTR(sender));
 		event->msg.roomid = strdup(roomid);
-		event->msg.text = strdup(json_object_get_string(body));
+		event->msg.text = strdup(J_GETSTR(body));
 		enqueue_event(event);
-	} else if (strcmp(json_object_get_string(type), "m.room.encrypted") == 0) {
+	} else if (strcmp(J_GETSTR(type), "m.room.encrypted") == 0) {
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
 		event->type = EVENT_MSG;
-		event->msg.sender = strdup(json_object_get_string(sender));
+		event->msg.sender = strdup(J_GETSTR(sender));
 		event->msg.roomid = strdup(roomid);
 		event->msg.text = strdup("== encrypted message ==");
 		enqueue_event(event);
@@ -157,10 +162,8 @@ process_error(json_object *root)
 {
 	MatrixEvent *event = malloc(sizeof(MatrixEvent));
 	event->type = EVENT_ERROR;
-	event->error.errorcode = strdup(
-		json_object_get_string(json_object_object_get(root, "errcode")));
-	event->error.error = strdup(
-		json_object_get_string(json_object_object_get(root, "error")));
+	event->error.errorcode = strdup(J_GETSTR(J_OBJGET(root, "errcode")));
+	event->error.error = strdup(J_GETSTR(J_OBJGET(root, "error")));
 	enqueue_event(event);
 }
 
@@ -168,33 +171,33 @@ static void
 process_matrix_response(const char *output)
 {
 	json_object *root = json_tokener_parse(output);
-	json_object *errorcode = json_object_object_get(root, "errcode");
+	json_object *errorcode = J_OBJGET(root, "errcode");
 	if (errorcode) {
 		process_error(root);
 		return;
 	}
-	json_object *tok = json_object_object_get(root, "access_token");
+	json_object *tok = J_OBJGET(root, "access_token");
 	if (tok) {
 		assert(token == NULL);
-		token = strdup(json_object_get_string(tok));
+		token = strdup(J_GETSTR(tok));
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
 		event->type = EVENT_LOGGED_IN;
 		enqueue_event(event);
 		return;
 	}
-	json_object *account_data = json_object_object_get(root, "account_data");
+	json_object *account_data = J_OBJGET(root, "account_data");
 	if (account_data) {
-		json_object *events = json_object_object_get(account_data, "events");
+		json_object *events = J_OBJGET(account_data, "events");
 		assert(events != NULL);
 		for (size_t i = 0; i < json_object_array_length(events); i++) {
 			json_object *item = json_object_array_get_idx(events, i);
 			assert(item != NULL);
-			json_object *type = json_object_object_get(item, "type");
+			json_object *type = J_OBJGET(item, "type");
 			assert(type != NULL);
 			const char *t;
-			t = json_object_get_string(type);
+			t = J_GETSTR(type);
 			if (strcmp(t, "m.direct") == 0) {
-				json_object *content = json_object_object_get(item, "content"); 
+				json_object *content = J_OBJGET(item, "content"); 
 				json_object_object_foreach(content, sender, roomid) {
 					for (size_t i = 0; i < json_object_array_length(roomid); i++) {
 						json_object *item = json_object_array_get_idx(roomid, i);
@@ -204,16 +207,16 @@ process_matrix_response(const char *output)
 			}
 		}
 	}
-	json_object *rooms = json_object_object_get(root, "rooms");
+	json_object *rooms = J_OBJGET(root, "rooms");
 	if (!rooms)
 		return;
-	json_object *join = json_object_object_get(rooms, "join");
+	json_object *join = J_OBJGET(rooms, "join");
 	if (!join)
 		return;
 	json_object_object_foreach(join, roomid, item) {
-		json_object *state = json_object_object_get(item, "state");
+		json_object *state = J_OBJGET(item, "state");
 		assert(state != NULL);
-		json_object *events = json_object_object_get(state, "events");
+		json_object *events = J_OBJGET(state, "events");
 		assert(events != NULL);
 		for (size_t i = 0; i < json_object_array_length(events); i++) {
 			json_object *item = json_object_array_get_idx(events, i);
@@ -221,9 +224,9 @@ process_matrix_response(const char *output)
 			process_room_event(item, roomid);
 		}
 		
-		json_object *timeline = json_object_object_get(item, "timeline");
+		json_object *timeline = J_OBJGET(item, "timeline");
 		assert(timeline != NULL);
-		events = json_object_object_get(timeline, "events");
+		events = J_OBJGET(timeline, "events");
 		assert(events != NULL);
 		for (size_t i = 0; i < json_object_array_length(events); i++) {
 			json_object *item = json_object_array_get_idx(events, i);
@@ -233,9 +236,9 @@ process_matrix_response(const char *output)
 	}
 
 	free(next_batch);
-	json_object *n = json_object_object_get(root, "next_batch");
+	json_object *n = J_OBJGET(root, "next_batch");
 	assert(n != NULL);
-	next_batch = strdup(json_object_get_string(n));
+	next_batch = strdup(J_GETSTR(n));
 	json_object_put(root);
 }
 
