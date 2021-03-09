@@ -16,35 +16,41 @@ Hash *roomids;
 
 void alarm_handler();
 void process_input(char *s);
-void usage();
 
 bool logged_in = false;
 
 int
 main(int argc, char *argv[])
 {
-	if (argc != 2)
-		usage();
+	char *id;
+	char *password;
 
-	if (argv[1][0] != '@')
-		usage();
+	fputs("Matrix ID: ", stderr);
+	id = read_line();
+
+	if (id[0] != '@') {
+		fputs("Invalid Matrix ID\n", stderr);
+		exit(1);
+	}
 
 	/* Consume '@' */
-	argv[1]++;
+	id++;
 
 	const char *user;
 	const char *server;
 	
 	size_t offset;
-	offset = strcspn(argv[1], ":");
+	offset = strcspn(id, ":");
 
-	if (*(argv[1]+offset) == '\0')
-		usage();
+	if (id[offset] == '\0') {
+		fputs("Invalid Matrix ID\n", stderr);
+		exit(1);
+	}
 
-	argv[1][offset] = '\0';
-	user = argv[1];
-	server = argv[1]+offset+1;
-	char *password;
+	id[offset] = '\0';
+	user = id;
+	server = id+offset+1;
+	
 	password = getpass("Password: ");
 
 	matrix_login(server, user, password);
@@ -117,13 +123,6 @@ process_input(char *s)
 	}
 	s = s2 + strlen(s2)+1;
 	matrix_send_message(roomid, s);
-}
-
-void
-usage()
-{
-	fprintf(stderr, "usage: janechat @username:server\n");
-	exit(1);
 }
 
 void
