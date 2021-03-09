@@ -84,6 +84,7 @@ matrix_login(const char *server, const char *user, const char *password)
 	json_object_object_add(root, "type", json_object_new_string("m.login.password"));
 	json_object_object_add(root, "user", json_object_new_string(user));
 	json_object_object_add(root, "password", json_object_new_string(password));
+	json_object_object_add(root, "initial_device_display_name", json_object_new_string("janechat"));
 	send("-XPOST", "/_matrix/client/r0/login", json_object_to_json_string(root));
 }
 
