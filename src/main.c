@@ -49,7 +49,6 @@ main(int argc, char *argv[])
 
 	matrix_login(server, user, password);
 	memset(password, 0x0, strlen(password)); // TODO: is this optimized out?
-	free(password);
 	
 	roomnames = hash_new();
 	roomids = hash_new();
