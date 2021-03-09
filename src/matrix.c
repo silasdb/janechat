@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <json.h>
 
@@ -295,6 +296,32 @@ matrix_free_event(MatrixEvent *event)
 	free(event);
 }
 
+static char *
+find_curl()
+{
+	char *pathenv = strdup(getenv("PATH"));
+	char *p;
+	char *ret = NULL;
+	StrBuf *path = strbuf_new();
+
+	p = strtok(pathenv, ":");
+	do {
+		strbuf_cat_c(path, p);
+		strbuf_cat_c(path, "/");
+		strbuf_cat_c(path, "curl");
+		if (access(strbuf_buf(path), X_OK) == 0) {
+			ret = strdup(strbuf_buf(path));
+			break;
+		}
+		strbuf_reset(path);
+	} while ((p = strtok(NULL, ":")) != NULL);
+
+	free(pathenv);
+	strbuf_free(path);
+	
+	return ret;
+}
+
 static void
 send(const char *method, const char *path, const char *json)
 {
@@ -331,8 +358,14 @@ send(const char *method, const char *path, const char *json)
 	}
 #endif
 	/* TODO: popenve exists only in NetBSD? */
+	char *curl = find_curl();
+	if (!curl) {
+		fprintf(stderr, "Error: curl not found on this system\n");
+		exit(1);
+	}
 	FILE *f;
-	f = popenve("/usr/pkg/bin/curl", (char *const *)argv, NULL, "rw");
+	f = popenve(curl, (char *const *)argv, NULL, "rw");
+	free(curl);
 	if (!f)
 		exit(1);
 	char *output = read_file(f);
