@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -307,22 +308,18 @@ find_curl()
 	char *pathenv = strdup(getenv("PATH"));
 	char *p;
 	char *ret = NULL;
-	StrBuf *path = strbuf_new();
+	char path[PATH_MAX];
 
 	p = strtok(pathenv, ":");
 	do {
-		strbuf_cat_c(path, p);
-		strbuf_cat_c(path, "/");
-		strbuf_cat_c(path, "curl");
-		if (access(strbuf_buf(path), X_OK) == 0) {
-			ret = strdup(strbuf_buf(path));
+		snprintf(path, sizeof(path), "%s/curl", p);
+		if (access(path, X_OK) == 0) {
+			ret = strdup(path);
 			break;
 		}
-		strbuf_reset(path);
 	} while ((p = strtok(NULL, ":")) != NULL);
 
 	free(pathenv);
-	strbuf_free(path);
 	
 	return ret;
 }
