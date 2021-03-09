@@ -14,6 +14,8 @@
 
 /* Shorten some json-c function names */
 #define J_GETSTR json_object_get_string
+#define J_NEWSTR json_object_new_string
+#define J_OBJADD json_object_object_add
 #define J_OBJGET json_object_object_get
 
 char *next_batch = NULL;
@@ -44,9 +46,8 @@ matrix_send_message(const char *roomid, const char *msg)
 	strbuf_cat_c(url, "/send/m.room.message?access_token=");
 	strbuf_cat_c(url, token);
 	json_object *root = json_object_new_object();
-	json_object_object_add(root, "msgtype",
-		json_object_new_string("m.text"));
-	json_object_object_add(root, "body", json_object_new_string(msg));
+	J_OBJADD(root, "msgtype", J_NEWSTR("m.text"));
+	J_OBJADD(root, "body", J_NEWSTR(msg));
 	send("-XPOST", strbuf_buf(url), json_object_to_json_string(root));
 	strbuf_free(url);
 }
@@ -81,10 +82,10 @@ matrix_login(const char *server, const char *user, const char *password)
 {
 	matrix_server = server;
 	json_object *root = json_object_new_object();
-	json_object_object_add(root, "type", json_object_new_string("m.login.password"));
-	json_object_object_add(root, "user", json_object_new_string(user));
-	json_object_object_add(root, "password", json_object_new_string(password));
-	json_object_object_add(root, "initial_device_display_name", json_object_new_string("janechat"));
+	J_OBJADD(root, "type", J_NEWSTR("m.login.password"));
+	J_OBJADD(root, "user", J_NEWSTR(user));
+	J_OBJADD(root, "password", J_NEWSTR(password));
+	J_OBJADD(root, "initial_device_display_name", J_NEWSTR("janechat"));
 	send("-XPOST", "/_matrix/client/r0/login", json_object_to_json_string(root));
 }
 
