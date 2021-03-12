@@ -334,21 +334,29 @@ send(const char *method, const char *path, const char *json)
 	strbuf_cat_c(url, ":443");
 	strbuf_cat_c(url, path);
 
-	const char *argv[7];
+	const char *argv[11];
 	if (json != NULL) {
 		argv[0] = method;
 		argv[1] = "-d";
 		argv[2] = json;
 		argv[3] = "-s";
 		argv[4] = "--globoff";
-		argv[5] = strbuf_buf(url);
-		argv[6] = NULL;
+		argv[5] = "--connect-timeout";
+		argv[6] = "60";
+		argv[7] = "--max-time";
+		argv[8] = "60";
+		argv[9] = strbuf_buf(url);
+		argv[10] = NULL;
 	} else {
 		argv[0] = method;
 		argv[1] = "-s";
 		argv[2] = "--globoff";
-		argv[3] = strbuf_buf(url);
-		argv[4] = NULL;
+		argv[3] = "--connect-timeout";
+		argv[4] = "60";
+		argv[5] = "--max-time";
+		argv[6] = "60";
+		argv[7] = strbuf_buf(url);
+		argv[8] = NULL;
 	}
 #if DEBUG_REQUEST
 	/* Don't debug username/password information. */
