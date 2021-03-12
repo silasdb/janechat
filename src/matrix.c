@@ -379,6 +379,11 @@ send(const char *method, const char *path, const char *json)
 	if (!f)
 		exit(1);
 	char *output = read_file(f);
+	if (!output) {
+		strbuf_free(url);
+		pclose(f);
+		return;
+	}
 #if DEBUG_RESPONSE
 	printf("%s\n", output);
 #endif
