@@ -23,7 +23,6 @@ read_file(FILE *stream)
 	getdelim(&output, &size, EOF, stream);
 	if (!output) {
 		perror("Fatal error when reading response");
-		assert(output != NULL);
 	}
 	return output;
 }
