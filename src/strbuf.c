@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "StrBuf.h"
+#include "strbuf.h"
 
 #define INITSIZE 256
 
