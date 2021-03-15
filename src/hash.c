@@ -3,16 +3,50 @@
 #include <string.h>
 
 #include "hash.h"
+#include "list.h"
 
 #define HASH_SIZE 256
-struct node {
+
+/**
+ * This file implements a generic hash table.
+ *
+ * This Hash implementation has a total of HASH_SIZE buckets.  Each bucket is
+ * the head of a linked list and whever there is a hash collision, the new item
+ * is appended to the list.
+ *
+ * An illustration on how this hash table exists:
+ *
+ * +-------------+  +---+
+ * |      1      |->|   |->NULL
+ * +-------------+  +---+
+ * +-------------+  +---+  +---+
+ * |      2      |->|   |->|   |->NULL
+ * +-------------+  +---+  +---+
+ *      ...
+ * +-------------+
+ * | HASH_SIZE-1 |
+ * +-------------+
+ *
+ * Now, the relationship between data structures in this file:
+ *
+ * The user passes to `hash_insert()` a `val` (`void *`).  The object (actually,
+ * the pointer) is wrapped around a `struct hash_item`.  The sole purpose of
+ * this struct is to hold `val` alongside with `key` and we need to make that
+ * because there can be hash collisions.  When that happens, we need to traverse
+ * the list of `struct hash_item`, comparing the keys to fetch the correct item.
+ *
+ * So, relationship between data structures, from the container to the
+ * contained, can be summarized as: Hash > List > struct list_node (declared in
+ * list.h) > struct hash_item > val.
+ */
+
+struct hash_item {
 	const char *key;
-	const void *val;
-	void *next;
+	void *val;
 };
 
 struct Hash {
-	struct node *table[HASH_SIZE];
+	List *table[HASH_SIZE];
 };
 
 /* TODO: document why not 
@@ -31,33 +65,25 @@ Hash *hash_new() {
 
 void hash_insert(Hash *h, const char *key, const void *val) {
 	size_t idx = hash_calculate_idx(key);
-	if (h->table[idx] == NULL) {
-		h->table[idx] = (struct node *)malloc(sizeof(struct node));
-		h->table[idx]->key = key;
-		h->table[idx]->val = val;
-		h->table[idx]->next = NULL;
-		return;
+	if (!h->table[idx])
+		h->table[idx] = list_new();
+	List *l = h->table[idx];
+	LIST_FOREACH(l, item) {
+		// TODO: overwrite if it happens?
+		assert(strcmp(((struct hash_item *)item)->key, key) != 0);
 	}
-	struct node *node;
-	node = h->table[idx];
-	while (node->next != NULL) {
-		node = node->next;
-		assert(strcmp(node->key, key) != 0); // TODO: overwrite if it happens?
-	}
-	struct node *next = malloc(sizeof(struct node));
-	node->next = next;
-	next->key = key;
-	next->val = val;
-	next->next = NULL;
+	struct hash_item *item = malloc(sizeof(struct hash_item));
+	item->key = key;
+	item->val = (void *)val;
+	list_append(l, item);
 }
 
 const void *hash_get(const Hash *h, const char *key) {
 	size_t idx = hash_calculate_idx(key);
-	struct node *node = h->table[idx];
-	while (node != NULL) {
-		if (strcmp(node->key, key) == 0)
-			return node->val;
-		node = node->next;
+	List *l = h->table[idx];
+	LIST_FOREACH(l, item) {
+		if (strcmp(((struct hash_item *)item)->key, key) == 0)
+			return ((struct hash_item *)item)->val;
 	}
 	return NULL;
 }
