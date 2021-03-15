@@ -6,7 +6,7 @@
 
 #include <json.h>
 
-#include "StrBuf.h"
+#include "strbuf.h"
 #include "matrix.h"
 #include "utils.h"
 

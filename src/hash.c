@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "Hash.h"
+#include "hash.h"
 
 #define HASH_SIZE 256
 struct node {

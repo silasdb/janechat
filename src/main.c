@@ -6,7 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "Hash.h"
+#include "hash.h"
 #include "cache.h"
 #include "matrix.h"
 #include "utils.h"
