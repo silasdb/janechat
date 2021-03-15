@@ -20,9 +20,7 @@
 static char *cache_dir();
 static void mkdir_r(const char *);
 
-const char *
-cache_set(const char *key, const char *value)
-{
+const char *cache_set(const char *key, const char *value) {
 	mkdir_r(cache_dir());
 	
 	char path[PATH_MAX];
@@ -36,9 +34,7 @@ cache_set(const char *key, const char *value)
 	return value;
 }
 
-char *
-cache_get(const char *key)
-{
+char *cache_get(const char *key) {
 	char path[PATH_MAX];
 	snprintf(path, sizeof(path), "%s/%s", cache_dir(), key);
 	FILE *f = fopen(path, "r");
@@ -53,9 +49,7 @@ cache_get(const char *key)
  * Return a internal pointer to the cache directory.  This pointer is a static
  * object and should not be freed.
  */
-static char *
-cache_dir()
-{
+static char *cache_dir() {
 	static char dir[PATH_MAX] = { '\0' };
 
 	if (dir[0] != '\0')
@@ -77,9 +71,7 @@ cache_dir()
  * leaf exist before going to the parent.  It creates the parents recursivelly
  * to create the leafs.
  */
-static void
-mkdir_r(const char *path)
-{
+static void mkdir_r(const char *path) {
 	struct stat s;
 	if (stat(path, &s) == 0) {
 		if (s.st_mode & S_IFDIR)

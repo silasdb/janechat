@@ -21,9 +21,7 @@ void process_input(char *s);
 
 bool logged_in = false;
 
-int
-main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	/* TODO: what if the access_token expires or is invalid? */
 	if (!do_matrix_send_token())
 		do_matrix_login();
@@ -52,9 +50,7 @@ main(int argc, char *argv[])
 	return 0;
 }
 
-bool
-do_matrix_send_token()
-{
+bool do_matrix_send_token() {
 	char *token = cache_get("access_token");
 	if (!token)
 		return false;
@@ -62,9 +58,7 @@ do_matrix_send_token()
 	return true;
 }
 
-void
-do_matrix_login()
-{
+void do_matrix_login() {
 	char *id;
 	char *password;
 
@@ -100,32 +94,24 @@ do_matrix_login()
 	memset(password, 0x0, strlen(password)); // TODO: is this optimized out?
 }
 
-const char *
-roomid2alias(const char *id)
-{
+const char *roomid2alias(const char *id) {
 	const char *v = hash_get(roomnames, id);
 	assert(v != NULL); // generate a core dump
 	return v;
 }
 
-const char *
-roomname2roomid(const char *name)
-{
+const char *roomname2roomid(const char *name) {
 	return hash_get(roomids, name);
 }
 
-void
-process_room_name(const char *id, const char *name)
-{
+void process_room_name(const char *id, const char *name) {
 	char *i = strdup(id);
 	char *n = strdup(name);
 	hash_insert(roomids, n, i);
 	hash_insert(roomnames, i, n);
 }
 
-void
-process_msg(const char *roomid, const char *sender, const char *text)
-{
+void process_msg(const char *roomid, const char *sender, const char *text) {
 	const char *roomname = roomid2alias(roomid);
 	printf("%c[38;5;4m%s%c[m: %c[38;5;2m%s%c[m: %s\n",
 		0x1b, roomname, 0x1b,
@@ -133,9 +119,7 @@ process_msg(const char *roomid, const char *sender, const char *text)
 		text);
 }
 
-void
-process_input(char *s)
-{
+void process_input(char *s) {
 	if (strcmp(s, "/quit") == 0)
 		exit(0);
 	char *s2;
@@ -153,9 +137,7 @@ process_input(char *s)
 	matrix_send_message(roomid, s);
 }
 
-void
-alarm_handler()
-{
+void alarm_handler() {
 	MatrixEvent *ev;
 	while ((ev = matrix_next_event()) != NULL) {
 		switch (ev->type) {

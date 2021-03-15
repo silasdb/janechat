@@ -23,17 +23,13 @@ typedef struct Hash Hash[HASH_SIZE];
 
 static size_t hash_calculate_idx(const char *);
 
-Hash *
-hash_new()
-{
+Hash *hash_new() {
 	Hash *h = malloc(sizeof(Hash));
 	memset(h->table, 0x0, sizeof(h->table));
 	return h;
 }
 
-void
-hash_insert(Hash *h, const char *key, const void *val)
-{
+void hash_insert(Hash *h, const char *key, const void *val) {
 	size_t idx = hash_calculate_idx(key);
 	if (h->table[idx] == NULL) {
 		h->table[idx] = (struct node *)malloc(sizeof(struct node));
@@ -55,9 +51,7 @@ hash_insert(Hash *h, const char *key, const void *val)
 	next->next = NULL;
 }
 
-const void *
-hash_get(const Hash *h, const char *key)
-{
+const void *hash_get(const Hash *h, const char *key) {
 	size_t idx = hash_calculate_idx(key);
 	struct node *node = h->table[idx];
 	while (node != NULL) {
@@ -68,9 +62,7 @@ hash_get(const Hash *h, const char *key)
 	return NULL;
 }
 
-static size_t
-hash_calculate_idx(const char *key)
-{
+static size_t hash_calculate_idx(const char *key) {
 	size_t idx;
 	idx = 0;
 	for (size_t i = 0; i < strlen(key); i++)

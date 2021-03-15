@@ -38,9 +38,7 @@ struct {
 	struct node *tail;
 } event_queue = {NULL, NULL};
 
-void
-matrix_send_message(const char *roomid, const char *msg)
-{
+void matrix_send_message(const char *roomid, const char *msg) {
 	StrBuf *url = strbuf_new();
 	strbuf_cat_c(url, "/_matrix/client/r0/rooms/");
 	strbuf_cat_c(url, roomid);
@@ -53,21 +51,15 @@ matrix_send_message(const char *roomid, const char *msg)
 	strbuf_free(url);
 }
 
-void
-matrix_set_server(char *s)
-{
+void matrix_set_server(char *s) {
 	matrix_server = s;
 }
 
-void
-matrix_set_token(char *tok)
-{
+void matrix_set_token(char *tok) {
 	token = tok;
 }
 
-void
-matrix_sync()
-{
+void matrix_sync() {
 	StrBuf *url = strbuf_new();
 	strbuf_cat_c(url, "/_matrix/client/r0/sync");
 	if (!next_batch)
@@ -90,9 +82,7 @@ matrix_sync()
 	strbuf_free(url);
 }
 
-void
-matrix_login(const char *server, const char *user, const char *password)
-{
+void matrix_login(const char *server, const char *user, const char *password) {
 	matrix_server = server;
 	json_object *root = json_object_new_object();
 	J_OBJADD(root, "type", J_NEWSTR("m.login.password"));
@@ -102,9 +92,7 @@ matrix_login(const char *server, const char *user, const char *password)
 	send("-XPOST", "/_matrix/client/r0/login", json_object_to_json_string(root));
 }
 
-static void
-process_direct_event(char *sender, json_object *roomid)
-{
+static void process_direct_event(char *sender, json_object *roomid) {
 	char *id = strdup(J_GETSTR(roomid));
 	MatrixEvent *event = malloc(sizeof(MatrixEvent));
 	event->type = EVENT_ROOM;
@@ -113,9 +101,7 @@ process_direct_event(char *sender, json_object *roomid)
 	enqueue_event(event);
 }
 
-static void
-process_room_event(json_object *item, const char *roomid)
-{
+static void process_room_event(json_object *item, const char *roomid) {
 	json_object *type = J_OBJGET(item, "type");
 	assert(type != NULL);
 	if (strcmp(J_GETSTR(type), "m.room.name") == 0) {
@@ -134,9 +120,7 @@ process_room_event(json_object *item, const char *roomid)
 	}
 }
 
-static void
-process_timeline_event(json_object *item, const char *roomid)
-{
+static void process_timeline_event(json_object *item, const char *roomid) {
 	json_object *type = J_OBJGET(item, "type");
 	assert(type != NULL);
 	if ((strcmp(J_GETSTR(type), "m.room.message") != 0)
@@ -172,9 +156,7 @@ process_timeline_event(json_object *item, const char *roomid)
 	}
 }
 
-static void
-process_error(json_object *root)
-{
+static void process_error(json_object *root) {
 	MatrixEvent *event = malloc(sizeof(MatrixEvent));
 	event->type = EVENT_ERROR;
 	event->error.errorcode = strdup(J_GETSTR(J_OBJGET(root, "errcode")));
@@ -182,9 +164,7 @@ process_error(json_object *root)
 	enqueue_event(event);
 }
 
-static void
-process_matrix_response(const char *output)
-{
+static void process_matrix_response(const char *output) {
 	json_object *root = json_tokener_parse(output);
 	json_object *errorcode = J_OBJGET(root, "errcode");
 	if (errorcode) {
@@ -258,9 +238,7 @@ process_matrix_response(const char *output)
 	json_object_put(root);
 }
 
-static void
-enqueue_event(MatrixEvent *event)
-{
+static void enqueue_event(MatrixEvent *event) {
 	if (!event_queue.head) {
 		event_queue.tail = malloc(sizeof(struct node));
 		event_queue.head = event_queue.tail;
@@ -277,9 +255,7 @@ enqueue_event(MatrixEvent *event)
 }
 
 // a.k.a. dequeue_event
-MatrixEvent *
-matrix_next_event()
-{
+MatrixEvent *matrix_next_event() {
 	if (!event_queue.head)
 		return NULL;
 
@@ -292,9 +268,7 @@ matrix_next_event()
 	return event;
 }
 
-void
-matrix_free_event(MatrixEvent *event)
-{
+void matrix_free_event(MatrixEvent *event) {
 	switch (event->type) {
 	case EVENT_MSG:
 		free(event->msg.roomid);
@@ -316,9 +290,7 @@ matrix_free_event(MatrixEvent *event)
 	free(event);
 }
 
-static char *
-find_curl()
-{
+static char *find_curl() {
 	char *pathenv = strdup(getenv("PATH"));
 	char *p;
 	char *ret = NULL;
@@ -338,9 +310,7 @@ find_curl()
 	return ret;
 }
 
-static void
-send(const char *method, const char *path, const char *json)
-{
+static void send(const char *method, const char *path, const char *json) {
 	StrBuf *url = strbuf_new();
 	strbuf_cat_c(url, "https://");
 	assert(matrix_server != NULL);
