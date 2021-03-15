@@ -3,9 +3,7 @@
 
 #include "utils.h"
 
-char *
-read_line()
-{
+char *read_line() {
 	char *line = NULL;
 	size_t linesize = 0, len;
 	len = getline(&line, &linesize, stdin);
@@ -15,9 +13,7 @@ read_line()
 	return line;
 }
 
-char *
-read_file(FILE *stream)
-{
+char *read_file(FILE *stream) {
 	char *output = NULL;
 	size_t size = 0;
 	getdelim(&output, &size, EOF, stream);

@@ -13,15 +13,11 @@ struct StrBuf {
 	size_t max;
 };
 
-char *
-strbuf_buf(const StrBuf *s)
-{
+char *strbuf_buf(const StrBuf *s) {
 	return s->buf;
 }
 
-StrBuf *
-strbuf_new()
-{
+StrBuf *strbuf_new() {
 	StrBuf *ss;
 	ss = malloc(sizeof(struct StrBuf));
 	ss->buf = malloc(sizeof(char) * INITSIZE);
@@ -31,9 +27,7 @@ strbuf_new()
 	return ss;
 }
 
-void
-strbuf_cat_c(StrBuf *ss, const char *s)
-{
+void strbuf_cat_c(StrBuf *ss, const char *s) {
 	char *sb;
 	sb = &ss->buf[ss->len];
 	while (*s != '\0') {
@@ -51,22 +45,16 @@ strbuf_cat_c(StrBuf *ss, const char *s)
 	*sb = '\0';
 }
 
-void
-strbuf_free(StrBuf *ss)
-{
+void strbuf_free(StrBuf *ss) {
 	free(ss->buf);
 	free(ss);
 }
 
-size_t
-strbuf_len(const StrBuf *ss)
-{
+size_t strbuf_len(const StrBuf *ss) {
 	return ss->len;
 }
 
-void
-strbuf_reset(StrBuf *ss)
-{
+void strbuf_reset(StrBuf *ss) {
 	ss->len = 0;
 	ss->buf[0] = '\0';
 }
