@@ -6,6 +6,7 @@
 
 #include <json.h>
 
+#include "list.h"
 #include "strbuf.h"
 #include "matrix.h"
 #include "utils.h"
@@ -26,17 +27,7 @@ const char *matrix_server = NULL;
 static void enqueue_event(MatrixEvent *);
 static void send(const char *method, const char *path, const char *json);
 
-struct node {
-	MatrixEvent *event;
-	struct node *next;
-};
-
-// linked list for the matrixevent queue
-// TODO: is it possible to unify it with the linked list implementation of hash.c?
-struct {
-	struct node *head;
-	struct node *tail;
-} event_queue = {NULL, NULL};
+List *event_queue = NULL;
 
 void matrix_send_message(const char *roomid, const char *msg) {
 	StrBuf *url = strbuf_new();
@@ -239,33 +230,16 @@ static void process_matrix_response(const char *output) {
 }
 
 static void enqueue_event(MatrixEvent *event) {
-	if (!event_queue.head) {
-		event_queue.tail = malloc(sizeof(struct node));
-		event_queue.head = event_queue.tail;
-		event_queue.tail->event = event;
-		event_queue.tail->next = NULL;
-		return;
-	} else {
-		struct node *q = malloc(sizeof(struct node));
-		q->event = event;
-		q->next = NULL;
-		event_queue.tail->next = q;
-		event_queue.tail = q;
-	}
+	if (!event_queue)
+		event_queue = list_new();
+	list_append(event_queue, event);
 }
 
 // a.k.a. dequeue_event
 MatrixEvent *matrix_next_event() {
-	if (!event_queue.head)
+	if (!event_queue)
 		return NULL;
-
-	MatrixEvent *event;
-	event = event_queue.head->event;
-	struct node *q;
-	q = event_queue.head;
-	event_queue.head = event_queue.head->next;
-	free(q);
-	return event;
+	return list_pop_head(event_queue);
 }
 
 void matrix_free_event(MatrixEvent *event) {
