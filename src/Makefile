@@ -34,6 +34,12 @@ matrix.o: list.h matrix.h strbuf.h utils.h
 utils.o: utils.c utils.h
 	$(CC) ${CFLAGS} -c -o utils.o utils.c
 
+tags:
+	# Execute exctags, if not found, execute old ctags.
+	if ! exctags *.h *.c; then	\
+		ctags -dt *.h *.c;	\
+	fi
+
 .PHONY: clean
 clean:
-	rm -f janechat janechat.core *.o
+	rm -f janechat janechat.core *.o tags
