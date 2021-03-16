@@ -81,6 +81,8 @@ void hash_insert(Hash *h, const char *key, const void *val) {
 const void *hash_get(const Hash *h, const char *key) {
 	size_t idx = hash_calculate_idx(key);
 	List *l = h->table[idx];
+	if (!l)
+		return NULL;
 	LIST_FOREACH(l, item) {
 		if (strcmp(((struct hash_item *)item)->key, key) == 0)
 			return ((struct hash_item *)item)->val;
