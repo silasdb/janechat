@@ -9,10 +9,8 @@
 #include "hash.h"
 #include "cache.h"
 #include "matrix.h"
+#include "rooms.h"
 #include "utils.h"
-
-Hash *roomnames;
-Hash *roomids;
 
 bool do_matrix_send_token();
 void do_matrix_login();
@@ -33,9 +31,8 @@ int main(int argc, char *argv[]) {
 		 */
 		matrix_set_server("matrix.org");
 	}
-	
-	roomnames = hash_new();
-	roomids = hash_new();
+
+	rooms_init();
 
 	signal(SIGALRM, alarm_handler);
 	alarm_handler();
@@ -94,27 +91,16 @@ void do_matrix_login() {
 	memset(password, 0x0, strlen(password)); // TODO: is this optimized out?
 }
 
-const char *roomid2alias(const char *id) {
-	const char *v = hash_get(roomnames, id);
-	assert(v != NULL); // generate a core dump
-	return v;
-}
-
-const char *roomname2roomid(const char *name) {
-	return hash_get(roomids, name);
-}
-
 void process_room_name(const char *id, const char *name) {
 	char *i = strdup(id);
 	char *n = strdup(name);
-	hash_insert(roomids, n, i);
-	hash_insert(roomnames, i, n);
+	room_new(i, n);
 }
 
 void process_msg(const char *roomid, const char *sender, const char *text) {
-	const char *roomname = roomid2alias(roomid);
+	Room *room = room_byid(roomid);;
 	printf("%c[38;5;4m%s%c[m: %c[38;5;2m%s%c[m: %s\n",
-		0x1b, roomname, 0x1b,
+		0x1b, room->name, 0x1b,
 		0x1b, sender, 0x1b,
 		text);
 }
@@ -128,13 +114,13 @@ void process_input(char *s) {
 		printf(">Input not sent<\n");
 		return;
 	}
-	const char *roomid = roomname2roomid(s2);
-	if (!roomid) {
+	Room *room = room_byname(s2);
+	if (!room) {
 		printf(">Room not found<\n");
 		return;
 	}
 	s = s2 + strlen(s2)+1;
-	matrix_send_message(roomid, s);
+	matrix_send_message(room->id, s);
 }
 
 void alarm_handler() {
