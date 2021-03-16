@@ -78,7 +78,7 @@ void hash_insert(Hash *h, const char *key, const void *val) {
 	list_append(l, item);
 }
 
-const void *hash_get(const Hash *h, const char *key) {
+void *hash_get(const Hash *h, const char *key) {
 	size_t idx = hash_calculate_idx(key);
 	List *l = h->table[idx];
 	if (!l)
