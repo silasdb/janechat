@@ -3,13 +3,14 @@
 CC ?= gcc
 CFLAGS += -std=c11 -Wall -Wpedantic
 
-janechat: cache.o strbuf.o hash.o list.o main.o matrix.o utils.o
+janechat: cache.o strbuf.o hash.o list.o main.o matrix.o rooms.o utils.o
 	$(CC) ${LDFLAGS} -o $@ \
 		cache.o \
 		hash.o \
 		list.o \
 		main.o \
 		matrix.o \
+		rooms.o \
 		strbuf.o \
 		utils.o
 
@@ -31,6 +32,9 @@ main.o: cache.h hash.h strbuf.h
 matrix.o: list.h matrix.h strbuf.h utils.h
 	$(CC) ${CFLAGS} -c -o matrix.o matrix.c
 
+rooms.o: hash.h list.h rooms.c rooms.h
+	$(CC) ${CFLAGS} -c -o rooms.o rooms.c
+	
 utils.o: utils.c utils.h
 	$(CC) ${CFLAGS} -c -o utils.o utils.c
 
