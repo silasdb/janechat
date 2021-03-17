@@ -154,6 +154,15 @@ void process_input(char *s) {
 	}
 	if (*s == '\0')
 		return;
+	/*
+	 * Prevent misspelled commands to be sent to current_room.  This has the
+	 * drawback of not allowing user to send text that start with "/" (being
+	 * necessary to prepend it with a trailing space
+	 */
+	if (*s == '/') {
+		printf("Invalid command: %s\n", s);
+		return;
+	}
 	if (!current_room) {
 		puts("No room selected.  Text not sent.\n");
 		return;
