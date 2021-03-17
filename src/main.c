@@ -19,6 +19,8 @@ void process_input(char *s);
 
 bool logged_in = false;
 
+Room *current_room = NULL;
+
 int main(int argc, char *argv[]) {
 	/* TODO: what if the access_token expires or is invalid? */
 	if (!do_matrix_send_token())
@@ -97,30 +99,63 @@ void process_room_name(const char *id, const char *name) {
 	room_new(i, n);
 }
 
-void process_msg(const char *roomid, const char *sender, const char *text) {
-	Room *room = room_byid(roomid);;
+void print_msg(const char *roomname, const char *sender, const char *text) {
 	printf("%c[38;5;4m%s%c[m: %c[38;5;2m%s%c[m: %s\n",
-		0x1b, room->name, 0x1b,
-		0x1b, sender, 0x1b,
-		text);
+		0x1b, roomname, 0x1b, 0x1b, sender, 0x1b, text);
 }
 
+void process_msg(const char *roomid, const char *sender, const char *text) {
+	Room *room = room_byid(roomid);
+	room_append_msg(room, strdup(sender), strdup(text));
+	if (room == current_room)
+		print_msg(room->name, sender, text);
+	else
+		room->unread_msgs++;
+}
+
+void print_messages(Room *room) {
+	ROOM_MESSAGES_FOREACH(room, iter) {
+		Msg *msg = (Msg *)iter;
+		print_msg(room->name, msg->sender, msg->text);
+	}
+	room->unread_msgs = 0;
+}
+
+/*
+ * For now, possible commands are:
+ *
+ * /quit -> exit this program
+ * /stat -> list all rooms and number of unread messages
+ * /join room -> change the current room
+ * text -> send "text" to the current room
+ */
 void process_input(char *s) {
 	if (strcmp(s, "/quit") == 0)
 		exit(0);
-	char *s2;
-	s2 = strtok(s, "=");
-	if (s2 == NULL) {
-		printf(">Input not sent<\n");
+	if (strcmp(s, "/stat") == 0) {
+		ROOMS_FOREACH(iter) {
+			Room *room = iter;
+			printf("%s (unread messages: %zu)\n",
+				room->name, room->unread_msgs);
+		}
 		return;
 	}
-	Room *room = room_byname(s2);
-	if (!room) {
-		printf(">Room not found<\n");
+	if (strncmp(s, "/join ", strlen("/join ")) == 0) {
+		s += strlen("/join ");
+		Room *room = room_byname(s);
+		if (room)
+			current_room = room;
+		printf("Switched to room %s\n", s);
+		print_messages(current_room);
 		return;
 	}
-	s = s2 + strlen(s2)+1;
-	matrix_send_message(room->id, s);
+	if (*s == '\0')
+		return;
+	if (!current_room) {
+		puts("No room selected.  Text not sent.\n");
+		return;
+	}
+	matrix_send_message(current_room->id, s);
 }
 
 void alarm_handler() {
