@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "hash.h"
@@ -18,7 +19,19 @@ void rooms_init() {
  * TODO: is this the best name, since it changes the global variable?
  */
 Room *room_new(const char *id, const char *name) {
-	Room *room = malloc(sizeof(Room));
+	Room *room;
+	room = room_byid(id);
+	if (room) {
+		/*
+		 * TODO: this is a temporary workaround because the same room
+		 * can show up both as m.direct and m.room.name, but not always.
+		 * Who creates the room?
+		 */
+		printf("Duplicated room found (id: %s) (name: %s/%s)\n", id,
+		 name, room->name);
+		return room;
+	}
+	room = malloc(sizeof(Room));
 	room->id = id;
 	room->name = name;
 	room->msgs = list_new();
