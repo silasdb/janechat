@@ -143,8 +143,11 @@ void process_input(char *s) {
 	if (strncmp(s, "/join ", strlen("/join ")) == 0) {
 		s += strlen("/join ");
 		Room *room = room_byname(s);
-		if (room)
-			current_room = room;
+		if (!room) {
+			printf("Room \"%s\" not found.\n", s);
+			return;
+		}
+		current_room = room;
 		printf("Switched to room %s\n", s);
 		print_messages(current_room);
 		return;
