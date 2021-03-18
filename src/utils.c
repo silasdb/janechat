@@ -17,7 +17,7 @@ char *read_file(FILE *stream) {
 	char *output = NULL;
 	size_t size = 0;
 	getdelim(&output, &size, EOF, stream);
-	if (!output) {
+	if (ferror(stream)) {
 		perror("Fatal error when reading response");
 	}
 	return output;
