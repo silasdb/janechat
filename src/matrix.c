@@ -160,6 +160,7 @@ static void process_matrix_response(const char *output) {
 	json_object *errorcode = J_OBJGET(root, "errcode");
 	if (errorcode) {
 		process_error(root);
+		json_object_put(root);
 		return;
 	}
 	json_object *tok = J_OBJGET(root, "access_token");
@@ -170,6 +171,7 @@ static void process_matrix_response(const char *output) {
 		event->type = EVENT_LOGGED_IN;
 		event->login.token = strdup(token);
 		enqueue_event(event);
+		json_object_put(root);
 		return;
 	}
 	json_object *account_data = J_OBJGET(root, "account_data");
@@ -195,11 +197,15 @@ static void process_matrix_response(const char *output) {
 		}
 	}
 	json_object *rooms = J_OBJGET(root, "rooms");
-	if (!rooms)
+	if (!rooms) {
+		json_object_put(root);
 		return;
+	}
 	json_object *join = J_OBJGET(rooms, "join");
-	if (!join)
+	if (!join) {
+		json_object_put(root);
 		return;
+	}
 	json_object_object_foreach(join, roomid, item) {
 		json_object *state = J_OBJGET(item, "state");
 		assert(state != NULL);
