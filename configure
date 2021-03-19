@@ -1,8 +1,47 @@
 #!/bin/sh
 set -eu
-cat >config.mk <<-EOF
-	LDFLAGS += $(pkg-config --libs json-c)
-	CFLAGS += $(pkg-config --cflags json-c)
-	LDFLAGS += $(pkg-config --libs ncurses)
-	CFLAGS += $(pkg-config --cflags ncurses)
-EOF
+
+usage () {
+cat <<-'EOF'
+	Configure help:
+	--with-jansson		Use jansson JSON parser [yes]
+	--with-json-c		Use json-c JSON parser
+	EOF
+exit 1
+}
+
+json_prefer=jansson
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--with-jansson)
+		json_prefer='jansson'
+		;;
+	--with-json-c)
+		json_prefer='json-c'
+		;;
+	*)
+		usage
+		;;
+	esac
+	shift 1
+done
+
+>config.mk
+
+if test "$json_prefer" = 'jansson' && pkg-config jansson; then
+	cat >>config.mk <<-EOF
+		LDFLAGS += $(pkg-config --libs jansson)
+		CFLAGS += $(pkg-config --cflags jansson)
+		CFLAGS += -DHAVE_JANSSON=1
+	EOF
+elif test "$json_prefer" = 'json-c' && pkg-config json-c; then
+	cat >>config.mk <<-EOF
+		LDFLAGS += $(pkg-config --libs json-c)
+		CFLAGS += $(pkg-config --cflags json-c)
+		CFLAGS += -DHAVE_JSONC=1
+	EOF
+else
+	echo >&2 'Error: no jansson nor json-c found.'
+	exit 1
+fi
