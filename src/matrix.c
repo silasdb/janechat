@@ -142,8 +142,8 @@ static void process_direct_event(const char *sender, J_T *roomid) {
 	char *id = strdup(J_GETSTR(roomid));
 	MatrixEvent *event = malloc(sizeof(MatrixEvent));
 	event->type = EVENT_ROOM;
-	event->room.id = id;
-	event->room.name = sender;
+	event->room.id = strdup(id);
+	event->room.name = strdup(sender);
 	enqueue_event(event);
 }
 
