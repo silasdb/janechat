@@ -26,10 +26,10 @@ strbuf.o: strbuf.c strbuf.h
 cache.o: cache.h cache.c
 	$(CC) ${CFLAGS} -c -o cache.o cache.c
 
-main.o: cache.h hash.h strbuf.h
+main.o: main.c  cache.h hash.h strbuf.h
 	$(CC) ${CFLAGS} -c -o main.o main.c
 
-matrix.o: list.h matrix.h strbuf.h utils.h
+matrix.o: matrix.c  list.h matrix.h strbuf.h utils.h
 	$(CC) ${CFLAGS} -c -o matrix.o matrix.c
 
 rooms.o: hash.h list.h rooms.c rooms.h
