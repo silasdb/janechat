@@ -445,8 +445,7 @@ static void send(const char *method, const char *path, const char *json) {
 	FILE *f;
 	f = popenve(curl, (char *const *)argv, NULL, "rw");
 	free(curl);
-	if (!f)
-		exit(1);
+	assert(f != NULL);
 	char *output = read_file(f);
 	if (!output) {
 		strbuf_free(url);
