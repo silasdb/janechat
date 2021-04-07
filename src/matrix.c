@@ -68,7 +68,7 @@ const char *matrix_server = NULL;
 static void enqueue_event(MatrixEvent *);
 static void send(const char *method, const char *path, const char *json);
 static const char * json2str_alloc(J_T *);
-static J_T *str2json_alloc(MatrixEvent *);
+static J_T *str2json_alloc(const char *);
 
 List *event_queue = NULL;
 
@@ -456,7 +456,7 @@ static const char *json2str_alloc(J_T *j) {
 
 }
 
-static J_T *str2json_alloc(MatrixEvent *s) {
+static J_T *str2json_alloc(const char *s) {
 	J_T *j;
 	/*
 	 * TODO: propagate JSON parsing errors up, so we be able to show it in
