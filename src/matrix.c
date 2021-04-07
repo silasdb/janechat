@@ -67,6 +67,8 @@ const char *matrix_server = NULL;
 
 static void enqueue_event(MatrixEvent *);
 static void send(const char *method, const char *path, const char *json);
+static const char * json2str_alloc(J_T *);
+static J_T *str2json_alloc(MatrixEvent *);
 
 List *event_queue = NULL;
 
@@ -79,13 +81,9 @@ void matrix_send_message(const char *roomid, const char *msg) {
 	J_T *root = J_NEWOBJ();
 	J_OBJADD(root, "msgtype", J_NEWSTR("m.text"));
 	J_OBJADD(root, "body", J_NEWSTR(msg));
-#if HAVE_JANSSON
-	char *s = json_dumps(root, 0);
+	const char *s = json2str_alloc(root);
 	send("-XPOST", strbuf_buf(url), s);
 	free(s);
-#elif HAVE_JSONC
-	send("-XPOST", strbuf_buf(url), json_object_to_json_string(root));
-#endif
 	strbuf_free(url);
 }
 
@@ -128,14 +126,9 @@ void matrix_login(const char *server, const char *user, const char *password) {
 	J_OBJADD(root, "user", J_NEWSTR(user));
 	J_OBJADD(root, "password", J_NEWSTR(password));
 	J_OBJADD(root, "initial_device_display_name", J_NEWSTR("janechat"));
-#if HAVE_JANSSON
-	char *s = json_dumps(root, JSON_COMPACT);
-	assert(s != NULL);
+	const char *s = json2str_alloc(root);
 	send("-XPOST", "/_matrix/client/r0/login", s);
 	free(s);
-#elif HAVE_JSONC
-	send("-XPOST", "/_matrix/client/r0/login", json_object_to_json_string(root));
-#endif
 }
 
 static void process_direct_event(const char *sender, J_T *roomid) {
@@ -212,16 +205,9 @@ static void process_error(J_T *root) {
 
 static void process_matrix_response(const char *output) {
 	J_T *root;
-#if HAVE_JANSSON
-	json_error_t error;
-	root = json_loads(output, 0, &error);
-	if (!root) {
-		printf("Error when parsing JSON line %d: %s\n", error.line, error.text);
+	root = str2json_alloc(output);
+	if (!root)
 		return;
-	}
-#elif HAVE_JSONC
-	root = json_tokener_parse(output);
-#endif
 	J_T *errorcode = J_OBJGET(root, "errcode");
 	if (errorcode) {
 		process_error(root);
@@ -459,4 +445,37 @@ static void send(const char *method, const char *path, const char *json) {
 	pclose(f);
 	process_matrix_response(output);
 	free(output);
+}
+
+static const char *json2str_alloc(J_T *j) {
+#if HAVE_JANSSON
+	return json_dumps(j, 0);
+#elif HAVE_JSONC
+	return json_object_to_json_string(j);
+#endif
+
+}
+
+static J_T *str2json_alloc(MatrixEvent *s) {
+	J_T *j;
+	/*
+	 * TODO: propagate JSON parsing errors up, so we be able to show it in
+	 * the UI.
+	 */
+#if HAVE_JANSSON
+	json_error_t error;
+	j = json_loads(s, 0, &error);
+	if (!root) {
+		printf("Error when parsing JSON line %d: %s\n", error.line, error.text);
+		return NULL;
+	}
+#elif HAVE_JSONC
+	j = json_tokener_parse(s);
+#endif
+	if (j == NULL) {
+		/* TODO: how to handle this error? */
+		printf("Error when parsing string: %s\n", s);
+		abort();
+	}
+	return j;
 }
