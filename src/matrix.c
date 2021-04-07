@@ -83,7 +83,7 @@ void matrix_send_message(const char *roomid, const char *msg) {
 	J_OBJADD(root, "body", J_NEWSTR(msg));
 	const char *s = json2str_alloc(root);
 	send("-XPOST", strbuf_buf(url), s);
-	free(s);
+	free((void *)s);
 	strbuf_free(url);
 }
 
@@ -128,7 +128,7 @@ void matrix_login(const char *server, const char *user, const char *password) {
 	J_OBJADD(root, "initial_device_display_name", J_NEWSTR("janechat"));
 	const char *s = json2str_alloc(root);
 	send("-XPOST", "/_matrix/client/r0/login", s);
-	free(s);
+	free((void *)s);
 }
 
 static void process_direct_event(const char *sender, J_T *roomid) {
