@@ -465,7 +465,7 @@ static J_T *str2json_alloc(const char *s) {
 #if HAVE_JANSSON
 	json_error_t error;
 	j = json_loads(s, 0, &error);
-	if (!root) {
+	if (!j) {
 		printf("Error when parsing JSON line %d: %s\n", error.line, error.text);
 		return NULL;
 	}
