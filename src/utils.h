@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-char *read_line();
-char *read_file(FILE *);
+char *read_line_alloc();
+char *read_file_alloc(FILE *);
 
 #endif /* !JANECHAT_UTILS_H */
