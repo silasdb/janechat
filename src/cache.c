@@ -20,7 +20,7 @@
 static char *cache_dir();
 static void mkdir_r(const char *);
 
-const char *cache_set(const char *key, const char *value) {
+void cache_set(const char *key, const char *value) {
 	mkdir_r(cache_dir());
 	
 	char path[PATH_MAX];
@@ -31,7 +31,6 @@ const char *cache_set(const char *key, const char *value) {
 	fprintf(f, "%s", value);
 	fflush(f);
 	fclose(f);
-	return value;
 }
 
 char *cache_get(const char *key) {
