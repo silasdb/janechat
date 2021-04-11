@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 
 	char *line;
 	for (;;) {
-		line = read_line();
+		line = read_line_alloc();
 		process_input(line);
 		free(line);
 	}
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 }
 
 bool do_matrix_send_token() {
-	char *token = cache_get("access_token");
+	char *token = cache_get_alloc("access_token");
 	if (!token)
 		return false;
 	matrix_set_token(token);
@@ -62,7 +62,7 @@ void do_matrix_login() {
 	char *password;
 
 	fputs("Matrix ID: ", stderr);
-	id = read_line();
+	id = read_line_alloc();
 
 	if (id[0] != '@') {
 		fputs("Invalid Matrix ID\n", stderr);
@@ -91,6 +91,9 @@ void do_matrix_login() {
 
 	matrix_login(server, user, password);
 	memset(password, 0x0, strlen(password)); // TODO: is this optimized out?
+
+	free(id);
+	// TODO: free(password)?
 }
 
 void process_room_name(const char *id, const char *name) {

@@ -33,13 +33,13 @@ void cache_set(const char *key, const char *value) {
 	fclose(f);
 }
 
-char *cache_get(const char *key) {
+char *cache_get_alloc(const char *key) {
 	char path[PATH_MAX];
 	snprintf(path, sizeof(path), "%s/%s", cache_dir(), key);
 	FILE *f = fopen(path, "r");
 	if (!f)
 		return NULL;
-	char *contents = read_file(f);
+	char *contents = read_file_alloc(f);
 	fclose(f);
 	return contents;
 }
