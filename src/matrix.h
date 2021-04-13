@@ -6,6 +6,7 @@ enum MatrixEventType {
 	EVENT_ROOM,
 	EVENT_ERROR,
 	EVENT_LOGGED_IN,
+	EVENT_CONN_ERROR,
 };
 
 struct MatrixEvent {
@@ -28,6 +29,7 @@ struct MatrixEvent {
 		struct MatrixEventLogin {
 			char *token;
 		} login;
+		// MatrixEventConnError - empty struct
 	};
 };
 
