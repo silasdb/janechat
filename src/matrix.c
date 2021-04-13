@@ -357,6 +357,9 @@ void matrix_free_event(MatrixEvent *event) {
 	case EVENT_LOGGED_IN:
 		free(event->login.token);
 		break;
+	case EVENT_CONN_ERROR:
+		// empty struct - do nothing
+		break;
 	}
 	free(event);
 }
@@ -436,6 +439,9 @@ static void send(const char *method, const char *path, const char *json) {
 	if (!output) {
 		strbuf_free(url);
 		pclose(f);
+		MatrixEvent *event = malloc(sizeof(MatrixEvent));
+		event->type = EVENT_CONN_ERROR;
+		enqueue_event(event);
 		return;
 	}
 #if DEBUG_RESPONSE

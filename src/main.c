@@ -191,6 +191,9 @@ void alarm_handler() {
 			logged_in = true;
 			cache_set("access_token", ev->login.token);
 			break;
+		case EVENT_CONN_ERROR:
+			puts("Connection error.\n");
+			break;
 		}
 		matrix_free_event(ev);
 	}
