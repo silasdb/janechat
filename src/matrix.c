@@ -66,9 +66,10 @@ char *token = NULL;
 const char *matrix_server = NULL;
 
 static void enqueue_event(MatrixEvent *);
-static void send(const char *method, const char *path, const char *json);
+static char *send_alloc(const char *method, const char *path, const char *json);
 static const char * json2str_alloc(J_T *);
 static J_T *str2json_alloc(const char *);
+static void process_sync_response(const char *);
 
 List *event_queue = NULL;
 
@@ -82,7 +83,9 @@ void matrix_send_message(const char *roomid, const char *msg) {
 	J_OBJADD(root, "msgtype", J_NEWSTR("m.text"));
 	J_OBJADD(root, "body", J_NEWSTR(msg));
 	const char *s = json2str_alloc(root);
-	send("-XPOST", strbuf_buf(url), s);
+	char *response = send_alloc("-XPOST", strbuf_buf(url), s);
+	process_sync_response(response);
+	free(response);
 	free((void *)s);
 	strbuf_free(url);
 }
@@ -115,7 +118,9 @@ void matrix_sync() {
 	}
 	strbuf_cat_c(url, "&access_token=");
 	strbuf_cat_c(url, token);
-	send("-XGET", strbuf_buf(url), NULL);
+	char *response = send_alloc("-XGET", strbuf_buf(url), NULL);
+	process_sync_response(response);
+	free(response);
 	strbuf_free(url);
 }
 
@@ -127,7 +132,9 @@ void matrix_login(const char *server, const char *user, const char *password) {
 	J_OBJADD(root, "password", J_NEWSTR(password));
 	J_OBJADD(root, "initial_device_display_name", J_NEWSTR("janechat"));
 	const char *s = json2str_alloc(root);
-	send("-XPOST", "/_matrix/client/r0/login", s);
+	char *response = send_alloc("-XPOST", "/_matrix/client/r0/login", s);
+	process_sync_response(response);
+	free(response);
 	free((void *)s);
 }
 
@@ -203,7 +210,13 @@ static void process_error(J_T *root) {
 	enqueue_event(event);
 }
 
-static void process_matrix_response(const char *output) {
+static void process_sync_response(const char *output) {
+	if (!output) {
+		MatrixEvent *event = malloc(sizeof(MatrixEvent));
+		event->type = EVENT_CONN_ERROR;
+		enqueue_event(event);
+		return NULL;
+	}
 	J_T *root;
 	root = str2json_alloc(output);
 	if (!root)
@@ -384,7 +397,7 @@ static char *find_curl() {
 	return ret;
 }
 
-static void send(const char *method, const char *path, const char *json) {
+static char *send_alloc(const char *method, const char *path, const char *json) {
 	StrBuf *url = strbuf_new();
 	strbuf_cat_c(url, "https://");
 	assert(matrix_server != NULL);
@@ -436,21 +449,12 @@ static void send(const char *method, const char *path, const char *json) {
 	free(curl);
 	assert(f != NULL);
 	char *output = read_file_alloc(f);
-	if (!output) {
-		strbuf_free(url);
-		pclose(f);
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_CONN_ERROR;
-		enqueue_event(event);
-		return;
-	}
 #if DEBUG_RESPONSE
 	printf("%s\n", output);
 #endif
 	strbuf_free(url);
 	pclose(f);
-	process_matrix_response(output);
-	free(output);
+	return output;
 }
 
 static const char *json2str_alloc(J_T *j) {
