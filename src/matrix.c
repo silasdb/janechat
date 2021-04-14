@@ -215,7 +215,7 @@ static void process_sync_response(const char *output) {
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
 		event->type = EVENT_CONN_ERROR;
 		enqueue_event(event);
-		return NULL;
+		return;
 	}
 	J_T *root;
 	root = str2json_alloc(output);
