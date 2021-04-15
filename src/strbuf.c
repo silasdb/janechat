@@ -11,6 +11,7 @@ struct StrBuf {
 	char *buf;
 	size_t len; // do not include null byte
 	size_t max;
+	bool attached;
 };
 
 char *strbuf_buf(const StrBuf *s) {
@@ -24,6 +25,7 @@ StrBuf *strbuf_new() {
 	ss->buf[0] = '\0';
 	ss->len = 0;
 	ss->max = INITSIZE;
+	ss->attached = true;
 	return ss;
 }
 
@@ -51,7 +53,8 @@ void strbuf_ncat_c(StrBuf *ss, const char *s, size_t size) {
 }
 
 void strbuf_free(StrBuf *ss) {
-	free(ss->buf);
+	if (ss->attached)
+		free(ss->buf);
 	free(ss);
 }
 
@@ -62,4 +65,15 @@ size_t strbuf_len(const StrBuf *ss) {
 void strbuf_reset(StrBuf *ss) {
 	ss->len = 0;
 	ss->buf[0] = '\0';
+}
+
+/*
+ * Detach a buffer from the StrBuf object.  This is useful when we need to work
+ * on the `char *` buffer directly and don't need the StrBuf object anymore.  The
+ * caller will have to call strbuf_free() on the StrBuf object and free() on the
+ * char * variable when after using the `char *` string.
+ */
+char *strbuf_detach(StrBuf *ss) {
+	ss->attached = false;
+	return ss->buf;
 }
