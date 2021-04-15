@@ -430,13 +430,9 @@ static char *send_alloc(const char *method, const char *path, const char *json) 
 		argv[8] = NULL;
 	}
 #if DEBUG_REQUEST
-	/* Don't debug username/password information. */
-	if (strcmp(path, "/_matrix/client/r0/login") != 0) {
-		const char **aux = argv;
-		while (*aux != NULL)
-			printf("%s ", *(aux++));
-		puts("\n");
-	}
+	printf("DEBUG_REQUEST: url: %s\n", strbuf_buf(url));
+	if (json)
+		printf("DEBUG_REQUEST: json: %s\n", json);
 #endif
 	/* TODO: popenve exists only in NetBSD? */
 	char *curl = find_curl();
@@ -450,7 +446,7 @@ static char *send_alloc(const char *method, const char *path, const char *json) 
 	assert(f != NULL);
 	char *output = read_file_alloc(f);
 #if DEBUG_RESPONSE
-	printf("%s\n", output);
+	printf("DEBUG_RESPONSE: output: %s\n", output);
 #endif
 	strbuf_free(url);
 	pclose(f);
