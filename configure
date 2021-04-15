@@ -29,6 +29,12 @@ done
 
 >config.mk
 
+# TODO: use pkg-config or curl-config?
+cat >>config.mk <<-EOF
+	LDFLAGS += $(pkg-config --libs libcurl)
+	CFLAGS += $(pkg-config --cflags libcurl)
+EOF
+
 if test "$json_prefer" = 'jansson' && pkg-config jansson; then
 	cat >>config.mk <<-EOF
 		LDFLAGS += $(pkg-config --libs jansson)
