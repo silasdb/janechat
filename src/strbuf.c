@@ -28,9 +28,13 @@ StrBuf *strbuf_new() {
 }
 
 void strbuf_cat_c(StrBuf *ss, const char *s) {
+	strbuf_ncat_c(ss, s, strlen(s));
+}
+
+void strbuf_ncat_c(StrBuf *ss, const char *s, size_t size) {
 	char *sb;
 	sb = &ss->buf[ss->len];
-	while (*s != '\0') {
+	while (size > 0) {
 		assert(ss->len <= ss->max);
 		if (ss->len == ss->max) {
 			ss->max *= 2;
@@ -41,6 +45,7 @@ void strbuf_cat_c(StrBuf *ss, const char *s) {
 		ss->len++;
 		sb++;
 		s++;
+		size--;
 	}
 	*sb = '\0';
 }
