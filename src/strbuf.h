@@ -13,6 +13,7 @@ void strbuf_ncat_c(StrBuf *, const char *, size_t);
 void strbuf_reset(StrBuf *);
 void strbuf_free(StrBuf *);
 size_t strbuf_len(const StrBuf *);
+char *strbuf_detach(StrBuf *);
 
 
 #endif /* !JANECHAT_STRBUF_H */
