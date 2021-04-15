@@ -23,9 +23,12 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <curl/curl.h>
 
 #if HAVE_JANSSON
 # include <jansson.h>
@@ -61,12 +64,17 @@
 #define DEBUG_REQUEST 0
 #define DEBUG_RESPONSE 0
 
+enum HTTPMethod {
+	HTTP_GET,
+	HTTP_POST,
+};
+
 char *next_batch = NULL;
 char *token = NULL;
 const char *matrix_server = NULL;
 
 static void enqueue_event(MatrixEvent *);
-static char *send_alloc(const char *method, const char *path, const char *json);
+static char *send_alloc(enum HTTPMethod method, const char *path, const char *json);
 static const char * json2str_alloc(J_T *);
 static J_T *str2json_alloc(const char *);
 static void process_sync_response(const char *);
@@ -83,8 +91,7 @@ void matrix_send_message(const char *roomid, const char *msg) {
 	J_OBJADD(root, "msgtype", J_NEWSTR("m.text"));
 	J_OBJADD(root, "body", J_NEWSTR(msg));
 	const char *s = json2str_alloc(root);
-	char *response = send_alloc("-XPOST", strbuf_buf(url), s);
-	process_sync_response(response);
+	char *response = send_alloc(HTTP_POST, strbuf_buf(url), s);
 	free(response);
 	free((void *)s);
 	strbuf_free(url);
@@ -118,7 +125,7 @@ void matrix_sync() {
 	}
 	strbuf_cat_c(url, "&access_token=");
 	strbuf_cat_c(url, token);
-	char *response = send_alloc("-XGET", strbuf_buf(url), NULL);
+	char *response = send_alloc(HTTP_GET, strbuf_buf(url), NULL);
 	process_sync_response(response);
 	free(response);
 	strbuf_free(url);
@@ -132,7 +139,7 @@ void matrix_login(const char *server, const char *user, const char *password) {
 	J_OBJADD(root, "password", J_NEWSTR(password));
 	J_OBJADD(root, "initial_device_display_name", J_NEWSTR("janechat"));
 	const char *s = json2str_alloc(root);
-	char *response = send_alloc("-XPOST", "/_matrix/client/r0/login", s);
+	char *response = send_alloc(HTTP_POST, "/_matrix/client/r0/login", s);
 	process_sync_response(response);
 	free(response);
 	free((void *)s);
@@ -377,27 +384,16 @@ void matrix_free_event(MatrixEvent *event) {
 	free(event);
 }
 
-static char *find_curl() {
-	char *pathenv = strdup(getenv("PATH"));
-	char *p;
-	char *ret = NULL;
-	char path[PATH_MAX];
-
-	p = strtok(pathenv, ":");
-	do {
-		snprintf(path, sizeof(path), "%s/curl", p);
-		if (access(path, X_OK) == 0) {
-			ret = strdup(path);
-			break;
-		}
-	} while ((p = strtok(NULL, ":")) != NULL);
-
-	free(pathenv);
-	
-	return ret;
+/* Callback used for libcurl to retrieve web content. */
+static size_t
+send_alloc_callback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+	StrBuf *s = (StrBuf *)userp;
+	strbuf_ncat_c(s, contents, size * nmemb);
+	return size * nmemb;
 }
 
-static char *send_alloc(const char *method, const char *path, const char *json) {
+static char *send_alloc(enum HTTPMethod method, const char *path, const char *json) {
 	StrBuf *url = strbuf_new();
 	strbuf_cat_c(url, "https://");
 	assert(matrix_server != NULL);
@@ -405,51 +401,56 @@ static char *send_alloc(const char *method, const char *path, const char *json) 
 	strbuf_cat_c(url, ":443");
 	strbuf_cat_c(url, path);
 
-	const char *argv[11];
-	if (json != NULL) {
-		argv[0] = method;
-		argv[1] = "-d";
-		argv[2] = json;
-		argv[3] = "-s";
-		argv[4] = "--globoff";
-		argv[5] = "--connect-timeout";
-		argv[6] = "60";
-		argv[7] = "--max-time";
-		argv[8] = "60";
-		argv[9] = strbuf_buf(url);
-		argv[10] = NULL;
-	} else {
-		argv[0] = method;
-		argv[1] = "-s";
-		argv[2] = "--globoff";
-		argv[3] = "--connect-timeout";
-		argv[4] = "60";
-		argv[5] = "--max-time";
-		argv[6] = "60";
-		argv[7] = strbuf_buf(url);
-		argv[8] = NULL;
-	}
 #if DEBUG_REQUEST
 	printf("DEBUG_REQUEST: url: %s\n", strbuf_buf(url));
 	if (json)
 		printf("DEBUG_REQUEST: json: %s\n", json);
 #endif
-	/* TODO: popenve exists only in NetBSD? */
-	char *curl = find_curl();
-	if (!curl) {
-		fprintf(stderr, "Error: curl not found on this system\n");
-		exit(1);
+
+	static bool curl_initialized = false;
+	if (!curl_initialized) {
+		 /* TODO: we should enable only what we need */
+		curl_global_init(CURL_GLOBAL_ALL);
+		curl_initialized = true;
+		/*
+		 * TODO: should we call curl_global_cleanup() at the end of the
+		 * program?
+		 */
 	}
-	FILE *f;
-	f = popenve(curl, (char *const *)argv, NULL, "rw");
-	free(curl);
-	assert(f != NULL);
-	char *output = read_file_alloc(f);
+
+	StrBuf *aux = strbuf_new();
+	CURL *handle;
+	handle = curl_easy_init();
+	/* TODO: add --connect-timeout 60 --max-time 60 ? */
+	curl_easy_setopt(handle, CURLOPT_URL, strbuf_buf(url));
+	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_alloc_callback);
+	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
+
+	switch (method) {
+	case HTTP_POST:
+		curl_easy_setopt(handle, CURLOPT_POST, 1L);
+		curl_easy_setopt(handle, CURLOPT_POSTFIELDS, json);
+		curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, (long)strlen(json));
+		break;
+	default:
+		break;
+	}
+	
+	CURLcode res;
+	res = curl_easy_perform(handle);
+
+	if (res != CURLE_OK) {
+		printf("curl error: %s\n", curl_easy_strerror(res));
+	}
+
+	char *output = strbuf_detach(aux);
+	strbuf_free(aux);
+
+	curl_easy_cleanup(handle);
 #if DEBUG_RESPONSE
 	printf("DEBUG_RESPONSE: output: %s\n", output);
 #endif
 	strbuf_free(url);
-	pclose(f);
 	return output;
 }
 

@@ -42,7 +42,8 @@ int main(int argc, char *argv[]) {
 	char *line;
 	for (;;) {
 		line = read_line_alloc();
-		process_input(line);
+		if (line)
+			process_input(line);
 		free(line);
 	}
 	
