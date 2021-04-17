@@ -1,17 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "hash.h"
 #include "rooms.h"
 
 Hash *rooms_hash;	/* Hash<const char *id, Room> */
 List *rooms_list;	/* List<Room> */
-Hash *roomnames2id;	/* Hash<const char *name, const char *id> */
 size_t count;		/* Number of rooms */
 
 void rooms_init() {
 	rooms_hash = hash_new();
-	roomnames2id = hash_new();
 	rooms_list = list_new();
 }
 
@@ -38,7 +37,6 @@ Room *room_new(const char *id, const char *name) {
 	room->unread_msgs = 0;
 	hash_insert(rooms_hash, id, room);
 	list_append(rooms_list, room);
-	hash_insert(roomnames2id, name, id);
 	return room;
 }
 
@@ -47,11 +45,12 @@ Room *room_byid(const char *id) {
 }
 
 Room *room_byname(const char *name) {
-	const char *id;
-	id = hash_get(roomnames2id, name);
-	if (!id)
-		return NULL;
-	return room_byid(id);
+	ROOMS_FOREACH(iter) {
+		Room *r = iter;
+		if (strcmp(r->name, name) == 0)
+			return r;
+	}
+	return NULL;
 }
 
 void room_append_msg(Room *room, const char *sender, const char *text) {
