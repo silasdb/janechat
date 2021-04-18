@@ -17,7 +17,7 @@ void rooms_init() {
 /*
  * TODO: is this the best name, since it changes the global variable?
  */
-Room *room_new(const char *id, const char *name) {
+Room *room_new(const char *id) {
 	Room *room;
 	room = room_byid(id);
 	if (room) {
@@ -26,13 +26,13 @@ Room *room_new(const char *id, const char *name) {
 		 * can show up both as m.direct and m.room.name, but not always.
 		 * Who creates the room?
 		 */
-		printf("Duplicated room found (id: %s) (name: %s/%s)\n", id,
-		 name, room->name);
+		printf("Trying to create duplicated room (id: %s)\n", id);
 		return room;
 	}
 	room = malloc(sizeof(Room));
 	room->id = id;
-	room->name = name;
+	room->name = id;
+	room->users = list_new();
 	room->msgs = list_new();
 	room->unread_msgs = 0;
 	hash_insert(rooms_hash, id, room);
@@ -53,9 +53,18 @@ Room *room_byname(const char *name) {
 	return NULL;
 }
 
+void room_set_name(Room *r, const char *name) {
+	free((void *)r->name);
+	r->name = name;
+}
+
 void room_append_msg(Room *room, const char *sender, const char *text) {
 	Msg *msg = malloc(sizeof(Msg));
 	msg->sender = sender;
 	msg->text = text;
 	list_append(room->msgs, msg);
+}
+
+void room_append_user(Room *room, const char *sender) {
+	list_append(room->users, (void *)sender);
 }

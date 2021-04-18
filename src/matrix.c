@@ -73,7 +73,8 @@ char *next_batch = NULL;
 char *token = NULL;
 const char *matrix_server = NULL;
 
-static void enqueue_event(MatrixEvent *);
+static void event_queue_append(MatrixEvent *);
+static void event_queue_prepend(MatrixEvent *);
 static char *send_alloc(enum HTTPMethod method, const char *path, const char *json);
 static const char * json2str_alloc(J_T *);
 static J_T *str2json_alloc(const char *);
@@ -146,12 +147,15 @@ void matrix_login(const char *server, const char *user, const char *password) {
 }
 
 static void process_direct_event(const char *sender, J_T *roomid) {
+	MatrixEvent *event;
+	
 	char *id = strdup(J_GETSTR(roomid));
-	MatrixEvent *event = malloc(sizeof(MatrixEvent));
-	event->type = EVENT_ROOM;
-	event->room.id = strdup(id);
-	event->room.name = strdup(sender);
-	enqueue_event(event);
+	
+	event = malloc(sizeof(MatrixEvent));
+	event->type = EVENT_ROOM_NAME;
+	event->roomname.id = strdup(id);
+	event->roomname.name = strdup(sender);
+	event_queue_append(event);
 }
 
 static void process_room_event(J_T *item, const char *roomid) {
@@ -166,10 +170,23 @@ static void process_room_event(J_T *item, const char *roomid) {
 		char *id = strdup(roomid);
 		char *nn = strdup(name);
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_ROOM;
-		event->room.id = id;
-		event->room.name = nn;
-		enqueue_event(event);
+		event->type = EVENT_ROOM_NAME;
+		event->roomname.id = id;
+		event->roomname.name = nn;
+		event_queue_append(event);
+	} else if (strcmp(J_GETSTR(type), "m.room.create") == 0) {
+		MatrixEvent *event = malloc(sizeof(MatrixEvent));
+		event->type = EVENT_ROOM_CREATE;
+		event->roomcreate.id = strdup(roomid);
+		/*
+		 * m.room.create events come in room state events list, which
+		 * are unsorted.  But when passing EVENT_ROOM_CREATE events to
+		 * upper layers, we have to pass it before other events that
+		 * alter the room state (because the room object need already to
+		 * be created in order to receive these other events), so we
+		 * prepend it to the event queue.
+		 */
+		event_queue_prepend(event);
 	}
 }
 
@@ -198,14 +215,14 @@ static void process_timeline_event(J_T *item, const char *roomid) {
 		event->msg.sender = strdup(J_GETSTR(sender));
 		event->msg.roomid = strdup(roomid);
 		event->msg.text = strdup(J_GETSTR(body));
-		enqueue_event(event);
+		event_queue_append(event);
 	} else if (strcmp(J_GETSTR(type), "m.room.encrypted") == 0) {
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
 		event->type = EVENT_MSG;
 		event->msg.sender = strdup(J_GETSTR(sender));
 		event->msg.roomid = strdup(roomid);
 		event->msg.text = strdup("== encrypted message ==");
-		enqueue_event(event);
+		event_queue_append(event);
 	}
 }
 
@@ -214,14 +231,14 @@ static void process_error(J_T *root) {
 	event->type = EVENT_ERROR;
 	event->error.errorcode = strdup(J_GETSTR(J_OBJGET(root, "errcode")));
 	event->error.error = strdup(J_GETSTR(J_OBJGET(root, "error")));
-	enqueue_event(event);
+	event_queue_append(event);
 }
 
 static void process_sync_response(const char *output) {
 	if (!output) {
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
 		event->type = EVENT_CONN_ERROR;
-		enqueue_event(event);
+		event_queue_append(event);
 		return;
 	}
 	J_T *root;
@@ -241,7 +258,7 @@ static void process_sync_response(const char *output) {
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
 		event->type = EVENT_LOGGED_IN;
 		event->login.token = strdup(token);
-		enqueue_event(event);
+		event_queue_append(event);
 		J_FREE(root);
 		return;
 	}
@@ -344,12 +361,19 @@ static void process_sync_response(const char *output) {
 	assert(n != NULL);
 	next_batch = strdup(J_GETSTR(n));
 	J_FREE(root);
+	
 }
 
-static void enqueue_event(MatrixEvent *event) {
+static void event_queue_append(MatrixEvent *event) {
 	if (!event_queue)
 		event_queue = list_new();
 	list_append(event_queue, event);
+}
+
+static void event_queue_prepend(MatrixEvent *event) {
+	if (!event_queue)
+		event_queue = list_new();
+	list_prepend(event_queue, event);
 }
 
 // a.k.a. dequeue_event
@@ -366,9 +390,12 @@ void matrix_free_event(MatrixEvent *event) {
 		free(event->msg.sender);
 		free(event->msg.text);
 		break;
-	case EVENT_ROOM:
-		free(event->room.id);
-		free(event->room.name);
+	case EVENT_ROOM_CREATE:
+		free(event->roomcreate.id);
+		break;
+	case EVENT_ROOM_NAME:
+		free(event->roomname.id);
+		free(event->roomname.name);
 		break;
 	case EVENT_ERROR:
 		free(event->error.errorcode);

@@ -97,10 +97,20 @@ void do_matrix_login() {
 	// TODO: free(password)?
 }
 
-void process_room_name(const char *id, const char *name) {
+void process_room_create(const char *id) {
 	char *i = strdup(id);
-	char *n = strdup(name);
-	room_new(i, n);
+	room_new(i);
+}
+
+void process_room_name(const char *id, const char *name) {
+	Room *room = room_byid(id);
+	room_set_name(room, strdup(name));
+}
+
+void process_room_join(const char *roomid, const char *sender) {
+	Room *room = room_byid(roomid);
+	assert(room);
+	room_append_user(room, strdup(sender));
 }
 
 void print_msg(const char *roomname, const char *sender, const char *text) {
@@ -178,8 +188,11 @@ void alarm_handler() {
 	MatrixEvent *ev;
 	while ((ev = matrix_next_event()) != NULL) {
 		switch (ev->type) {
-		case EVENT_ROOM:
-			process_room_name(ev->room.id, ev->room.name);
+		case EVENT_ROOM_CREATE:
+			process_room_create(ev->roomcreate.id);
+			break;
+		case EVENT_ROOM_NAME:
+			process_room_name(ev->roomname.id, ev->roomname.name);
 			break;
 		case EVENT_MSG:
 			process_msg(ev->msg.roomid, ev->msg.sender, ev->msg.text);
