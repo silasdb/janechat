@@ -187,6 +187,20 @@ static void process_room_event(J_T *item, const char *roomid) {
 		 * prepend it to the event queue.
 		 */
 		event_queue_prepend(event);
+	} else if (strcmp(J_GETSTR(type), "m.room.member") == 0) {
+		J_T *content = J_OBJGET(item, "content");
+		assert(content != NULL);
+		J_T *membership = J_OBJGET(content, "membership");
+		assert(membership != NULL);
+		if (strcmp(J_GETSTR(membership), "join") != 0)
+			return;
+		J_T *sender = J_OBJGET(item, "sender");
+		assert(sender != NULL);
+		MatrixEvent *event = malloc(sizeof(MatrixEvent));
+		event->type = EVENT_ROOM_JOIN;
+		event->roomjoin.roomid = strdup(roomid);
+		event->roomjoin.sender = strdup(J_GETSTR(sender));
+		event_queue_append(event);
 	}
 }
 
@@ -396,6 +410,10 @@ void matrix_free_event(MatrixEvent *event) {
 	case EVENT_ROOM_NAME:
 		free(event->roomname.id);
 		free(event->roomname.name);
+		break;
+	case EVENT_ROOM_JOIN:
+		free(event->roomjoin.roomid);
+		free(event->roomjoin.sender);
 		break;
 	case EVENT_ERROR:
 		free(event->error.errorcode);

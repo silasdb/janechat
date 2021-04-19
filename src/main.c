@@ -140,6 +140,7 @@ void print_messages(Room *room) {
  *
  * /quit -> exit this program
  * /stat -> list all rooms and number of unread messages
+ * /names -> list all users in current room
  * /join room -> change the current room
  * text -> send "text" to the current room
  */
@@ -151,6 +152,16 @@ void process_input(char *s) {
 			Room *room = iter;
 			printf("%s (unread messages: %zu)\n",
 				room->name, room->unread_msgs);
+		}
+		return;
+	}
+	if (strcmp(s, "/names") == 0) {
+		if (!current_room) {
+			puts("No room selected.  Text not sent.\n");
+			return;
+		}
+		ROOM_USERS_FOREACH(current_room, iter) {
+			printf("%s\n", (char *)iter);
 		}
 		return;
 	}
@@ -193,6 +204,10 @@ void alarm_handler() {
 			break;
 		case EVENT_ROOM_NAME:
 			process_room_name(ev->roomname.id, ev->roomname.name);
+			break;
+		case EVENT_ROOM_JOIN:
+			process_room_join(ev->roomjoin.roomid,
+				ev->roomjoin.sender);
 			break;
 		case EVENT_MSG:
 			process_msg(ev->msg.roomid, ev->msg.sender, ev->msg.text);
