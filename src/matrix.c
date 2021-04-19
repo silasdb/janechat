@@ -75,12 +75,23 @@ const char *matrix_server = NULL;
 
 static void event_queue_append(MatrixEvent *);
 static void event_queue_prepend(MatrixEvent *);
-static char *send_alloc(enum HTTPMethod method, const char *path, const char *json);
+static void matrix_send(enum HTTPMethod, const char *, const char *,
+	void (*callback)(const char *));
 static const char * json2str_alloc(J_T *);
 static J_T *str2json_alloc(const char *);
 static void process_sync_response(const char *);
 
 List *event_queue = NULL;
+
+CURLM *mhandle = NULL;
+CURL *handle = NULL;
+StrBuf *aux = NULL;
+fd_set fdread;
+fd_set fdwrite;
+fd_set fdexcep;
+int maxfd = -1;
+void (*callback)(const char *);
+int still_running = -1;
 
 void matrix_send_message(const char *roomid, const char *msg) {
 	StrBuf *url = strbuf_new();
@@ -92,8 +103,7 @@ void matrix_send_message(const char *roomid, const char *msg) {
 	J_OBJADD(root, "msgtype", J_NEWSTR("m.text"));
 	J_OBJADD(root, "body", J_NEWSTR(msg));
 	const char *s = json2str_alloc(root);
-	char *response = send_alloc(HTTP_POST, strbuf_buf(url), s);
-	free(response);
+	matrix_send(HTTP_POST, strbuf_buf(url), s, NULL);
 	free((void *)s);
 	strbuf_free(url);
 }
@@ -108,6 +118,7 @@ void matrix_set_token(char *tok) {
 
 
 void matrix_sync() {
+	still_running = -1;
 	StrBuf *url = strbuf_new();
 	strbuf_cat_c(url, "/_matrix/client/r0/sync");
 	if (!next_batch)
@@ -126,9 +137,7 @@ void matrix_sync() {
 	}
 	strbuf_cat_c(url, "&access_token=");
 	strbuf_cat_c(url, token);
-	char *response = send_alloc(HTTP_GET, strbuf_buf(url), NULL);
-	process_sync_response(response);
-	free(response);
+	matrix_send(HTTP_GET, strbuf_buf(url), NULL, process_sync_response);
 	strbuf_free(url);
 }
 
@@ -140,9 +149,7 @@ void matrix_login(const char *server, const char *user, const char *password) {
 	J_OBJADD(root, "password", J_NEWSTR(password));
 	J_OBJADD(root, "initial_device_display_name", J_NEWSTR("janechat"));
 	const char *s = json2str_alloc(root);
-	char *response = send_alloc(HTTP_POST, "/_matrix/client/r0/login", s);
-	process_sync_response(response);
-	free(response);
+	matrix_send(HTTP_POST, "/_matrix/client/r0/login", s, process_sync_response);
 	free((void *)s);
 }
 
@@ -431,27 +438,76 @@ void matrix_free_event(MatrixEvent *event) {
 
 /* Callback used for libcurl to retrieve web content. */
 static size_t
-send_alloc_callback(void *contents, size_t size, size_t nmemb, void *userp)
+send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 {
 	StrBuf *s = (StrBuf *)userp;
 	strbuf_ncat_c(s, contents, size * nmemb);
 	return size * nmemb;
 }
 
-static char *send_alloc(enum HTTPMethod method, const char *path, const char *json) {
-	StrBuf *url = strbuf_new();
-	strbuf_cat_c(url, "https://");
-	assert(matrix_server != NULL);
-	strbuf_cat_c(url, matrix_server);
-	strbuf_cat_c(url, ":443");
-	strbuf_cat_c(url, path);
 
-#if DEBUG_REQUEST
-	printf("DEBUG_REQUEST: url: %s\n", strbuf_buf(url));
-	if (json)
-		printf("DEBUG_REQUEST: json: %s\n", json);
+bool matrix_finished() {
+	if (still_running == 0)
+		return true;
+	struct timeval timeout;
+	long curl_timeo = -1;
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 100;
+	
+	/* TODO: use curl_multi_timeout()? */
+
+	FD_ZERO(&fdread);
+	FD_ZERO(&fdwrite);
+	FD_ZERO(&fdexcep);
+
+	/* TODO: place it in a better place */
+	FD_SET(0 /* TODO: stdin */, &fdread);
+		
+	curl_multi_fdset(
+		mhandle,
+		&fdread,
+		&fdwrite,
+		&fdexcep,
+		&maxfd);
+	int res = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout);
+	return false;
+}
+
+void matrix_resume() {
+	curl_multi_perform(mhandle, &still_running);
+	
+	/* TODO: check return value of curl_multi_perform() for errors */
+	/*
+	TODO: also, check for errors in easy handler */
+	if (res != CURLE_OK) {
+		printf("curl error: %s\n", curl_easy_strerror(res));
+	}
+	*/
+	if (still_running == 0) {
+		char *output = strdup(strbuf_buf(aux));
+		strbuf_free(aux);
+		curl_multi_remove_handle(mhandle, handle);
+		curl_easy_cleanup(handle);
+		curl_multi_cleanup(mhandle);
+		aux = NULL;
+		handle = NULL;
+		mhandle = NULL;
+#if DEBUG_RESPONSE
+		printf("DEBUG_RESPONSE: output: %s\n", output);
 #endif
+		if (callback)
+			callback(output);
+		free(output);
+	}
+}
 
+static void matrix_send(
+	enum HTTPMethod method,
+	const char *path,
+	const char *json,
+	void (*c)(const char *))
+{
+	callback = c;
 	static bool curl_initialized = false;
 	if (!curl_initialized) {
 		 /* TODO: we should enable only what we need */
@@ -463,12 +519,33 @@ static char *send_alloc(enum HTTPMethod method, const char *path, const char *js
 		 */
 	}
 
-	StrBuf *aux = strbuf_new();
-	CURL *handle;
+	assert(!mhandle);
+
+	mhandle = curl_multi_init();
+
 	handle = curl_easy_init();
+	aux = strbuf_new();
+	
+	StrBuf *url = strbuf_new();
+	
+	strbuf_cat_c(url, "https://");
+	assert(matrix_server != NULL);
+	strbuf_cat_c(url, matrix_server);
+	strbuf_cat_c(url, ":443");
+	strbuf_cat_c(url, path);
+
+	StrBuf *u = strbuf_new();
+	strbuf_cat_c(u, "http://silas.net.br/index.html");
+
+#if DEBUG_REQUEST
+	printf("DEBUG_REQUEST: url: %s\n", strbuf_buf(url));
+	if (json)
+		printf("DEBUG_REQUEST: json: %s\n", json);
+#endif
+	
 	/* TODO: add --connect-timeout 60 --max-time 60 ? */
 	curl_easy_setopt(handle, CURLOPT_URL, strbuf_buf(url));
-	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_alloc_callback);
+	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
 
 	switch (method) {
@@ -480,23 +557,12 @@ static char *send_alloc(enum HTTPMethod method, const char *path, const char *js
 	default:
 		break;
 	}
-	
-	CURLcode res;
-	res = curl_easy_perform(handle);
 
-	if (res != CURLE_OK) {
-		printf("curl error: %s\n", curl_easy_strerror(res));
-	}
-
-	char *output = strbuf_detach(aux);
-	strbuf_free(aux);
-
-	curl_easy_cleanup(handle);
-#if DEBUG_RESPONSE
-	printf("DEBUG_RESPONSE: output: %s\n", output);
-#endif
+	curl_multi_add_handle(mhandle, handle);
+	CURLMcode res;
 	strbuf_free(url);
-	return output;
+
+	curl_multi_perform(mhandle, &still_running);
 }
 
 static const char *json2str_alloc(J_T *j) {
