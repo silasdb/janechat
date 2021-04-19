@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "hash.h"
 #include "cache.h"
@@ -14,7 +15,7 @@
 
 bool do_matrix_send_token();
 void do_matrix_login();
-void alarm_handler();
+void sync();
 void process_input(char *s);
 
 bool logged_in = false;
@@ -36,15 +37,24 @@ int main(int argc, char *argv[]) {
 
 	rooms_init();
 
-	signal(SIGALRM, alarm_handler);
-	alarm_handler();
-
+	matrix_sync();
 	char *line;
 	for (;;) {
-		line = read_line_alloc();
-		if (line)
-			process_input(line);
-		free(line);
+		if (!matrix_finished()) {
+			if (FD_ISSET(0, &fdread)) {
+				line = read_line_alloc();
+				if (line)
+					process_input(line);
+				printf("line: %s\n", line);
+				free(line);
+			} else {
+				matrix_resume();
+			}
+		} else {
+			sync();
+			if (logged_in)
+				matrix_sync();
+		}
 	}
 	
 	return 0;
@@ -195,7 +205,7 @@ void process_input(char *s) {
 	matrix_send_message(current_room->id, s);
 }
 
-void alarm_handler() {
+void sync() {
 	MatrixEvent *ev;
 	while ((ev = matrix_next_event()) != NULL) {
 		switch (ev->type) {
@@ -226,7 +236,4 @@ void alarm_handler() {
 		}
 		matrix_free_event(ev);
 	}
-	if (logged_in)
-		matrix_sync();
-	alarm(5); /* 5 seconds */
 }
