@@ -7,11 +7,16 @@
 
 #define INITSIZE 256
 
+/*
+ * Fat pointer to our String type.  buf length is max+1, because we always make
+ * room for the nullbyte, but don't count it in len and max.  StrBuf objects are
+ * always guaranteed to have null-terminated strings.
+ */
 struct StrBuf {
-	char *buf;
-	size_t len; // do not include null byte
-	size_t max;
-	bool attached;
+	char *buf;	/* Buffer that store string (always with null byte) */
+	size_t len;	/* Length of string in buf (don't count null byte )*/
+	size_t max;	/* Length of buf - 1 (cause we don't count null byte */
+	bool attached;  /* Is the buffer attached to the StrBuf object? */
 };
 
 char *strbuf_buf(const StrBuf *s) {
@@ -21,7 +26,7 @@ char *strbuf_buf(const StrBuf *s) {
 StrBuf *strbuf_new() {
 	StrBuf *ss;
 	ss = malloc(sizeof(struct StrBuf));
-	ss->buf = malloc(sizeof(char) * INITSIZE);
+	ss->buf = malloc(sizeof(char) * INITSIZE + 1); /* +1 for null byte */
 	ss->buf[0] = '\0';
 	ss->len = 0;
 	ss->max = INITSIZE;
@@ -40,7 +45,8 @@ void strbuf_ncat_c(StrBuf *ss, const char *s, size_t size) {
 		assert(ss->len <= ss->max);
 		if (ss->len == ss->max) {
 			ss->max *= 2;
-			ss->buf = realloc(ss->buf, sizeof(char) * ss->max);
+			ss->buf = realloc(ss->buf,
+			 (sizeof(char) * ss->max) + 1); /* +1 for null byte */
 			sb = &ss->buf[ss->len]; // because the pointer may have changed
 		}
 		*sb = *s;
