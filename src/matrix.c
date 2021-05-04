@@ -466,7 +466,8 @@ static char *send_alloc(enum HTTPMethod method, const char *path, const char *js
 	StrBuf *aux = strbuf_new();
 	CURL *handle;
 	handle = curl_easy_init();
-	/* TODO: add --connect-timeout 60 --max-time 60 ? */
+	curl_easy_setopt(handle, CURLOPT_TIMEOUT, 60L);
+	curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT, 60L);
 	curl_easy_setopt(handle, CURLOPT_URL, strbuf_buf(url));
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_alloc_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
