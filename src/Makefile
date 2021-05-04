@@ -1,10 +1,10 @@
-LDFLAGS += -lasan
+LDFLAGS += -lasan -g
 
 -include ../config.mk
 
 # TODO: split debug / release build rules
 CC ?= gcc
-CFLAGS += -fsanitize=address -std=c11 -Wall -Wpedantic
+CFLAGS += -fsanitize=address -g -std=c11 -Wall -Wpedantic
 LDFLAGS += -lasan
 
 janechat: cache.o strbuf.o hash.o list.o main.o matrix.o rooms.o utils.o
