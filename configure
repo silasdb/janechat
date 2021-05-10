@@ -10,7 +10,7 @@ cat <<-'EOF'
 exit 1
 }
 
-json_prefer=jansson
+json_prefer=
 
 while [ $# -gt 0 ]; do
 	case "$1" in
@@ -35,13 +35,15 @@ cat >>config.mk <<-EOF
 	CFLAGS += $(pkg-config --cflags libcurl)
 EOF
 
-if test "$json_prefer" = 'jansson' && pkg-config jansson; then
+if pkg-config jansson && (test "$json_prefer" = 'jansson' \
+ || test -z "$json_prefer"); then
 	cat >>config.mk <<-EOF
 		LDFLAGS += $(pkg-config --libs jansson)
 		CFLAGS += $(pkg-config --cflags jansson)
 		CFLAGS += -DHAVE_JANSSON=1
 	EOF
-elif test "$json_prefer" = 'json-c' && pkg-config json-c; then
+elif pkg-config json-c && (test "$json_prefer" = 'json-c' \
+ || test -z "$json_prefer"); then
 	cat >>config.mk <<-EOF
 		LDFLAGS += $(pkg-config --libs json-c)
 		CFLAGS += $(pkg-config --cflags json-c)
