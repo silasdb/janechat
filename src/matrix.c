@@ -133,7 +133,7 @@ void matrix_sync() {
 }
 
 void matrix_login(const char *server, const char *user, const char *password) {
-	matrix_server = server;
+	matrix_server = strdup(server);
 	J_T *root = J_NEWOBJ();
 	J_OBJADD(root, "type", J_NEWSTR("m.login.password"));
 	J_OBJADD(root, "user", J_NEWSTR(user));

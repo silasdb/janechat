@@ -59,11 +59,13 @@ bool do_matrix_send_token() {
 }
 
 void do_matrix_login() {
-	char *id;
+	char *id, *ptr;
 	char *password;
 
 	fputs("Matrix ID: ", stderr);
-	id = read_line_alloc();
+	ptr = read_line_alloc();
+
+	id = ptr;
 
 	if (id[0] != '@') {
 		fputs("Invalid Matrix ID\n", stderr);
@@ -93,7 +95,7 @@ void do_matrix_login() {
 	matrix_login(server, user, password);
 	memset(password, 0x0, strlen(password)); // TODO: is this optimized out?
 
-	free(id);
+	free(ptr);
 	// TODO: free(password)?
 }
 
