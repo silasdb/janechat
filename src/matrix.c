@@ -466,6 +466,10 @@ static char *send_alloc(enum HTTPMethod method, const char *path, const char *js
 	StrBuf *aux = strbuf_new();
 	CURL *handle;
 	handle = curl_easy_init();
+	/*
+	 * TODO: libcurl timeouts with SIGALRM, so we need to caught this signal
+	 * so the program doesn't abort.
+	 */
 	curl_easy_setopt(handle, CURLOPT_TIMEOUT, 60L);
 	curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT, 60L);
 	curl_easy_setopt(handle, CURLOPT_URL, strbuf_buf(url));
