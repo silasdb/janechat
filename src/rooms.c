@@ -67,6 +67,13 @@ Room *room_byname(const char *name) {
 }
 
 void room_set_name(Room *r, const char *name) {
+	/*
+	 * TODO: it seems client can receive m.room.name before m.room.create,
+	 * so we'll need to handle that.
+	 */
+	if (!r)
+		return;
+
 	free((void *)r->name);
 	r->name = name;
 }
