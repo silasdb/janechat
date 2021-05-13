@@ -127,7 +127,8 @@ void matrix_sync() {
 	strbuf_cat_c(url, "&access_token=");
 	strbuf_cat_c(url, token);
 	char *response = send_alloc(HTTP_GET, strbuf_buf(url), NULL);
-	process_sync_response(response);
+	if (response)
+		process_sync_response(response);
 	free(response);
 	strbuf_free(url);
 }
@@ -141,7 +142,8 @@ void matrix_login(const char *server, const char *user, const char *password) {
 	J_OBJADD(root, "initial_device_display_name", J_NEWSTR("janechat"));
 	const char *s = json2str_alloc(root);
 	char *response = send_alloc(HTTP_POST, "/_matrix/client/r0/login", s);
-	process_sync_response(response);
+	if (response)
+		process_sync_response(response);
 	free(response);
 	free((void *)s);
 }
@@ -438,6 +440,10 @@ send_alloc_callback(void *contents, size_t size, size_t nmemb, void *userp)
 	return size * nmemb;
 }
 
+/*
+ * Send a string to server and return response, synchronously.  Returns NULL if
+ * there is a network error or parser cannot parse string.
+ */
 static char *send_alloc(enum HTTPMethod method, const char *path, const char *json) {
 	StrBuf *url = strbuf_new();
 	strbuf_cat_c(url, "https://");
@@ -491,6 +497,10 @@ static char *send_alloc(enum HTTPMethod method, const char *path, const char *js
 
 	if (res != CURLE_OK) {
 		printf("curl error: %s\n", curl_easy_strerror(res));
+		strbuf_free(aux);
+		strbuf_free(url);
+		curl_easy_cleanup(handle);
+		return NULL;
 	}
 
 	char *output = strbuf_detach(aux);
@@ -532,7 +542,7 @@ static J_T *str2json_alloc(const char *s) {
 	if (j == NULL) {
 		/* TODO: how to handle this error? */
 		printf("Error when parsing string: %s\n", s);
-		abort();
+		return NULL;
 	}
 	return j;
 }
