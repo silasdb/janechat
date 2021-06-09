@@ -61,7 +61,7 @@
 #include "matrix.h"
 #include "utils.h"
 
-#define DEBUG_REQUEST 1
+#define DEBUG_REQUEST 0
 #define DEBUG_RESPONSE 0
 
 enum HTTPMethod {
