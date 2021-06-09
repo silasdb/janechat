@@ -47,8 +47,8 @@ struct MatrixEvent {
 typedef struct MatrixEvent MatrixEvent;
 
 enum SelectStatus {
-	SELECTSTATUS_NONE,
 	SELECTSTATUS_STDINREADY,
+	SELECTSTATUS_MATRIXRESUME,
 	SELECTSTATUS_MATRIXREADY,
 };
 

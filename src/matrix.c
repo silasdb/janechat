@@ -61,7 +61,7 @@
 #include "matrix.h"
 #include "utils.h"
 
-#define DEBUG_REQUEST 0
+#define DEBUG_REQUEST 1
 #define DEBUG_RESPONSE 0
 
 enum HTTPMethod {
@@ -91,7 +91,7 @@ fd_set fdwrite;
 fd_set fdexcep;
 int maxfd = -1;
 void (*callback)(const char *);
-int still_running = -1;
+int still_running = 0;
 
 void matrix_send_message(const char *roomid, const char *msg) {
 	StrBuf *url = strbuf_new();
@@ -447,7 +447,7 @@ send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 
 enum SelectStatus select_matrix_stdin() {
 	if (still_running == 0)
-		return SELECTSTATUS_NONE;
+		return SELECTSTATUS_MATRIXREADY;
 	struct timeval timeout;
 	long curl_timeo = -1;
 	timeout.tv_sec = 0;
@@ -473,10 +473,15 @@ enum SelectStatus select_matrix_stdin() {
 		perror("select()");
 		abort(); /* TODO */
 	}
-	if (res == 0)
-		return SELECTSTATUS_NONE;
+	if (res == 0) {
+		if (still_running)
+			return SELECTSTATUS_MATRIXRESUME;
+		return SELECTSTATUS_MATRIXREADY;
+	}
 	if (FD_ISSET(0, &fdread))
 		return SELECTSTATUS_STDINREADY;
+	if (still_running)
+		return SELECTSTATUS_MATRIXRESUME;
 	return SELECTSTATUS_MATRIXREADY;
 }
 
