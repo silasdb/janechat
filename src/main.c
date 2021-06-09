@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -40,20 +41,28 @@ int main(int argc, char *argv[]) {
 	matrix_sync();
 	char *line;
 	for (;;) {
-		if (!matrix_finished()) {
-			if (FD_ISSET(0, &fdread)) {
-				line = read_line_alloc();
-				if (line)
-					process_input(line);
-				printf("line: %s\n", line);
-				free(line);
-			} else {
-				matrix_resume();
-			}
-		} else {
+		switch (select_matrix_stdin()) {
+		case SELECTSTATUS_STDINREADY:
+			line = read_line_alloc();
+			printf("line: %s\n", line);
+			if (line)
+				process_input(line);
+			free(line);
+			break;
+		case SELECTSTATUS_MATRIXREADY:
+			matrix_resume();
+			break;
+		default:
 			sync();
-			if (logged_in)
-				matrix_sync();
+			if (logged_in) {
+				static time_t past = 0, now = 0;
+				now = time(0);
+				if (now > past + 5) {
+					matrix_sync();
+					past = now;
+				}
+			}
+			break;
 		}
 	}
 	

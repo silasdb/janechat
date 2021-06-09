@@ -445,10 +445,9 @@ send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 	return size * nmemb;
 }
 
-
-bool matrix_finished() {
+enum SelectStatus select_matrix_stdin() {
 	if (still_running == 0)
-		return true;
+		return SELECTSTATUS_NONE;
 	struct timeval timeout;
 	long curl_timeo = -1;
 	timeout.tv_sec = 0;
@@ -470,7 +469,15 @@ bool matrix_finished() {
 		&fdexcep,
 		&maxfd);
 	int res = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout);
-	return false;
+	if (res == -1) {
+		perror("select()");
+		abort(); /* TODO */
+	}
+	if (res == 0)
+		return SELECTSTATUS_NONE;
+	if (FD_ISSET(0, &fdread))
+		return SELECTSTATUS_STDINREADY;
+	return SELECTSTATUS_MATRIXREADY;
 }
 
 void matrix_resume() {
@@ -478,7 +485,7 @@ void matrix_resume() {
 	
 	/* TODO: check return value of curl_multi_perform() for errors */
 	/*
-	TODO: also, check for errors in easy handler */
+	TODO: also, check for errors in easy handler
 	if (res != CURLE_OK) {
 		printf("curl error: %s\n", curl_easy_strerror(res));
 	}
@@ -519,7 +526,31 @@ static void matrix_send(
 		 */
 	}
 
-	assert(!mhandle);
+	/* Quick-n-dirty message queue system! */
+	struct msg {
+		enum HTTPMethod method;
+		const char *path;
+		const char *json;
+	};
+	struct msg *m = malloc(sizeof(struct msg));
+	m->method = method;
+	m->path = strdup(path);
+	m->json = NULL;
+	if (json)
+		m->json = strdup(json);
+	static List *msgs = NULL;
+	if (!msgs)
+		msgs = list_new();
+	if (mhandle) {
+		list_append(msgs, m);
+		return;
+	}
+	struct msg *m2;
+	m2 = list_pop_head(msgs);
+	if (m2) {
+		list_append(msgs, m);
+		m = m2;
+	}
 
 	mhandle = curl_multi_init();
 
@@ -532,15 +563,15 @@ static void matrix_send(
 	assert(matrix_server != NULL);
 	strbuf_cat_c(url, matrix_server);
 	strbuf_cat_c(url, ":443");
-	strbuf_cat_c(url, path);
+	strbuf_cat_c(url, m->path);
 
 	StrBuf *u = strbuf_new();
 	strbuf_cat_c(u, "http://silas.net.br/index.html");
 
 #if DEBUG_REQUEST
 	printf("DEBUG_REQUEST: url: %s\n", strbuf_buf(url));
-	if (json)
-		printf("DEBUG_REQUEST: json: %s\n", json);
+	if (m->json)
+		printf("DEBUG_REQUEST: json: %s\n", m->json);
 #endif
 	
 	/* TODO: add --connect-timeout 60 --max-time 60 ? */
@@ -548,11 +579,11 @@ static void matrix_send(
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
 
-	switch (method) {
+	switch (m->method) {
 	case HTTP_POST:
 		curl_easy_setopt(handle, CURLOPT_POST, 1L);
-		curl_easy_setopt(handle, CURLOPT_POSTFIELDS, json);
-		curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, (long)strlen(json));
+		curl_easy_setopt(handle, CURLOPT_POSTFIELDS, m->json);
+		curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, (long)strlen(m->json));
 		break;
 	default:
 		break;
@@ -563,6 +594,11 @@ static void matrix_send(
 	strbuf_free(url);
 
 	curl_multi_perform(mhandle, &still_running);
+
+	/* TODO: I cannot free now because curl uses it asynchronously */
+	//free(m->json);
+	//free(m->path);
+	free(m);
 }
 
 static const char *json2str_alloc(J_T *j) {
