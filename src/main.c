@@ -49,10 +49,10 @@ int main(int argc, char *argv[]) {
 				process_input(line);
 			free(line);
 			break;
-		case SELECTSTATUS_MATRIXREADY:
+		case SELECTSTATUS_MATRIXRESUME:
 			matrix_resume();
 			break;
-		default:
+		case SELECTSTATUS_MATRIXREADY:
 			sync();
 			if (logged_in) {
 				static time_t past = 0, now = 0;
