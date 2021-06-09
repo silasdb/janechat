@@ -565,9 +565,6 @@ static void matrix_send(
 	strbuf_cat_c(url, ":443");
 	strbuf_cat_c(url, m->path);
 
-	StrBuf *u = strbuf_new();
-	strbuf_cat_c(u, "http://silas.net.br/index.html");
-
 #if DEBUG_REQUEST
 	printf("DEBUG_REQUEST: url: %s\n", strbuf_buf(url));
 	if (m->json)
