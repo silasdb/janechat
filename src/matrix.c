@@ -91,7 +91,13 @@ fd_set fdwrite;
 fd_set fdexcep;
 int maxfd = -1;
 void (*callback)(const char *);
-int still_running = 0;
+
+/*
+ * -1 -> initial state
+ *  0 -> no transfers
+ * >0 -> there are transfer running
+ */
+int still_running = -1;
 
 void matrix_send_message(const char *roomid, const char *msg) {
 	StrBuf *url = strbuf_new();
@@ -118,7 +124,6 @@ void matrix_set_token(char *tok) {
 
 
 void matrix_sync() {
-	still_running = -1;
 	StrBuf *url = strbuf_new();
 	strbuf_cat_c(url, "/_matrix/client/r0/sync");
 	if (!next_batch)
@@ -446,7 +451,7 @@ send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 }
 
 enum SelectStatus select_matrix_stdin() {
-	if (still_running == 0)
+	if (still_running == -1)
 		return SELECTSTATUS_MATRIXREADY;
 	struct timeval timeout;
 	long curl_timeo = -1;
