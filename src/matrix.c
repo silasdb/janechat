@@ -142,7 +142,7 @@ void matrix_sync() {
 }
 
 void matrix_login(const char *server, const char *user, const char *password) {
-	matrix_server = server;
+	matrix_server = strdup(server);
 	J_T *root = J_NEWOBJ();
 	J_OBJADD(root, "type", J_NEWSTR("m.login.password"));
 	J_OBJADD(root, "user", J_NEWSTR(user));
@@ -574,7 +574,12 @@ static void matrix_send(
 		printf("DEBUG_REQUEST: json: %s\n", m->json);
 #endif
 	
-	/* TODO: add --connect-timeout 60 --max-time 60 ? */
+	/*
+	 * TODO: libcurl timeouts with SIGALRM, so we need to caught this signal
+	 * so the program doesn't abort.
+	 */
+	curl_easy_setopt(handle, CURLOPT_TIMEOUT, 60L);
+	curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT, 60L);
 	curl_easy_setopt(handle, CURLOPT_URL, strbuf_buf(url));
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
@@ -629,7 +634,7 @@ static J_T *str2json_alloc(const char *s) {
 	if (j == NULL) {
 		/* TODO: how to handle this error? */
 		printf("Error when parsing string: %s\n", s);
-		abort();
+		return NULL;
 	}
 	return j;
 }

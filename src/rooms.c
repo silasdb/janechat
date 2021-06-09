@@ -31,7 +31,20 @@ Room *room_new(const char *id) {
 	}
 	room = malloc(sizeof(Room));
 	room->id = id;
-	room->name = id;
+	
+	/*
+	 * At the moment of creation, we don't know the room name yet, so we set
+	 * it to be temporarily the same as id, but, because room name can be
+	 * manipulated (like when changing a rooms name), while id is a fixed
+	 * object, so we strdup() it.
+	 *
+	 * There could be other more optimized ways to do that, like setting
+	 * name to NULL and checking if it is NULL whenever we need to print the
+	 * name, but this would make things more complex outside of the rooms
+	 * module, so we prefer this less effective but simplier way.
+	 */
+	room->name = strdup(id);
+
 	room->users = list_new();
 	room->msgs = list_new();
 	room->unread_msgs = 0;
@@ -54,6 +67,13 @@ Room *room_byname(const char *name) {
 }
 
 void room_set_name(Room *r, const char *name) {
+	/*
+	 * TODO: it seems client can receive m.room.name before m.room.create,
+	 * so we'll need to handle that.
+	 */
+	if (!r)
+		return;
+
 	free((void *)r->name);
 	r->name = name;
 }
