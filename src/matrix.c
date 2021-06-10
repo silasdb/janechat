@@ -593,9 +593,15 @@ static void matrix_send(
 
 	switch (m->method) {
 	case HTTP_POST:
+		/*
+		 * TODO: According to
+		 * https://curl.se/libcurl/c/curl_easy_setopt.html, we cannot
+		 * handle strings longer than 8 MB.  Should we validate the
+		 * string length?
+		 */
 		curl_easy_setopt(handle, CURLOPT_POST, 1L);
-		curl_easy_setopt(handle, CURLOPT_POSTFIELDS, m->json);
 		curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, (long)strlen(m->json));
+		curl_easy_setopt(handle, CURLOPT_COPYPOSTFIELDS, m->json);
 		break;
 	default:
 		break;
@@ -607,9 +613,8 @@ static void matrix_send(
 
 	curl_multi_perform(mhandle, &still_running);
 
-	/* TODO: I cannot free now because curl uses it asynchronously */
-	//free(m->json);
-	//free(m->path);
+	free(m->json);
+	free(m->path);
 	free(m);
 }
 
