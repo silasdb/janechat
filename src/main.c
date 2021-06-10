@@ -44,7 +44,6 @@ int main(int argc, char *argv[]) {
 		switch (select_matrix_stdin()) {
 		case SELECTSTATUS_STDINREADY:
 			line = read_line_alloc();
-			printf("line: %s\n", line);
 			if (line)
 				process_input(line);
 			free(line);
