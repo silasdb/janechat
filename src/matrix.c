@@ -64,6 +64,11 @@
 #define DEBUG_REQUEST 0
 #define DEBUG_RESPONSE 0
 
+struct callback_info {
+	void (*callback)(const char *);
+	StrBuf *data;
+};
+
 enum HTTPMethod {
 	HTTP_GET,
 	HTTP_POST,
@@ -84,12 +89,10 @@ static void process_sync_response(const char *);
 List *event_queue = NULL;
 
 CURLM *mhandle = NULL;
-CURL *handle = NULL;
 fd_set fdread;
 fd_set fdwrite;
 fd_set fdexcep;
 int maxfd = -1;
-void (*callback)(const char *);
 bool insync = false;
 
 /*
@@ -503,16 +506,17 @@ void matrix_resume() {
 	if (msg && msg->msg == CURLMSG_DONE) {
 		CURL *handle;
 		handle = msg->easy_handle;
-		StrBuf *output;
-		curl_easy_getinfo(handle, CURLINFO_PRIVATE, &output); /* TODO: Check return code */
+		struct callback_info *c;
+		curl_easy_getinfo(handle, CURLINFO_PRIVATE, &c); /* TODO: Check return code */
 #if DEBUG_RESPONSE
-		printf("DEBUG_RESPONSE: output: %s\n", strbuf_buf(output));
+		printf("DEBUG_RESPONSE: output: %s\n", strbuf_buf(c->data));
 #endif
 		curl_multi_remove_handle(mhandle, handle);
 		curl_easy_cleanup(handle);
-		if (callback)
-			callback(strbuf_buf(output));
-		strbuf_free(output);
+		if (c->callback)
+			c->callback(strbuf_buf(c->data));
+		strbuf_free(c->data);
+		free(c);
 	}
 }
 
@@ -520,9 +524,10 @@ static void matrix_send(
 	enum HTTPMethod method,
 	const char *path,
 	const char *json,
-	void (*c)(const char *))
+	void (*callback)(const char *))
 {
-	callback = c;
+	struct callback_info *c = malloc(sizeof(struct callback_info));
+	c->callback = callback;
 	static bool curl_initialized = false;
 	if (!curl_initialized) {
 		 /* TODO: we should enable only what we need */
@@ -534,11 +539,15 @@ static void matrix_send(
 		 */
 	}
 
+	CURL *handle = NULL;
+
 	if (!mhandle)
 		mhandle = curl_multi_init();
 
 	handle = curl_easy_init();
 	StrBuf *aux = strbuf_new();
+
+	c->data = aux;
 	
 	StrBuf *url = strbuf_new();
 	
@@ -563,7 +572,7 @@ static void matrix_send(
 	curl_easy_setopt(handle, CURLOPT_URL, strbuf_buf(url));
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
-	curl_easy_setopt(handle, CURLOPT_PRIVATE, (void *)aux);
+	curl_easy_setopt(handle, CURLOPT_PRIVATE, (void *)c);
 
 	switch (method) {
 	case HTTP_POST:
