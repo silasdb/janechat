@@ -595,10 +595,6 @@ static void matrix_send(
 	strbuf_free(url);
 
 	curl_multi_perform(mhandle, &still_running);
-
-	/* TODO */
-	//free(json);
-	//free(path);
 }
 
 static const char *json2str_alloc(J_T *j) {
