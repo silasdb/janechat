@@ -49,7 +49,6 @@ typedef struct MatrixEvent MatrixEvent;
 enum SelectStatus {
 	SELECTSTATUS_STDINREADY,
 	SELECTSTATUS_MATRIXRESUME,
-	SELECTSTATUS_MATRIXREADY,
 };
 
 void matrix_sync();

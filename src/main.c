@@ -51,17 +51,15 @@ int main(int argc, char *argv[]) {
 		case SELECTSTATUS_MATRIXRESUME:
 			matrix_resume();
 			break;
-		case SELECTSTATUS_MATRIXREADY:
-			sync();
-			if (logged_in) {
-				static time_t past = 0, now = 0;
-				now = time(0);
-				if (now > past + 5) {
-					matrix_sync();
-					past = now;
-				}
+		}
+		sync();
+		if (logged_in) {
+			static time_t past = 0, now = 0;
+			now = time(0);
+			if (now > past + 1) {
+				matrix_sync();
+				past = now;
 			}
-			break;
 		}
 	}
 	
