@@ -150,12 +150,9 @@ void matrix_login(const char *server, const char *user, const char *password) {
 
 static void process_direct_event(const char *sender, J_T *roomid) {
 	MatrixEvent *event;
-	
-	char *id = strdup(J_GETSTR(roomid));
-	
 	event = malloc(sizeof(MatrixEvent));
 	event->type = EVENT_ROOM_NAME;
-	event->roomname.id = strdup(id);
+	event->roomname.id = strdup(strdup(J_GETSTR(roomid)));
 	event->roomname.name = strdup(sender);
 	event_queue_append(event);
 }
