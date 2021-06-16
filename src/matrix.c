@@ -449,7 +449,6 @@ send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 
 enum SelectStatus select_matrix_stdin() {
 	struct timeval timeout;
-	long curl_timeo = -1;
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 100;
 	
@@ -588,9 +587,7 @@ static void matrix_send(
 	}
 
 	curl_multi_add_handle(mhandle, handle);
-	CURLMcode res;
 	strbuf_free(url);
-
 	curl_multi_perform(mhandle, &still_running);
 }
 
