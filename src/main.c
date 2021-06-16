@@ -27,6 +27,13 @@ int main(int argc, char *argv[]) {
 	/* TODO: what if the access_token expires or is invalid? */
 	if (!do_matrix_send_token())
 		do_matrix_login();
+		/*
+		 * do_matrix_login() asks for user's id and password and, using
+		 * matrix.c API, sends it to the matrix server, but it happens
+		 * asynchronously, i.e., it is set only after we EVENT_LOGGED_IN
+		 * is received.  So, we cannot call matrix_sync() right now and
+		 * have to wait until logged_in variable is set to true.
+		 */
 	else {
 		logged_in = true;
 		/*
@@ -34,11 +41,11 @@ int main(int argc, char *argv[]) {
 		 * hardcode the server we are testing against.
 		 */
 		matrix_set_server("matrix.org");
+		matrix_sync();
 	}
 
 	rooms_init();
 
-	matrix_sync();
 	char *line;
 	for (;;) {
 		switch (select_matrix_stdin()) {
