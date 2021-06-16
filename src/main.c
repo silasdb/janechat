@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "hash.h"
 #include "cache.h"
@@ -14,7 +16,7 @@
 
 bool do_matrix_send_token();
 void do_matrix_login();
-void alarm_handler();
+void sync();
 void process_input(char *s);
 
 bool logged_in = false;
@@ -25,6 +27,13 @@ int main(int argc, char *argv[]) {
 	/* TODO: what if the access_token expires or is invalid? */
 	if (!do_matrix_send_token())
 		do_matrix_login();
+		/*
+		 * do_matrix_login() asks for user's id and password and, using
+		 * matrix.c API, sends it to the matrix server, but it happens
+		 * asynchronously, i.e., it is set only after we EVENT_LOGGED_IN
+		 * is received.  So, we cannot call matrix_sync() right now and
+		 * have to wait until logged_in variable is set to true.
+		 */
 	else {
 		logged_in = true;
 		/*
@@ -32,19 +41,33 @@ int main(int argc, char *argv[]) {
 		 * hardcode the server we are testing against.
 		 */
 		matrix_set_server("matrix.org");
+		matrix_sync();
 	}
 
 	rooms_init();
 
-	signal(SIGALRM, alarm_handler);
-	alarm_handler();
-
 	char *line;
 	for (;;) {
-		line = read_line_alloc();
-		if (line)
-			process_input(line);
-		free(line);
+		switch (select_matrix_stdin()) {
+		case SELECTSTATUS_STDINREADY:
+			line = read_line_alloc();
+			if (line)
+				process_input(line);
+			free(line);
+			break;
+		case SELECTSTATUS_MATRIXRESUME:
+			matrix_resume();
+			break;
+		}
+		sync();
+		if (logged_in) {
+			static time_t past = 0, now = 0;
+			now = time(0);
+			if (now > past + 1) {
+				matrix_sync();
+				past = now;
+			}
+		}
 	}
 	
 	return 0;
@@ -179,6 +202,10 @@ void process_input(char *s) {
 		print_messages(current_room);
 		return;
 	}
+	if (logged_in && strcmp(s, "/sync") == 0) {
+		matrix_sync();
+		return;
+	}
 	if (*s == '\0')
 		return;
 	/*
@@ -197,7 +224,7 @@ void process_input(char *s) {
 	matrix_send_message(current_room->id, s);
 }
 
-void alarm_handler() {
+void sync() {
 	MatrixEvent *ev;
 	while ((ev = matrix_next_event()) != NULL) {
 		switch (ev->type) {
@@ -228,7 +255,4 @@ void alarm_handler() {
 		}
 		matrix_free_event(ev);
 	}
-	if (logged_in)
-		matrix_sync();
-	alarm(5); /* 5 seconds */
 }

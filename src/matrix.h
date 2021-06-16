@@ -1,6 +1,8 @@
 #ifndef MATRIXEV
 #define MATRIXEV
 
+#include <fcntl.h>
+
 enum MatrixEventType {
 	EVENT_MSG,
 	EVENT_ROOM_CREATE,
@@ -44,6 +46,11 @@ struct MatrixEvent {
 
 typedef struct MatrixEvent MatrixEvent;
 
+enum SelectStatus {
+	SELECTSTATUS_STDINREADY,
+	SELECTSTATUS_MATRIXRESUME,
+};
+
 void matrix_sync();
 void matrix_send_message(const char *roomid, const char *msg);
 MatrixEvent * matrix_next_event();
@@ -51,5 +58,10 @@ void matrix_set_server(char *token);
 void matrix_set_token(char *token);
 void matrix_login(const char *server, const char *user, const char *password);
 void matrix_free_event(MatrixEvent *);
+bool matrix_select();
+void matrix_resume();
+enum SelectStatus select_matrix_stdin();
+
+extern fd_set fdread;
 
 #endif

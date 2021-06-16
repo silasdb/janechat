@@ -64,6 +64,11 @@
 #define DEBUG_REQUEST 0
 #define DEBUG_RESPONSE 0
 
+struct callback_info {
+	void (*callback)(const char *);
+	StrBuf *data;
+};
+
 enum HTTPMethod {
 	HTTP_GET,
 	HTTP_POST,
@@ -75,12 +80,27 @@ const char *matrix_server = NULL;
 
 static void event_queue_append(MatrixEvent *);
 static void event_queue_prepend(MatrixEvent *);
-static char *send_alloc(enum HTTPMethod method, const char *path, const char *json);
+static void matrix_send(enum HTTPMethod, const char *, const char *,
+	void (*callback)(const char *));
 static const char * json2str_alloc(J_T *);
 static J_T *str2json_alloc(const char *);
 static void process_sync_response(const char *);
 
 List *event_queue = NULL;
+
+CURLM *mhandle = NULL;
+fd_set fdread;
+fd_set fdwrite;
+fd_set fdexcep;
+int maxfd = -1;
+bool insync = false;
+
+/*
+ * -1 -> initial state
+ *  0 -> no transfers
+ * >0 -> there are transfer running
+ */
+int still_running = -1;
 
 void matrix_send_message(const char *roomid, const char *msg) {
 	StrBuf *url = strbuf_new();
@@ -92,8 +112,7 @@ void matrix_send_message(const char *roomid, const char *msg) {
 	J_OBJADD(root, "msgtype", J_NEWSTR("m.text"));
 	J_OBJADD(root, "body", J_NEWSTR(msg));
 	const char *s = json2str_alloc(root);
-	char *response = send_alloc(HTTP_POST, strbuf_buf(url), s);
-	free(response);
+	matrix_send(HTTP_POST, strbuf_buf(url), s, NULL);
 	free((void *)s);
 	strbuf_free(url);
 }
@@ -108,28 +127,21 @@ void matrix_set_token(char *tok) {
 
 
 void matrix_sync() {
+	if (insync)
+		return;
+	insync = true;
 	StrBuf *url = strbuf_new();
 	strbuf_cat_c(url, "/_matrix/client/r0/sync");
 	if (!next_batch)
 		strbuf_cat_c(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
 	else {
-		/*
-		 * TODO: because of the blocking nature of janechat (curl
-		 * "blocks" until it receives a response) we set timeout=5000 (5
-		 * seconds) to prevent long polling, otherwise we would not be
-		 * able to return to the main loop that reads stdin.  This will
-		 * be fixed in the future.
-		 */
 		strbuf_cat_c(url, "?since=");
 		strbuf_cat_c(url, next_batch);
-		strbuf_cat_c(url, "&timeout=5000");
+		strbuf_cat_c(url, "&timeout=10000");
 	}
 	strbuf_cat_c(url, "&access_token=");
 	strbuf_cat_c(url, token);
-	char *response = send_alloc(HTTP_GET, strbuf_buf(url), NULL);
-	if (response)
-		process_sync_response(response);
-	free(response);
+	matrix_send(HTTP_GET, strbuf_buf(url), NULL, process_sync_response);
 	strbuf_free(url);
 }
 
@@ -141,10 +153,7 @@ void matrix_login(const char *server, const char *user, const char *password) {
 	J_OBJADD(root, "password", J_NEWSTR(password));
 	J_OBJADD(root, "initial_device_display_name", J_NEWSTR("janechat"));
 	const char *s = json2str_alloc(root);
-	char *response = send_alloc(HTTP_POST, "/_matrix/client/r0/login", s);
-	if (response)
-		process_sync_response(response);
-	free(response);
+	matrix_send(HTTP_POST, "/_matrix/client/r0/login", s, process_sync_response);
 	free((void *)s);
 }
 
@@ -248,6 +257,7 @@ static void process_error(J_T *root) {
 }
 
 static void process_sync_response(const char *output) {
+	insync = false;
 	if (!output) {
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
 		event->type = EVENT_CONN_ERROR;
@@ -430,31 +440,90 @@ void matrix_free_event(MatrixEvent *event) {
 
 /* Callback used for libcurl to retrieve web content. */
 static size_t
-send_alloc_callback(void *contents, size_t size, size_t nmemb, void *userp)
+send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 {
 	StrBuf *s = (StrBuf *)userp;
 	strbuf_ncat_c(s, contents, size * nmemb);
 	return size * nmemb;
 }
 
-/*
- * Send a string to server and return response, synchronously.  Returns NULL if
- * there is a network error or parser cannot parse string.
- */
-static char *send_alloc(enum HTTPMethod method, const char *path, const char *json) {
-	StrBuf *url = strbuf_new();
-	strbuf_cat_c(url, "https://");
-	assert(matrix_server != NULL);
-	strbuf_cat_c(url, matrix_server);
-	strbuf_cat_c(url, ":443");
-	strbuf_cat_c(url, path);
+enum SelectStatus select_matrix_stdin() {
+	struct timeval timeout;
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 100;
+	
+	/* TODO: use curl_multi_timeout()? */
 
-#if DEBUG_REQUEST
-	printf("DEBUG_REQUEST: url: %s\n", strbuf_buf(url));
-	if (json)
-		printf("DEBUG_REQUEST: json: %s\n", json);
+	FD_ZERO(&fdread);
+	FD_ZERO(&fdwrite);
+	FD_ZERO(&fdexcep);
+
+	/* TODO: place it in a better place */
+	FD_SET(0 /* TODO: stdin */, &fdread);
+		
+	curl_multi_fdset(
+		mhandle,
+		&fdread,
+		&fdwrite,
+		&fdexcep,
+		&maxfd);
+	/* TODO: why (maxfd + 2) ?*/
+	int res = select(maxfd + 2, &fdread, &fdwrite, &fdexcep, &timeout);
+	switch (res) {
+	case -1:
+		perror("select()");
+		abort(); /* TODO */
+		break;
+	case 0:
+		if (still_running)
+			return SELECTSTATUS_MATRIXRESUME;
+		break;
+	default: /* res > 0 */
+		if (FD_ISSET(0, &fdread))
+			return SELECTSTATUS_STDINREADY;
+		break;
+	}
+	return SELECTSTATUS_MATRIXRESUME;
+}
+
+void matrix_resume() {
+	curl_multi_perform(mhandle, &still_running);
+	
+	/* TODO: check return value of curl_multi_perform() for errors */
+	/*
+	TODO: also, check for errors in easy handler
+	if (res != CURLE_OK) {
+		printf("curl error: %s\n", curl_easy_strerror(res));
+	}
+	*/
+	int msgs_in_queue;
+	CURLMsg *msg;
+	msg = curl_multi_info_read(mhandle, &msgs_in_queue);
+	if (msg && msg->msg == CURLMSG_DONE) {
+		CURL *handle;
+		handle = msg->easy_handle;
+		struct callback_info *c;
+		curl_easy_getinfo(handle, CURLINFO_PRIVATE, &c); /* TODO: Check return code */
+#if DEBUG_RESPONSE
+		printf("DEBUG_RESPONSE: output: %s\n", strbuf_buf(c->data));
 #endif
+		curl_multi_remove_handle(mhandle, handle);
+		curl_easy_cleanup(handle);
+		if (c->callback)
+			c->callback(strbuf_buf(c->data));
+		strbuf_free(c->data);
+		free(c);
+	}
+}
 
+static void matrix_send(
+	enum HTTPMethod method,
+	const char *path,
+	const char *json,
+	void (*callback)(const char *))
+{
+	struct callback_info *c = malloc(sizeof(struct callback_info));
+	c->callback = callback;
 	static bool curl_initialized = false;
 	if (!curl_initialized) {
 		 /* TODO: we should enable only what we need */
@@ -466,9 +535,30 @@ static char *send_alloc(enum HTTPMethod method, const char *path, const char *js
 		 */
 	}
 
-	StrBuf *aux = strbuf_new();
-	CURL *handle;
+	CURL *handle = NULL;
+
+	if (!mhandle)
+		mhandle = curl_multi_init();
+
 	handle = curl_easy_init();
+	StrBuf *aux = strbuf_new();
+
+	c->data = aux;
+	
+	StrBuf *url = strbuf_new();
+	
+	strbuf_cat_c(url, "https://");
+	assert(matrix_server != NULL);
+	strbuf_cat_c(url, matrix_server);
+	strbuf_cat_c(url, ":443");
+	strbuf_cat_c(url, path);
+
+#if DEBUG_REQUEST
+	printf("DEBUG_REQUEST: url: %s\n", strbuf_buf(url));
+	if (json)
+		printf("DEBUG_REQUEST: json: %s\n", json);
+#endif
+	
 	/*
 	 * TODO: libcurl timeouts with SIGALRM, so we need to caught this signal
 	 * so the program doesn't abort.
@@ -476,39 +566,29 @@ static char *send_alloc(enum HTTPMethod method, const char *path, const char *js
 	curl_easy_setopt(handle, CURLOPT_TIMEOUT, 60L);
 	curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT, 60L);
 	curl_easy_setopt(handle, CURLOPT_URL, strbuf_buf(url));
-	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_alloc_callback);
+	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
+	curl_easy_setopt(handle, CURLOPT_PRIVATE, (void *)c);
 
 	switch (method) {
 	case HTTP_POST:
+		/*
+		 * TODO: According to
+		 * https://curl.se/libcurl/c/curl_easy_setopt.html, we cannot
+		 * handle strings longer than 8 MB.  Should we validate the
+		 * string length?
+		 */
 		curl_easy_setopt(handle, CURLOPT_POST, 1L);
-		curl_easy_setopt(handle, CURLOPT_POSTFIELDS, json);
 		curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, (long)strlen(json));
+		curl_easy_setopt(handle, CURLOPT_COPYPOSTFIELDS, json);
 		break;
 	default:
 		break;
 	}
-	
-	CURLcode res;
-	res = curl_easy_perform(handle);
 
-	if (res != CURLE_OK) {
-		printf("curl error: %s\n", curl_easy_strerror(res));
-		strbuf_free(aux);
-		strbuf_free(url);
-		curl_easy_cleanup(handle);
-		return NULL;
-	}
-
-	char *output = strbuf_detach(aux);
-	strbuf_free(aux);
-
-	curl_easy_cleanup(handle);
-#if DEBUG_RESPONSE
-	printf("DEBUG_RESPONSE: output: %s\n", output);
-#endif
+	curl_multi_add_handle(mhandle, handle);
 	strbuf_free(url);
-	return output;
+	curl_multi_perform(mhandle, &still_running);
 }
 
 static const char *json2str_alloc(J_T *j) {
