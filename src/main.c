@@ -202,6 +202,10 @@ void process_input(char *s) {
 		print_messages(current_room);
 		return;
 	}
+	if (logged_in && strcmp(s, "/sync") == 0) {
+		matrix_sync();
+		return;
+	}
 	if (*s == '\0')
 		return;
 	/*
