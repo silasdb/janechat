@@ -1,32 +1,6 @@
 #!/bin/sh
 set -eu
 
-usage () {
-cat <<-'EOF'
-	Configure help:
-	--with-jansson		Use jansson JSON parser [yes]
-	--with-json-c		Use json-c JSON parser
-	EOF
-exit 1
-}
-
-json_prefer=
-
-while [ $# -gt 0 ]; do
-	case "$1" in
-	--with-jansson)
-		json_prefer='jansson'
-		;;
-	--with-json-c)
-		json_prefer='json-c'
-		;;
-	*)
-		usage
-		;;
-	esac
-	shift 1
-done
-
 >config.mk
 
 # TODO: use pkg-config or curl-config?
@@ -35,21 +9,7 @@ cat >>config.mk <<-EOF
 	CFLAGS += $(pkg-config --cflags libcurl)
 EOF
 
-if pkg-config jansson && (test "$json_prefer" = 'jansson' \
- || test -z "$json_prefer"); then
-	cat >>config.mk <<-EOF
-		LDFLAGS += $(pkg-config --libs jansson)
-		CFLAGS += $(pkg-config --cflags jansson)
-		CFLAGS += -DHAVE_JANSSON=1
-	EOF
-elif pkg-config json-c && (test "$json_prefer" = 'json-c' \
- || test -z "$json_prefer"); then
-	cat >>config.mk <<-EOF
-		LDFLAGS += $(pkg-config --libs json-c)
-		CFLAGS += $(pkg-config --cflags json-c)
-		CFLAGS += -DHAVE_JSONC=1
-	EOF
-else
-	echo >&2 'Error: no jansson nor json-c found.'
-	exit 1
-fi
+cat >>config.mk <<-EOF
+	LDFLAGS += $(pkg-config --libs jansson)
+	CFLAGS += $(pkg-config --cflags jansson)
+EOF
