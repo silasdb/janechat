@@ -57,6 +57,7 @@ static void event_queue_append(MatrixEvent *);
 static void event_queue_prepend(MatrixEvent *);
 static void matrix_send(enum HTTPMethod, const char *, const char *,
 	void (*callback)(const char *));
+static json_t *json_path(json_t *root, const char *, ...);
 static const char * json2str_alloc(json_t *);
 static json_t *str2json_alloc(const char *);
 static void process_sync_response(const char *);
@@ -145,9 +146,7 @@ static void process_room_event(json_t *item, const char *roomid) {
 	json_t *type = json_object_get(item, "type");
 	assert(type != NULL);
 	if (strcmp(json_string_value(type), "m.room.name") == 0) {
-		json_t *content = json_object_get(item, "content");
-		assert(content != NULL);
-		json_t *nam = json_object_get(content, "name");
+		json_t *nam = json_path(item, "content", "name", NULL);
 		assert(nam != NULL);
 		const char *name = json_string_value(nam);
 		char *id = strdup(roomid);
@@ -171,9 +170,7 @@ static void process_room_event(json_t *item, const char *roomid) {
 		 */
 		event_queue_prepend(event);
 	} else if (strcmp(json_string_value(type), "m.room.member") == 0) {
-		json_t *content = json_object_get(item, "content");
-		assert(content != NULL);
-		json_t *membership = json_object_get(content, "membership");
+		json_t *membership = json_path(item, "content", "membership", NULL);
 		assert(membership != NULL);
 		if (strcmp(json_string_value(membership), "join") != 0)
 			return;
@@ -299,9 +296,8 @@ static void process_sync_response(const char *output) {
 	json_t *item;
 	json_object_foreach(join, roomid, item)
 	{
-		json_t *state = json_object_get(item, "state");
-		assert(state != NULL);
-		json_t *events = json_object_get(state, "events");
+		json_t *events;
+		events = json_path(item, "state", "events", NULL);
 		assert(events != NULL);
 		size_t i;
 		json_t *event;
@@ -309,9 +305,7 @@ static void process_sync_response(const char *output) {
 			assert(item != NULL);
 			process_room_event(event, roomid);
 		}
-		json_t *timeline = json_object_get(item, "timeline");
-		assert(timeline != NULL);
-		events = json_object_get(timeline, "events");
+		events = json_path(item, "timeline", "events", NULL);
 		assert(events != NULL);
 		json_array_foreach(events, i, item) {
 			assert(item != NULL);
@@ -529,6 +523,33 @@ static void matrix_send(
 	curl_multi_add_handle(mhandle, handle);
 	strbuf_free(url);
 	curl_multi_perform(mhandle, &still_running);
+}
+
+/*
+ * Given a json_t *root object, returns a deep nested object whose path matches
+ * variable argument path. The argument list must end with NULL to indicate it
+ * has finished.
+ *
+ * Example: in order to retrieve object that has jq's path .foo.bar, one should
+ * call this function as json_path(obj, "foo", "bar", NULL)
+ */
+static json_t *json_path(json_t *root, const char *path, ...) {
+	va_list args;
+	va_start(args, path);
+	if (!path)
+		return root;
+	do {
+		if (*path == '^') {
+			void *iter = json_object_iter(root);
+			root = json_object_iter_value(iter);
+		} else {
+			root = json_object_get(root, path);
+		}
+		if (!root)
+			return root;
+		path = va_arg(args, const char *);
+	} while (path != NULL);
+	return root;
 }
 
 static const char *json2str_alloc(json_t *j) {
