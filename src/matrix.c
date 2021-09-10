@@ -528,7 +528,8 @@ static void matrix_send(
 /*
  * Given a json_t *root object, returns a deep nested object whose path matches
  * variable argument path. The argument list must end with NULL to indicate it
- * has finished.
+ * has finished. To return the first object (jansson preserves the order in
+ * which they are inserted), use "^".
  *
  * Example: in order to retrieve object that has jq's path .foo.bar, one should
  * call this function as json_path(obj, "foo", "bar", NULL)
