@@ -12,6 +12,8 @@
 #include "cache.h"
 #include "matrix.h"
 #include "rooms.h"
+#include "ui.h"
+#include "ui-cli.h"
 #include "utils.h"
 
 bool do_matrix_send_token();
@@ -20,8 +22,6 @@ void sync();
 void process_input(char *s);
 
 bool logged_in = false;
-
-Room *current_room = NULL;
 
 int main(int argc, char *argv[]) {
 	/* TODO: what if the access_token expires or is invalid? */
@@ -46,14 +46,22 @@ int main(int argc, char *argv[]) {
 
 	rooms_init();
 
-	char *line;
+	UiEvent ev;
 	for (;;) {
 		switch (select_matrix_stdin()) {
 		case SELECTSTATUS_STDINREADY:
-			line = read_line_alloc();
-			if (line)
-				process_input(line);
-			free(line);
+			ev = ui_cli_iter();
+			switch (ev.type) {
+			case UIEVENTTYPE_SYNC:
+				if (logged_in)
+					matrix_sync();
+				break;
+			case UIEVENTTYPE_SENDMSG:
+				matrix_send_message(ev.msg.roomid, ev.msg.text);
+				break;
+			case UIEVENTTYPE_NONE:
+				break;
+			}
 			break;
 		case SELECTSTATUS_MATRIXRESUME:
 			matrix_resume();
@@ -115,7 +123,10 @@ void do_matrix_login() {
 	
 	password = getpass("Password: ");
 
+	puts("Logging in...");
 	matrix_login(server, user, password);
+	puts("Logged in.");
+
 	memset(password, 0x0, strlen(password)); // TODO: is this optimized out?
 
 	free(ptr);
@@ -138,90 +149,10 @@ void process_room_join(const char *roomid, const char *sender) {
 	room_append_user(room, strdup(sender));
 }
 
-void print_msg(const char *roomname, const char *sender, const char *text) {
-	printf("%c[38;5;4m%s%c[m: %c[38;5;2m%s%c[m: %s\n",
-		0x1b, roomname, 0x1b, 0x1b, sender, 0x1b, text);
-}
-
 void process_msg(const char *roomid, const char *sender, const char *text) {
 	Room *room = room_byid(roomid);
 	room_append_msg(room, strdup(sender), strdup(text));
-	if (room == current_room)
-		print_msg(room->name, sender, text);
-	else
-		room->unread_msgs++;
-}
-
-void print_messages(Room *room) {
-	ROOM_MESSAGES_FOREACH(room, iter) {
-		Msg *msg = (Msg *)iter;
-		print_msg(room->name, msg->sender, msg->text);
-	}
-	room->unread_msgs = 0;
-}
-
-/*
- * For now, possible commands are:
- *
- * /quit -> exit this program
- * /stat -> list all rooms and number of unread messages
- * /names -> list all users in current room
- * /join room -> change the current room
- * text -> send "text" to the current room
- */
-void process_input(char *s) {
-	if (strcmp(s, "/quit") == 0)
-		exit(0);
-	if (strcmp(s, "/stat") == 0) {
-		ROOMS_FOREACH(iter) {
-			Room *room = iter;
-			printf("%s (unread messages: %zu)\n",
-				room->name, room->unread_msgs);
-		}
-		return;
-	}
-	if (strcmp(s, "/names") == 0) {
-		if (!current_room) {
-			puts("No room selected.  Text not sent.\n");
-			return;
-		}
-		ROOM_USERS_FOREACH(current_room, iter) {
-			printf("%s\n", (char *)iter);
-		}
-		return;
-	}
-	if (strncmp(s, "/join ", strlen("/join ")) == 0) {
-		s += strlen("/join ");
-		Room *room = room_byname(s);
-		if (!room) {
-			printf("Room \"%s\" not found.\n", s);
-			return;
-		}
-		current_room = room;
-		printf("Switched to room %s\n", s);
-		print_messages(current_room);
-		return;
-	}
-	if (logged_in && strcmp(s, "/sync") == 0) {
-		matrix_sync();
-		return;
-	}
-	if (*s == '\0')
-		return;
-	/*
-	 * Prevent misspelled commands to be sent to current_room.  This has the
-	 * drawback of not allowing user to send text that start with "/" (being
-	 * necessary to prepend it with a trailing space
-	 */
-	if (*s == '/') {
-		printf("Invalid command: %s\n", s);
-		return;
-	}
-	if (!current_room) {
-		puts("No room selected.  Text not sent.\n");
-		return;
-	}
-	matrix_send_message(current_room->id, s);
+	ui_cli_new_msg(room, sender, text);
 }
 
 void sync() {
