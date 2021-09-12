@@ -35,6 +35,11 @@ StrBuf *strbuf_new() {
 }
 
 void strbuf_cat_c(StrBuf *ss, const char *s) {
+	/*
+	 * TODO: It is now O(2*strlen(s))) but we can make it O(strlen(s)) by
+	 * not calculating strlen(s) and passing to strbuf_ncat_c() but
+	 * appending characters to ss until we find '\0'.
+	 */
 	strbuf_ncat_c(ss, s, strlen(s));
 }
 
