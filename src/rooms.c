@@ -83,6 +83,7 @@ void room_append_msg(Room *room, const char *sender, const char *text) {
 	msg->sender = sender;
 	msg->text = text;
 	list_append(room->msgs, msg);
+	room->unread_msgs++;
 }
 
 void room_append_user(Room *room, const char *sender) {
