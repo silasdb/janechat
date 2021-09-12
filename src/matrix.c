@@ -90,7 +90,7 @@ void matrix_send_message(const char *roomid, const char *msg) {
 	const char *s = json2str_alloc(root);
 	matrix_send(HTTP_POST, strbuf_buf(url), s, NULL);
 	free((void *)s);
-	strbuf_free(url);
+	strbuf_decref(url);
 }
 
 void matrix_set_server(char *s) {
@@ -118,7 +118,7 @@ void matrix_sync() {
 	strbuf_cat_c(url, "&access_token=");
 	strbuf_cat_c(url, token);
 	matrix_send(HTTP_GET, strbuf_buf(url), NULL, process_sync_response);
-	strbuf_free(url);
+	strbuf_decref(url);
 }
 
 void matrix_login(const char *server, const char *user, const char *password) {
@@ -445,7 +445,7 @@ void matrix_resume() {
 		curl_easy_cleanup(handle);
 		if (c->callback)
 			c->callback(strbuf_buf(c->data));
-		strbuf_free(c->data);
+		strbuf_decref(c->data);
 		free(c);
 	}
 }
@@ -521,7 +521,7 @@ static void matrix_send(
 	}
 
 	curl_multi_add_handle(mhandle, handle);
-	strbuf_free(url);
+	strbuf_decref(url);
 	curl_multi_perform(mhandle, &still_running);
 }
 
