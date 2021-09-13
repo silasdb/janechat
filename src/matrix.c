@@ -137,8 +137,8 @@ static void process_direct_event(const char *sender, json_t *roomid) {
 	MatrixEvent *event;
 	event = malloc(sizeof(MatrixEvent));
 	event->type = EVENT_ROOM_NAME;
-	event->roomname.id = strdup(json_string_value(roomid));
-	event->roomname.name = strdup(sender);
+	event->roomname.id = strbuf_new_c(json_string_value(roomid));
+	event->roomname.name = strbuf_new_c(sender);
 	event_queue_append(event);
 }
 
