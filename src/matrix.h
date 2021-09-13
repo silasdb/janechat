@@ -18,27 +18,27 @@ struct MatrixEvent {
 	union {
 		// TODO: why fields above are not const?
 		struct MatrixEventMsg {
-			char *roomid;
-			char *sender;
-			char *text;
+			StrBuf *roomid;
+			StrBuf *sender;
+			StrBuf *text;
 		} msg;
 		struct MatrixEventRoomCreate {
-			char *id;
+			StrBuf *id;
 		} roomcreate;
 		struct MatrixEventRoomName {
-			char *id;
-			char *name;
+			StrBuf *id;
+			StrBuf *name;
 		} roomname;
 		struct MatrixEventRoomJoin {
-			char *roomid;
-			char *sender;
+			StrBuf *roomid;
+			StrBuf *sender;
 		} roomjoin;
 		struct MatrixEventError {
-			char *errorcode;
-			char *error;
+			StrBuf *errorcode;
+			StrBuf *error;
 		} error;
 		struct MatrixEventLogin {
-			char *token;
+			StrBuf *token;
 		} login;
 		// MatrixEventConnError - empty struct
 	};

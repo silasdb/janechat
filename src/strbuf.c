@@ -34,6 +34,13 @@ StrBuf *strbuf_new() {
 	return ss;
 }
 
+StrBuf *strbuf_new_c(const char *s) {
+	StrBuf *sb;
+	sb = strbuf_new();
+	strbuf_cat_c(sb, s);
+	return sb;
+}
+
 void strbuf_cat_c(StrBuf *ss, const char *s) {
 	strbuf_ncat_c(ss, s, strlen(s));
 }
