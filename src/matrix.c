@@ -2,23 +2,8 @@
  * In this file there is the json decode of the Matrix protocol, according to
  * the protocol specified in https://matrix.org/docs/spec/client_server/latest
  *
- * External JSON parsers are used.  For now, one of the following parsers are
- * needed:
- *
- * - jansson (https://github.com/akheron/jansson/) (preferred)
- * - json-c (https://github.com/json-c/json-c)
- *
- * More files will be supported in the future, or maybe we'll embed one?
- *
- * We set macros to function names of parsers and try to use them whenever
- * possible, but there is some places where we cannot just use macros and have
- * to separate code related to each parser using #if .. #else .. #endif
- * conditionals.
- *
- * This code turned to be rather confusing.  In the future, we might create a
- * generic json wrapper for every parser (json-wrapper-jansson.c,
- * json-wrapper-json-c.c, etc.) that share a common interface (json-wrapper.h)
- * so we don't have to deal with different parsers in the same code file.
+ * External JSON parsers are used.  For now, only jansson
+ * (https://github.com/akheron/jansson/) is supported
  */
 
 #include <assert.h>
