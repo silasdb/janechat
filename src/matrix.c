@@ -54,7 +54,6 @@ char *token = NULL;
 const char *matrix_server = NULL;
 
 static void event_queue_append(MatrixEvent *);
-static void event_queue_prepend(MatrixEvent *);
 static void matrix_send(enum HTTPMethod, const char *, const char *,
 	void (*callback)(const char *));
 static json_t *json_path(json_t *root, const char *, ...);
@@ -160,15 +159,7 @@ static void process_room_event(json_t *item, const char *roomid) {
 		MatrixEvent *event = malloc(sizeof(MatrixEvent));
 		event->type = EVENT_ROOM_CREATE;
 		event->roomcreate.id = strdup(roomid);
-		/*
-		 * m.room.create events come in room state events list, which
-		 * are unsorted.  But when passing EVENT_ROOM_CREATE events to
-		 * upper layers, we have to pass it before other events that
-		 * alter the room state (because the room object need already to
-		 * be created in order to receive these other events), so we
-		 * prepend it to the event queue.
-		 */
-		event_queue_prepend(event);
+		event_queue_append(event);
 	} else if (strcmp(json_string_value(type), "m.room.member") == 0) {
 		json_t *membership = json_path(item, "content", "membership", NULL);
 		assert(membership != NULL);
@@ -258,6 +249,39 @@ static void process_sync_response(const char *output) {
 		return;
 	}
 
+	json_t *rooms = json_object_get(root, "rooms");
+	if (!rooms) {
+		json_decref(root);
+		return;
+	}
+	json_t *join = json_object_get(rooms, "join");
+	if (!join) {
+		json_decref(root);
+		return;
+	}
+
+	const char *roomid;
+	json_t *item;
+
+	/*
+	 * m.room.create events come in room state events list, which is
+	 * unsorted.  But when passing EVENT_ROOM_CREATE events to upper layers,
+	 * we have to pass it before other events that alter the room state
+	 * (because the room object need already to be created in order to
+	 * receive these other events), so we look for events of this type first.
+	 */
+	json_object_foreach(join, roomid, item) {
+		json_t *events;
+		events = json_path(item, "state", "events", NULL);
+		size_t i;
+		json_t *event;
+		json_array_foreach(events, i, event) {
+			json_t *type = json_object_get(event, "type");
+			if (strcmp(json_string_value(type), "m.room.create") == 0)
+				process_room_event(event, roomid);
+		}
+	}
+
 	json_t *events = json_path(root, "account_data", "events", NULL);
 	if (events) {
 		size_t i;
@@ -282,18 +306,6 @@ static void process_sync_response(const char *output) {
 		}
 	}
 
-	json_t *rooms = json_object_get(root, "rooms");
-	if (!rooms) {
-		json_decref(root);
-		return;
-	}
-	json_t *join = json_object_get(rooms, "join");
-	if (!join) {
-		json_decref(root);
-		return;
-	}
-	const char *roomid;
-	json_t *item;
 	json_object_foreach(join, roomid, item)
 	{
 		json_t *events;
@@ -302,8 +314,9 @@ static void process_sync_response(const char *output) {
 		size_t i;
 		json_t *event;
 		json_array_foreach(events, i, event) {
-			assert(item != NULL);
-			process_room_event(event, roomid);
+			json_t *type = json_object_get(event, "type");
+			if (strcmp(json_string_value(type), "m.room.create") != 0)
+				process_room_event(event, roomid);
 		}
 		events = json_path(item, "timeline", "events", NULL);
 		assert(events != NULL);
@@ -325,12 +338,6 @@ static void event_queue_append(MatrixEvent *event) {
 	if (!event_queue)
 		event_queue = list_new();
 	list_append(event_queue, event);
-}
-
-static void event_queue_prepend(MatrixEvent *event) {
-	if (!event_queue)
-		event_queue = list_new();
-	list_prepend(event_queue, event);
 }
 
 // a.k.a. dequeue_event
