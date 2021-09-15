@@ -257,10 +257,9 @@ static void process_sync_response(const char *output) {
 		json_decref(root);
 		return;
 	}
-	json_t *account_data = json_object_get(root, "account_data");
-	if (account_data) {
-		json_t *events = json_object_get(account_data, "events");
-		assert(events != NULL);
+
+	json_t *events = json_path(root, "account_data", "events", NULL);
+	if (events) {
 		size_t i;
 		json_t *item;
 		json_array_foreach(events, i, item) {
@@ -282,6 +281,7 @@ static void process_sync_response(const char *output) {
 			}
 		}
 	}
+
 	json_t *rooms = json_object_get(root, "rooms");
 	if (!rooms) {
 		json_decref(root);
