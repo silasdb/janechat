@@ -122,8 +122,8 @@ void matrix_login(const char *server, const char *user, const char *password) {
 static void process_direct_event(const char *sender, json_t *roomid) {
 	MatrixEvent event;
 	event.type = EVENT_ROOM_NAME;
-	event.roomname.id = json_string_value(roomid);
-	event.roomname.name = sender;
+	event.roomname.id = (char *)json_string_value(roomid);
+	event.roomname.name = (char *)sender;
 	event_handler_callback(event);
 }
 
@@ -146,7 +146,7 @@ static void process_room_event(json_t *item, const char *roomid) {
 	} else if (strcmp(json_string_value(type), "m.room.create") == 0) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_CREATE;
-		event.roomcreate.id = roomid;
+		event.roomcreate.id = (char *)roomid;
 		event_handler_callback(event);
 	} else if (strcmp(json_string_value(type), "m.room.member") == 0) {
 		json_t *membership = json_path(item, "content", "membership", NULL);
@@ -157,8 +157,8 @@ static void process_room_event(json_t *item, const char *roomid) {
 		assert(sender != NULL);
 		MatrixEvent event;
 		event.type = EVENT_ROOM_JOIN;
-		event.roomjoin.roomid = roomid;
-		event.roomjoin.sender = json_string_value(sender);
+		event.roomjoin.roomid = (char *)roomid;
+		event.roomjoin.sender = (char *)json_string_value(sender);
 		event_handler_callback(event);
 	}
 }
@@ -185,15 +185,15 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 		assert(body != NULL);
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.sender = json_string_value(sender);
-		event.msg.roomid = roomid;
-		event.msg.text = json_string_value(body);
+		event.msg.sender = (char *)json_string_value(sender);
+		event.msg.roomid = (char *)roomid;
+		event.msg.text = (char *)json_string_value(body);
 		event_handler_callback(event);
 	} else if (strcmp(json_string_value(type), "m.room.encrypted") == 0) {
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.sender = json_string_value(sender);
-		event.msg.roomid = roomid;
+		event.msg.sender = (char *)json_string_value(sender);
+		event.msg.roomid = (char *)roomid;
 		event.msg.text = "== encrypted message ==";
 		event_handler_callback(event);
 	}
