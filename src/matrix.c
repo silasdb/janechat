@@ -205,6 +205,8 @@ static void process_error(json_t *root) {
 	event.error.errorcode = strdup(json_string_value(json_object_get(root, "errcode")));
 	event.error.error = strdup(json_string_value(json_object_get(root, "error")));
 	event_handler_callback(event);
+	free(event.error.errorcode);
+	free(event.error.error);
 }
 
 static void process_sync_response(const char *output) {
