@@ -37,16 +37,14 @@ enum HTTPMethod {
 char *next_batch = NULL;
 char *token = NULL;
 const char *matrix_server = NULL;
+void (*event_handler_callback)(MatrixEvent) = NULL;
 
-static void event_queue_append(MatrixEvent *);
 static void matrix_send(enum HTTPMethod, const char *, const char *,
 	void (*callback)(const char *));
 static json_t *json_path(json_t *root, const char *, ...);
 static const char * json2str_alloc(json_t *);
 static json_t *str2json_alloc(const char *);
 static void process_sync_response(const char *);
-
-List *event_queue = NULL;
 
 CURLM *mhandle = NULL;
 fd_set fdread;
@@ -61,6 +59,10 @@ bool insync = false;
  * >0 -> there are transfer running
  */
 int still_running = -1;
+
+void matrix_set_event_handler(void (*callback)(MatrixEvent)) {
+	event_handler_callback = callback;
+}
 
 void matrix_send_message(const char *roomid, const char *msg) {
 	StrBuf *url = strbuf_new();
@@ -118,12 +120,11 @@ void matrix_login(const char *server, const char *user, const char *password) {
 }
 
 static void process_direct_event(const char *sender, json_t *roomid) {
-	MatrixEvent *event;
-	event = malloc(sizeof(MatrixEvent));
-	event->type = EVENT_ROOM_NAME;
-	event->roomname.id = strdup(json_string_value(roomid));
-	event->roomname.name = strdup(sender);
-	event_queue_append(event);
+	MatrixEvent event;
+	event.type = EVENT_ROOM_NAME;
+	event.roomname.id = json_string_value(roomid);
+	event.roomname.name = sender;
+	event_handler_callback(event);
 }
 
 static void process_room_event(json_t *item, const char *roomid) {
@@ -135,16 +136,18 @@ static void process_room_event(json_t *item, const char *roomid) {
 		const char *name = json_string_value(nam);
 		char *id = strdup(roomid);
 		char *nn = strdup(name);
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_ROOM_NAME;
-		event->roomname.id = id;
-		event->roomname.name = nn;
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_ROOM_NAME;
+		event.roomname.id = id;
+		event.roomname.name = nn;
+		event_handler_callback(event);
+		free(event.roomname.id);
+		free(event.roomname.name);
 	} else if (strcmp(json_string_value(type), "m.room.create") == 0) {
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_ROOM_CREATE;
-		event->roomcreate.id = strdup(roomid);
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_ROOM_CREATE;
+		event.roomcreate.id = roomid;
+		event_handler_callback(event);
 	} else if (strcmp(json_string_value(type), "m.room.member") == 0) {
 		json_t *membership = json_path(item, "content", "membership", NULL);
 		assert(membership != NULL);
@@ -152,11 +155,11 @@ static void process_room_event(json_t *item, const char *roomid) {
 			return;
 		json_t *sender = json_object_get(item, "sender");
 		assert(sender != NULL);
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_ROOM_JOIN;
-		event->roomjoin.roomid = strdup(roomid);
-		event->roomjoin.sender = strdup(json_string_value(sender));
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_ROOM_JOIN;
+		event.roomjoin.roomid = roomid;
+		event.roomjoin.sender = json_string_value(sender);
+		event_handler_callback(event);
 	}
 }
 
@@ -180,36 +183,36 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 		}
 		json_t *body = json_object_get(content, "body");
 		assert(body != NULL);
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_MSG;
-		event->msg.sender = strdup(json_string_value(sender));
-		event->msg.roomid = strdup(roomid);
-		event->msg.text = strdup(json_string_value(body));
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_MSG;
+		event.msg.sender = json_string_value(sender);
+		event.msg.roomid = roomid;
+		event.msg.text = json_string_value(body);
+		event_handler_callback(event);
 	} else if (strcmp(json_string_value(type), "m.room.encrypted") == 0) {
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_MSG;
-		event->msg.sender = strdup(json_string_value(sender));
-		event->msg.roomid = strdup(roomid);
-		event->msg.text = strdup("== encrypted message ==");
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_MSG;
+		event.msg.sender = json_string_value(sender);
+		event.msg.roomid = roomid;
+		event.msg.text = "== encrypted message ==";
+		event_handler_callback(event);
 	}
 }
 
 static void process_error(json_t *root) {
-	MatrixEvent *event = malloc(sizeof(MatrixEvent));
-	event->type = EVENT_ERROR;
-	event->error.errorcode = strdup(json_string_value(json_object_get(root, "errcode")));
-	event->error.error = strdup(json_string_value(json_object_get(root, "error")));
-	event_queue_append(event);
+	MatrixEvent event;
+	event.type = EVENT_ERROR;
+	event.error.errorcode = strdup(json_string_value(json_object_get(root, "errcode")));
+	event.error.error = strdup(json_string_value(json_object_get(root, "error")));
+	event_handler_callback(event);
 }
 
 static void process_sync_response(const char *output) {
 	insync = false;
 	if (!output) {
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_CONN_ERROR;
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_CONN_ERROR;
+		event_handler_callback(event);
 		return;
 	}
 	json_t *root;
@@ -226,10 +229,10 @@ static void process_sync_response(const char *output) {
 	if (tok) {
 		assert(token == NULL);
 		token = strdup(json_string_value(tok));
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_LOGGED_IN;
-		event->login.token = strdup(token);
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_LOGGED_IN;
+		event.login.token = token;
+		event_handler_callback(event);
 		json_decref(root);
 		return;
 	}
@@ -317,51 +320,6 @@ static void process_sync_response(const char *output) {
 	next_batch = strdup(json_string_value(n));
 	json_decref(root);
 	
-}
-
-static void event_queue_append(MatrixEvent *event) {
-	if (!event_queue)
-		event_queue = list_new();
-	list_append(event_queue, event);
-}
-
-// a.k.a. dequeue_event
-MatrixEvent *matrix_next_event() {
-	if (!event_queue)
-		return NULL;
-	return list_pop_head(event_queue);
-}
-
-void matrix_free_event(MatrixEvent *event) {
-	switch (event->type) {
-	case EVENT_MSG:
-		free(event->msg.roomid);
-		free(event->msg.sender);
-		free(event->msg.text);
-		break;
-	case EVENT_ROOM_CREATE:
-		free(event->roomcreate.id);
-		break;
-	case EVENT_ROOM_NAME:
-		free(event->roomname.id);
-		free(event->roomname.name);
-		break;
-	case EVENT_ROOM_JOIN:
-		free(event->roomjoin.roomid);
-		free(event->roomjoin.sender);
-		break;
-	case EVENT_ERROR:
-		free(event->error.errorcode);
-		free(event->error.error);
-		break;
-	case EVENT_LOGGED_IN:
-		free(event->login.token);
-		break;
-	case EVENT_CONN_ERROR:
-		// empty struct - do nothing
-		break;
-	}
-	free(event);
 }
 
 /* Callback used for libcurl to retrieve web content. */
