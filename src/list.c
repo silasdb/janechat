@@ -13,17 +13,6 @@ List *list_new() {
 	return l;
 }
 
-void list_prepend(List *l, void *val) {
-	if (l->head) {
-		struct list_node *n = malloc(sizeof(struct list_node));
-		n->val = val;
-		n->next = l->head;
-		l->head = n;
-	} else {
-		alloc_head(l, val);
-	}
-}
-
 void list_append(List *l, void *val) {
 	if (l->head) {
 		struct list_node *n = malloc(sizeof(struct list_node));
