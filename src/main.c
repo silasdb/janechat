@@ -18,12 +18,15 @@ bool do_matrix_send_token();
 void do_matrix_login();
 void sync();
 void process_input(char *s);
+void handle_matrix_event(MatrixEvent ev);
 
 bool logged_in = false;
 
 Room *current_room = NULL;
 
 int main(int argc, char *argv[]) {
+	matrix_set_event_handler(handle_matrix_event);
+
 	/* TODO: what if the access_token expires or is invalid? */
 	if (!do_matrix_send_token())
 		do_matrix_login();
@@ -224,35 +227,31 @@ void process_input(char *s) {
 	matrix_send_message(current_room->id, s);
 }
 
-void sync() {
-	MatrixEvent *ev;
-	while ((ev = matrix_next_event()) != NULL) {
-		switch (ev->type) {
-		case EVENT_ROOM_CREATE:
-			process_room_create(ev->roomcreate.id);
-			break;
-		case EVENT_ROOM_NAME:
-			process_room_name(ev->roomname.id, ev->roomname.name);
-			break;
-		case EVENT_ROOM_JOIN:
-			process_room_join(ev->roomjoin.roomid,
-				ev->roomjoin.sender);
-			break;
-		case EVENT_MSG:
-			process_msg(ev->msg.roomid, ev->msg.sender, ev->msg.text);
-			break;
-		case EVENT_ERROR:
-			printf("%s\n", ev->error.error);
-			exit(1);
-			break;
-		case EVENT_LOGGED_IN:
-			logged_in = true;
-			cache_set("access_token", ev->login.token);
-			break;
-		case EVENT_CONN_ERROR:
-			//puts("Connection error.\n");
-			break;
-		}
-		matrix_free_event(ev);
+void handle_matrix_event(MatrixEvent ev) {
+	switch (ev.type) {
+	case EVENT_ROOM_CREATE:
+		process_room_create(ev.roomcreate.id);
+		break;
+	case EVENT_ROOM_NAME:
+		process_room_name(ev.roomname.id, ev.roomname.name);
+		break;
+	case EVENT_ROOM_JOIN:
+		process_room_join(ev.roomjoin.roomid,
+			ev.roomjoin.sender);
+		break;
+	case EVENT_MSG:
+		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);
+		break;
+	case EVENT_ERROR:
+		printf("%s\n", ev.error.error);
+		exit(1);
+		break;
+	case EVENT_LOGGED_IN:
+		logged_in = true;
+		cache_set("access_token", ev.login.token);
+		break;
+	case EVENT_CONN_ERROR:
+		//puts("Connection error.\n");
+		break;
 	}
 }
