@@ -3,6 +3,8 @@
 
 #include <fcntl.h>
 
+#include "strbuf.h"
+
 enum MatrixEventType {
 	EVENT_MSG,
 	EVENT_ROOM_CREATE,
@@ -53,7 +55,7 @@ enum SelectStatus {
 
 void matrix_set_event_handler(void (*callback)(MatrixEvent));
 void matrix_sync();
-void matrix_send_message(const char *roomid, const char *msg);
+void matrix_send_message(const StrBuf *roomid, const StrBuf *msg);
 MatrixEvent * matrix_next_event();
 void matrix_set_server(char *token);
 void matrix_set_token(char *token);

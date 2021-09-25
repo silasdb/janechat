@@ -125,30 +125,31 @@ void do_matrix_login() {
 	// TODO: free(password)?
 }
 
-void process_room_create(const char *id) {
-	char *i = strdup(id);
-	room_new(i);
+void process_room_create(StrBuf *id) {
+	room_new(id);
 }
 
-void process_room_name(const char *id, const char *name) {
-	Room *room = room_byid(id);
-	room_set_name(room, strdup(name));
+void process_room_name(StrBuf *roomid, StrBuf *name) {
+	Room *room = room_byid(roomid);
+	room_set_name(room, name);
 }
 
-void process_room_join(const char *roomid, const char *sender) {
+void process_room_join(StrBuf *roomid, StrBuf *sender) {
 	Room *room = room_byid(roomid);
 	assert(room);
-	room_append_user(room, strdup(sender));
+	room_append_user(room, sender);
 }
 
-void print_msg(const char *roomname, const char *sender, const char *text) {
+void print_msg(StrBuf *roomname, StrBuf *sender, StrBuf *text) {
 	printf("%c[38;5;4m%s%c[m: %c[38;5;2m%s%c[m: %s\n",
-		0x1b, roomname, 0x1b, 0x1b, sender, 0x1b, text);
+		0x1b, strbuf_buf(roomname), 0x1b,
+		0x1b, strbuf_buf(sender), 0x1b,
+		strbuf_buf(text));
 }
 
-void process_msg(const char *roomid, const char *sender, const char *text) {
+void process_msg(StrBuf *roomid, StrBuf *sender, StrBuf *text) {
 	Room *room = room_byid(roomid);
-	room_append_msg(room, strdup(sender), strdup(text));
+	room_append_msg(room, sender, text);
 	if (room == current_room)
 		print_msg(room->name, sender, text);
 	else
@@ -179,7 +180,7 @@ void process_input(char *s) {
 		ROOMS_FOREACH(iter) {
 			Room *room = iter;
 			printf("%s (unread messages: %zu)\n",
-				room->name, room->unread_msgs);
+				strbuf_buf(room->name), room->unread_msgs);
 		}
 		return;
 	}
@@ -195,7 +196,9 @@ void process_input(char *s) {
 	}
 	if (strncmp(s, "/join ", strlen("/join ")) == 0) {
 		s += strlen("/join ");
-		Room *room = room_byname(s);
+		StrBuf *ss = strbuf_new_c(s);
+		Room *room = room_byname(ss);
+		strbuf_decref(ss);
 		if (!room) {
 			printf("Room \"%s\" not found.\n", s);
 			return;
@@ -224,7 +227,10 @@ void process_input(char *s) {
 		puts("No room selected.  Text not sent.\n");
 		return;
 	}
-	matrix_send_message(current_room->id, s);
+	printf("s: %s\n", s);
+	StrBuf *ss = strbuf_new_c(s);
+	matrix_send_message(current_room->id, ss);
+	strbuf_decref(ss);
 }
 
 void handle_matrix_event(MatrixEvent ev) {
@@ -243,12 +249,12 @@ void handle_matrix_event(MatrixEvent ev) {
 		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);
 		break;
 	case EVENT_ERROR:
-		printf("%s\n", ev.error.error);
+		printf("%s\n", strbuf_buf(ev.error.error));
 		exit(1);
 		break;
 	case EVENT_LOGGED_IN:
 		logged_in = true;
-		cache_set("access_token", ev.login.token);
+		cache_set("access_token", strbuf_buf(ev.login.token));
 		break;
 	case EVENT_CONN_ERROR:
 		//puts("Connection error.\n");

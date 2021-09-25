@@ -17,7 +17,7 @@ void rooms_init() {
 /*
  * TODO: is this the best name, since it changes the global variable?
  */
-Room *room_new(const char *id) {
+Room *room_new(StrBuf *id) {
 	Room *room;
 	room = room_byid(id);
 	if (room) {
@@ -26,47 +26,42 @@ Room *room_new(const char *id) {
 		 * can show up both as m.direct and m.room.name, but not always.
 		 * Who creates the room?
 		 */
-		printf("Trying to create duplicated room (id: %s)\n", id);
+		printf("Trying to create duplicated room (id: %s)\n",
+			strbuf_buf(id));
 		return room;
 	}
 	room = malloc(sizeof(Room));
-	room->id = id;
+	room->id = strbuf_incref(id);
 	
 	/*
 	 * At the moment of creation, we don't know the room name yet, so we set
-	 * it to be temporarily the same as id, but, because room name can be
-	 * manipulated (like when changing a rooms name), while id is a fixed
-	 * object, so we strdup() it.
-	 *
-	 * There could be other more optimized ways to do that, like setting
-	 * name to NULL and checking if it is NULL whenever we need to print the
-	 * name, but this would make things more complex outside of the rooms
-	 * module, so we prefer this less effective but simplier way.
+	 * it to be temporarily the same as id and increment its reference
+	 * counter.
 	 */
-	room->name = strdup(id);
+	room->name = strbuf_incref(id);
 
 	room->users = list_new();
 	room->msgs = list_new();
 	room->unread_msgs = 0;
-	hash_insert(rooms_hash, id, room);
+	hash_insert(rooms_hash, strbuf_buf(id), room);
 	list_append(rooms_list, room);
 	return room;
 }
 
-Room *room_byid(const char *id) {
-	return hash_get(rooms_hash, id);
+Room *room_byid(const StrBuf *id) {
+	return hash_get(rooms_hash, strbuf_buf(id));
 }
 
-Room *room_byname(const char *name) {
+Room *room_byname(const StrBuf *name) {
 	ROOMS_FOREACH(iter) {
 		Room *r = iter;
-		if (strcmp(r->name, name) == 0)
+		if (strcmp(strbuf_buf(r->name), strbuf_buf(name)) == 0)
 			return r;
 	}
 	return NULL;
 }
 
-void room_set_name(Room *r, const char *name) {
+void room_set_name(Room *r, StrBuf *name) {
 	/*
 	 * TODO: it seems client can receive m.room.name before m.room.create,
 	 * so we'll need to handle that.
@@ -74,17 +69,22 @@ void room_set_name(Room *r, const char *name) {
 	if (!r)
 		return;
 
-	free((void *)r->name);
-	r->name = name;
+	/*
+	 * We strbuf_decref() old value because it was set to the room id at
+	 * strbuf_new() while we don't receive the room name.
+	 */
+	strbuf_decref(r->name);
+
+	r->name = strbuf_incref(name);
 }
 
-void room_append_msg(Room *room, const char *sender, const char *text) {
+void room_append_msg(Room *room, StrBuf *sender, StrBuf *text) {
 	Msg *msg = malloc(sizeof(Msg));
-	msg->sender = sender;
-	msg->text = text;
+	msg->sender = strbuf_incref(sender);
+	msg->text = strbuf_incref(text);
 	list_append(room->msgs, msg);
 }
 
-void room_append_user(Room *room, const char *sender) {
-	list_append(room->users, (void *)sender);
+void room_append_user(Room *room, StrBuf *sender) {
+	list_append(room->users, (void *)strbuf_buf(strbuf_incref(sender)));
 }
