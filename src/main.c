@@ -227,7 +227,6 @@ void process_input(char *s) {
 		puts("No room selected.  Text not sent.\n");
 		return;
 	}
-	printf("s: %s\n", s);
 	StrBuf *ss = strbuf_new_c(s);
 	matrix_send_message(current_room->id, ss);
 	strbuf_decref(ss);
