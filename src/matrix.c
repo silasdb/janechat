@@ -2,23 +2,8 @@
  * In this file there is the json decode of the Matrix protocol, according to
  * the protocol specified in https://matrix.org/docs/spec/client_server/latest
  *
- * External JSON parsers are used.  For now, one of the following parsers are
- * needed:
- *
- * - jansson (https://github.com/akheron/jansson/) (preferred)
- * - json-c (https://github.com/json-c/json-c)
- *
- * More files will be supported in the future, or maybe we'll embed one?
- *
- * We set macros to function names of parsers and try to use them whenever
- * possible, but there is some places where we cannot just use macros and have
- * to separate code related to each parser using #if .. #else .. #endif
- * conditionals.
- *
- * This code turned to be rather confusing.  In the future, we might create a
- * generic json wrapper for every parser (json-wrapper-jansson.c,
- * json-wrapper-json-c.c, etc.) that share a common interface (json-wrapper.h)
- * so we don't have to deal with different parsers in the same code file.
+ * External JSON parsers are used.  For now, only jansson
+ * (https://github.com/akheron/jansson/) is supported
  */
 
 #include <assert.h>
@@ -52,17 +37,14 @@ enum HTTPMethod {
 char *next_batch = NULL;
 char *token = NULL;
 const char *matrix_server = NULL;
+static void (*event_handler_callback)(MatrixEvent) = NULL;
 
-static void event_queue_append(MatrixEvent *);
-static void event_queue_prepend(MatrixEvent *);
 static void matrix_send(enum HTTPMethod, const char *, const char *,
 	void (*callback)(const char *));
 static json_t *json_path(json_t *root, const char *, ...);
 static const char * json2str_alloc(json_t *);
 static json_t *str2json_alloc(const char *);
 static void process_sync_response(const char *);
-
-List *event_queue = NULL;
 
 CURLM *mhandle = NULL;
 fd_set fdread;
@@ -78,19 +60,23 @@ bool insync = false;
  */
 int still_running = -1;
 
-void matrix_send_message(const char *roomid, const char *msg) {
+void matrix_set_event_handler(void (*callback)(MatrixEvent)) {
+	event_handler_callback = callback;
+}
+
+void matrix_send_message(const StrBuf *roomid, const StrBuf *msg) {
 	StrBuf *url = strbuf_new();
 	strbuf_cat_c(url, "/_matrix/client/r0/rooms/");
-	strbuf_cat_c(url, roomid);
+	strbuf_cat_c(url, strbuf_buf(roomid));
 	strbuf_cat_c(url, "/send/m.room.message?access_token=");
 	strbuf_cat_c(url, token);
 	json_t *root = json_object();
 	json_object_set(root, "msgtype", json_string("m.text"));
-	json_object_set(root, "body", json_string(msg));
+	json_object_set(root, "body", json_string(strbuf_buf(msg)));
 	const char *s = json2str_alloc(root);
 	matrix_send(HTTP_POST, strbuf_buf(url), s, NULL);
 	free((void *)s);
-	strbuf_free(url);
+	strbuf_decref(url);
 }
 
 void matrix_set_server(char *s) {
@@ -118,7 +104,7 @@ void matrix_sync() {
 	strbuf_cat_c(url, "&access_token=");
 	strbuf_cat_c(url, token);
 	matrix_send(HTTP_GET, strbuf_buf(url), NULL, process_sync_response);
-	strbuf_free(url);
+	strbuf_decref(url);
 }
 
 void matrix_login(const char *server, const char *user, const char *password) {
@@ -134,12 +120,13 @@ void matrix_login(const char *server, const char *user, const char *password) {
 }
 
 static void process_direct_event(const char *sender, json_t *roomid) {
-	MatrixEvent *event;
-	event = malloc(sizeof(MatrixEvent));
-	event->type = EVENT_ROOM_NAME;
-	event->roomname.id = strdup(strdup(json_string_value(roomid)));
-	event->roomname.name = strdup(sender);
-	event_queue_append(event);
+	MatrixEvent event;
+	event.type = EVENT_ROOM_NAME;
+	event.roomname.id = strbuf_new_c(json_string_value(roomid));
+	event.roomname.name = strbuf_new_c(sender);
+	event_handler_callback(event);
+	strbuf_decref(event.roomname.id);
+	strbuf_decref(event.roomname.name);
 }
 
 static void process_room_event(json_t *item, const char *roomid) {
@@ -149,26 +136,19 @@ static void process_room_event(json_t *item, const char *roomid) {
 		json_t *nam = json_path(item, "content", "name", NULL);
 		assert(nam != NULL);
 		const char *name = json_string_value(nam);
-		char *id = strdup(roomid);
-		char *nn = strdup(name);
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_ROOM_NAME;
-		event->roomname.id = id;
-		event->roomname.name = nn;
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_ROOM_NAME;
+		event.roomname.id = strbuf_new_c(roomid);
+		event.roomname.name = strbuf_new_c(name);
+		event_handler_callback(event);
+		strbuf_decref(event.roomname.id);
+		strbuf_decref(event.roomname.name);
 	} else if (strcmp(json_string_value(type), "m.room.create") == 0) {
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_ROOM_CREATE;
-		event->roomcreate.id = strdup(roomid);
-		/*
-		 * m.room.create events come in room state events list, which
-		 * are unsorted.  But when passing EVENT_ROOM_CREATE events to
-		 * upper layers, we have to pass it before other events that
-		 * alter the room state (because the room object need already to
-		 * be created in order to receive these other events), so we
-		 * prepend it to the event queue.
-		 */
-		event_queue_prepend(event);
+		MatrixEvent event;
+		event.type = EVENT_ROOM_CREATE;
+		event.roomcreate.id = strbuf_new_c(roomid);
+		event_handler_callback(event);
+		strbuf_decref(event.roomcreate.id);
 	} else if (strcmp(json_string_value(type), "m.room.member") == 0) {
 		json_t *membership = json_path(item, "content", "membership", NULL);
 		assert(membership != NULL);
@@ -176,11 +156,13 @@ static void process_room_event(json_t *item, const char *roomid) {
 			return;
 		json_t *sender = json_object_get(item, "sender");
 		assert(sender != NULL);
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_ROOM_JOIN;
-		event->roomjoin.roomid = strdup(roomid);
-		event->roomjoin.sender = strdup(json_string_value(sender));
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_ROOM_JOIN;
+		event.roomjoin.roomid = strbuf_new_c(roomid);
+		event.roomjoin.sender = strbuf_new_c(json_string_value(sender));
+		event_handler_callback(event);
+		strbuf_decref(event.roomjoin.roomid);
+		strbuf_decref(event.roomjoin.sender);
 	}
 }
 
@@ -204,36 +186,44 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 		}
 		json_t *body = json_object_get(content, "body");
 		assert(body != NULL);
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_MSG;
-		event->msg.sender = strdup(json_string_value(sender));
-		event->msg.roomid = strdup(roomid);
-		event->msg.text = strdup(json_string_value(body));
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_MSG;
+		event.msg.sender = strbuf_new_c(json_string_value(sender));
+		event.msg.roomid = strbuf_new_c(roomid);
+		event.msg.text = strbuf_new_c(json_string_value(body));
+		event_handler_callback(event);
+		strbuf_decref(event.msg.sender);
+		strbuf_decref(event.msg.roomid);
+		strbuf_decref(event.msg.text);
 	} else if (strcmp(json_string_value(type), "m.room.encrypted") == 0) {
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_MSG;
-		event->msg.sender = strdup(json_string_value(sender));
-		event->msg.roomid = strdup(roomid);
-		event->msg.text = strdup("== encrypted message ==");
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_MSG;
+		event.msg.sender = strbuf_new_c(json_string_value(sender));
+		event.msg.roomid = strbuf_new_c(roomid);
+		event.msg.text = strbuf_new_c("== encrypted message ==");
+		event_handler_callback(event);
+		strbuf_decref(event.msg.sender);
+		strbuf_decref(event.msg.roomid);
+		strbuf_decref(event.msg.text);
 	}
 }
 
 static void process_error(json_t *root) {
-	MatrixEvent *event = malloc(sizeof(MatrixEvent));
-	event->type = EVENT_ERROR;
-	event->error.errorcode = strdup(json_string_value(json_object_get(root, "errcode")));
-	event->error.error = strdup(json_string_value(json_object_get(root, "error")));
-	event_queue_append(event);
+	MatrixEvent event;
+	event.type = EVENT_ERROR;
+	event.error.errorcode = strbuf_new_c(json_string_value(json_object_get(root, "errcode")));
+	event.error.error = strbuf_new_c(json_string_value(json_object_get(root, "error")));
+	event_handler_callback(event);
+	strbuf_decref(event.error.errorcode);
+	strbuf_decref(event.error.error);
 }
 
 static void process_sync_response(const char *output) {
 	insync = false;
 	if (!output) {
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_CONN_ERROR;
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_CONN_ERROR;
+		event_handler_callback(event);
 		return;
 	}
 	json_t *root;
@@ -250,17 +240,50 @@ static void process_sync_response(const char *output) {
 	if (tok) {
 		assert(token == NULL);
 		token = strdup(json_string_value(tok));
-		MatrixEvent *event = malloc(sizeof(MatrixEvent));
-		event->type = EVENT_LOGGED_IN;
-		event->login.token = strdup(token);
-		event_queue_append(event);
+		MatrixEvent event;
+		event.type = EVENT_LOGGED_IN;
+		event.login.token = strbuf_new_c(token);
+		json_decref(root);
+		event_handler_callback(event);
+		strbuf_decref(event.login.token);
+		return;
+	}
+
+	json_t *rooms = json_object_get(root, "rooms");
+	if (!rooms) {
 		json_decref(root);
 		return;
 	}
-	json_t *account_data = json_object_get(root, "account_data");
-	if (account_data) {
-		json_t *events = json_object_get(account_data, "events");
-		assert(events != NULL);
+	json_t *join = json_object_get(rooms, "join");
+	if (!join) {
+		json_decref(root);
+		return;
+	}
+
+	const char *roomid;
+	json_t *item;
+
+	/*
+	 * m.room.create events come in room state events list, which is
+	 * unsorted.  But when passing EVENT_ROOM_CREATE events to upper layers,
+	 * we have to pass it before other events that alter the room state
+	 * (because the room object need already to be created in order to
+	 * receive these other events), so we look for events of this type first.
+	 */
+	json_object_foreach(join, roomid, item) {
+		json_t *events;
+		events = json_path(item, "state", "events", NULL);
+		size_t i;
+		json_t *event;
+		json_array_foreach(events, i, event) {
+			json_t *type = json_object_get(event, "type");
+			if (strcmp(json_string_value(type), "m.room.create") == 0)
+				process_room_event(event, roomid);
+		}
+	}
+
+	json_t *events = json_path(root, "account_data", "events", NULL);
+	if (events) {
 		size_t i;
 		json_t *item;
 		json_array_foreach(events, i, item) {
@@ -282,18 +305,7 @@ static void process_sync_response(const char *output) {
 			}
 		}
 	}
-	json_t *rooms = json_object_get(root, "rooms");
-	if (!rooms) {
-		json_decref(root);
-		return;
-	}
-	json_t *join = json_object_get(rooms, "join");
-	if (!join) {
-		json_decref(root);
-		return;
-	}
-	const char *roomid;
-	json_t *item;
+
 	json_object_foreach(join, roomid, item)
 	{
 		json_t *events;
@@ -302,8 +314,9 @@ static void process_sync_response(const char *output) {
 		size_t i;
 		json_t *event;
 		json_array_foreach(events, i, event) {
-			assert(item != NULL);
-			process_room_event(event, roomid);
+			json_t *type = json_object_get(event, "type");
+			if (strcmp(json_string_value(type), "m.room.create") != 0)
+				process_room_event(event, roomid);
 		}
 		events = json_path(item, "timeline", "events", NULL);
 		assert(events != NULL);
@@ -319,57 +332,6 @@ static void process_sync_response(const char *output) {
 	next_batch = strdup(json_string_value(n));
 	json_decref(root);
 	
-}
-
-static void event_queue_append(MatrixEvent *event) {
-	if (!event_queue)
-		event_queue = list_new();
-	list_append(event_queue, event);
-}
-
-static void event_queue_prepend(MatrixEvent *event) {
-	if (!event_queue)
-		event_queue = list_new();
-	list_prepend(event_queue, event);
-}
-
-// a.k.a. dequeue_event
-MatrixEvent *matrix_next_event() {
-	if (!event_queue)
-		return NULL;
-	return list_pop_head(event_queue);
-}
-
-void matrix_free_event(MatrixEvent *event) {
-	switch (event->type) {
-	case EVENT_MSG:
-		free(event->msg.roomid);
-		free(event->msg.sender);
-		free(event->msg.text);
-		break;
-	case EVENT_ROOM_CREATE:
-		free(event->roomcreate.id);
-		break;
-	case EVENT_ROOM_NAME:
-		free(event->roomname.id);
-		free(event->roomname.name);
-		break;
-	case EVENT_ROOM_JOIN:
-		free(event->roomjoin.roomid);
-		free(event->roomjoin.sender);
-		break;
-	case EVENT_ERROR:
-		free(event->error.errorcode);
-		free(event->error.error);
-		break;
-	case EVENT_LOGGED_IN:
-		free(event->login.token);
-		break;
-	case EVENT_CONN_ERROR:
-		// empty struct - do nothing
-		break;
-	}
-	free(event);
 }
 
 /* Callback used for libcurl to retrieve web content. */
@@ -445,7 +407,7 @@ void matrix_resume() {
 		curl_easy_cleanup(handle);
 		if (c->callback)
 			c->callback(strbuf_buf(c->data));
-		strbuf_free(c->data);
+		strbuf_decref(c->data);
 		free(c);
 	}
 }
@@ -521,7 +483,7 @@ static void matrix_send(
 	}
 
 	curl_multi_add_handle(mhandle, handle);
-	strbuf_free(url);
+	strbuf_decref(url);
 	curl_multi_perform(mhandle, &still_running);
 }
 
