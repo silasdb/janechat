@@ -3,6 +3,8 @@
 
 #include <fcntl.h>
 
+#include "strbuf.h"
+
 enum MatrixEventType {
 	EVENT_MSG,
 	EVENT_ROOM_CREATE,
@@ -18,27 +20,27 @@ struct MatrixEvent {
 	union {
 		// TODO: why fields above are not const?
 		struct MatrixEventMsg {
-			char *roomid;
-			char *sender;
-			char *text;
+			StrBuf *roomid;
+			StrBuf *sender;
+			StrBuf *text;
 		} msg;
 		struct MatrixEventRoomCreate {
-			char *id;
+			StrBuf *id;
 		} roomcreate;
 		struct MatrixEventRoomName {
-			char *id;
-			char *name;
+			StrBuf *id;
+			StrBuf *name;
 		} roomname;
 		struct MatrixEventRoomJoin {
-			char *roomid;
-			char *sender;
+			StrBuf *roomid;
+			StrBuf *sender;
 		} roomjoin;
 		struct MatrixEventError {
-			char *errorcode;
-			char *error;
+			StrBuf *errorcode;
+			StrBuf *error;
 		} error;
 		struct MatrixEventLogin {
-			char *token;
+			StrBuf *token;
 		} login;
 		// MatrixEventConnError - empty struct
 	};
@@ -53,7 +55,7 @@ enum SelectStatus {
 
 void matrix_set_event_handler(void (*callback)(MatrixEvent));
 void matrix_sync();
-void matrix_send_message(const char *roomid, const char *msg);
+void matrix_send_message(const StrBuf *roomid, const StrBuf *msg);
 MatrixEvent * matrix_next_event();
 void matrix_set_server(char *token);
 void matrix_set_token(char *token);
