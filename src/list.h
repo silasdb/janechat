@@ -14,7 +14,6 @@ struct List {
 typedef struct List List;
 
 List *list_new();
-void list_prepend(List *, void *);
 void list_append(List *, void *);
 void *list_pop_head(List *);
 

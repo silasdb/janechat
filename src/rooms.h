@@ -2,16 +2,17 @@
 #define JANECHAT_ROOMS_H
 
 #include "list.h"
+#include "strbuf.h"
 
 struct Msg {
-	const char *sender;
-	const char *text;
+	StrBuf *sender;
+	StrBuf *text;
 };
 typedef struct Msg Msg;
 
 struct Room {
-	const char *id;
-	const char *name;
+	StrBuf *id;
+	StrBuf *name;
 	List *users;		/* List of joined users */
 	List *msgs;
 	size_t unread_msgs;	/* Should be reset by the caller */
@@ -19,12 +20,12 @@ struct Room {
 typedef struct Room Room;
 
 void rooms_init();
-Room *room_new(const char *);
-Room *room_byid(const char *);
-Room *room_byname(const char *);
-void room_set_name(Room *, const char *);
-void room_append_msg(Room *, const char *, const char *);
-void room_append_user(Room *, const char *);
+Room *room_new(StrBuf *);
+Room *room_byid(const StrBuf *);
+Room *room_byname(const StrBuf *);
+void room_set_name(Room *, StrBuf *);
+void room_append_msg(Room *, StrBuf *, StrBuf *);
+void room_append_user(Room *, StrBuf *);
 
 extern List *rooms_list;
 

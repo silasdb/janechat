@@ -6,22 +6,21 @@
 #include "ui-cli.h"
 
 Room *current_room = NULL;
+void (*event_handler_callback)(UiEvent) = NULL;
 
-static UiEvent process_input(char *);
+static void process_input(char *);
 static void print_messages(Room *room);
-static void print_msg(const char *roomname, const char *sender, const char *text);
+static void print_msg(StrBuf *roomname, StrBuf *sender, StrBuf *text);
 
-UiEvent ui_cli_iter() {
+void ui_cli_iter() {
 	char *line;
-	UiEvent ev;
 	line = read_line_alloc();
 	if (line)
-		ev = process_input(line);
+		process_input(line);
 	free(line);
-	return ev;
 }
 
-void ui_cli_new_msg(Room *room, const char *sender, const char *text) {
+void ui_cli_new_msg(Room *room, StrBuf *sender, StrBuf *text) {
 	if (room != current_room)
 		return;
 
@@ -34,6 +33,11 @@ void ui_cli_new_msg(Room *room, const char *sender, const char *text) {
 	room->unread_msgs = 0;
 }
 
+/* TODO: move to ui.c to be common to all frontends */
+void ui_set_event_handler(void (*callback)(UiEvent)) {
+	event_handler_callback = callback;
+}
+
 /*
  * For now, possible commands are:
  *
@@ -43,7 +47,7 @@ void ui_cli_new_msg(Room *room, const char *sender, const char *text) {
  * /join room -> change the current room
  * text -> send "text" to the current room
  */
-UiEvent process_input(char *s) {
+void process_input(char *s) {
 	UiEvent ev;
 	if (strcmp(s, "/quit") == 0)
 		exit(0);
@@ -52,48 +56,47 @@ UiEvent process_input(char *s) {
 		ROOMS_FOREACH(iter) {
 			Room *room = iter;
 			printf("%s (unread messages: %zu)\n",
-				room->name, room->unread_msgs);
+				strbuf_buf(room->name), room->unread_msgs);
 		}
-		ev.type = UIEVENTTYPE_NONE;
-		return ev;
+		return;
 	}
 
 	if (strcmp(s, "/names") == 0) {
 		if (!current_room) {
 			puts("No room selected.  Text not sent.\n");
-			ev.type = UIEVENTTYPE_NONE;
-			return ev;
+			return;
 		}
 		ROOM_USERS_FOREACH(current_room, iter) {
 			printf("%s\n", (char *)iter);
 		}
-		ev.type = UIEVENTTYPE_NONE;
-		return ev;
+		return;
 	}
 
 	if (strncmp(s, "/join ", strlen("/join ")) == 0) {
 		s += strlen("/join ");
-		Room *room = room_byname(s);
+		StrBuf *ss = strbuf_new_c(s);
+		Room *room = room_byname(ss);
+		strbuf_decref(ss);
 		if (!room) {
 			printf("Room \"%s\" not found.\n", s);
-			ev.type = UIEVENTTYPE_NONE;
-			return ev;
+			return;
 		}
 		current_room = room;
 		printf("Switched to room %s\n", s);
 		print_messages(current_room);
-		ev.type = UIEVENTTYPE_NONE;
-		return ev;
+		return;
 	}
 
 	if (strcmp(s, "/sync") == 0) {
 		ev.type = UIEVENTTYPE_SYNC;
-		return ev;
+		event_handler_callback(ev);
+		return;
 	}
 
 	if (*s == '\0') {
 		ev.type = UIEVENTTYPE_SYNC;
-		return ev;
+		event_handler_callback(ev);
+		return;
 	}
 
 	/*
@@ -103,20 +106,20 @@ UiEvent process_input(char *s) {
 	 */
 	if (*s == '/') {
 		printf("Invalid command: %s\n", s);
-		ev.type = UIEVENTTYPE_NONE;
-		return ev;
+		return;
 	}
 
 	if (!current_room) {
 		puts("No room selected.  Text not sent.\n");
-		ev.type = UIEVENTTYPE_NONE;
-		return ev;
+		return;
 	}
 
 	ev.type = UIEVENTTYPE_SENDMSG;
-	ev.msg.roomid = current_room->id;
-	ev.msg.text = s;
-	return ev;
+	ev.msg.roomid = strbuf_incref(current_room->id);
+	ev.msg.text = strbuf_new_c(s);
+	event_handler_callback(ev);
+	strbuf_decref(ev.msg.roomid);
+	strbuf_decref(ev.msg.text);
 }
 
 static void print_messages(Room *room) {
@@ -127,7 +130,9 @@ static void print_messages(Room *room) {
 	room->unread_msgs = 0;
 }
 
-static void print_msg(const char *roomname, const char *sender, const char *text) {
+static void print_msg(StrBuf *roomname, StrBuf *sender, StrBuf *text) {
 	printf("%c[38;5;4m%s%c[m: %c[38;5;2m%s%c[m: %s\n",
-		0x1b, roomname, 0x1b, 0x1b, sender, 0x1b, text);
+		0x1b, strbuf_buf(roomname), 0x1b,
+		0x1b, strbuf_buf(sender), 0x1b,
+		strbuf_buf(text));
 }

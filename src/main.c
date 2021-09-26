@@ -18,12 +18,16 @@
 
 bool do_matrix_send_token();
 void do_matrix_login();
-void sync();
 void process_input(char *s);
+void handle_matrix_event(MatrixEvent ev);
+void handle_ui_event(UiEvent ev);
 
 bool logged_in = false;
 
 int main(int argc, char *argv[]) {
+	ui_set_event_handler(handle_ui_event);
+	matrix_set_event_handler(handle_matrix_event);
+
 	/* TODO: what if the access_token expires or is invalid? */
 	if (!do_matrix_send_token())
 		do_matrix_login();
@@ -46,28 +50,15 @@ int main(int argc, char *argv[]) {
 
 	rooms_init();
 
-	UiEvent ev;
 	for (;;) {
 		switch (select_matrix_stdin()) {
 		case SELECTSTATUS_STDINREADY:
-			ev = ui_cli_iter();
-			switch (ev.type) {
-			case UIEVENTTYPE_SYNC:
-				if (logged_in)
-					matrix_sync();
-				break;
-			case UIEVENTTYPE_SENDMSG:
-				matrix_send_message(ev.msg.roomid, ev.msg.text);
-				break;
-			case UIEVENTTYPE_NONE:
-				break;
-			}
+			ui_cli_iter();
 			break;
 		case SELECTSTATUS_MATRIXRESUME:
 			matrix_resume();
 			break;
 		}
-		sync();
 		if (logged_in) {
 			static time_t past = 0, now = 0;
 			now = time(0);
@@ -133,57 +124,71 @@ void do_matrix_login() {
 	// TODO: free(password)?
 }
 
-void process_room_create(const char *id) {
-	char *i = strdup(id);
-	room_new(i);
+void process_room_create(StrBuf *id) {
+	room_new(id);
 }
 
-void process_room_name(const char *id, const char *name) {
-	Room *room = room_byid(id);
-	room_set_name(room, strdup(name));
+void process_room_name(StrBuf *roomid, StrBuf *name) {
+	Room *room = room_byid(roomid);
+	room_set_name(room, name);
 }
 
-void process_room_join(const char *roomid, const char *sender) {
+void process_room_join(StrBuf *roomid, StrBuf *sender) {
 	Room *room = room_byid(roomid);
 	assert(room);
-	room_append_user(room, strdup(sender));
+	room_append_user(room, sender);
 }
 
-void process_msg(const char *roomid, const char *sender, const char *text) {
+void print_msg(StrBuf *roomname, StrBuf *sender, StrBuf *text) {
+	printf("%c[38;5;4m%s%c[m: %c[38;5;2m%s%c[m: %s\n",
+		0x1b, strbuf_buf(roomname), 0x1b,
+		0x1b, strbuf_buf(sender), 0x1b,
+		strbuf_buf(text));
+}
+
+void process_msg(StrBuf *roomid, StrBuf *sender, StrBuf *text) {
 	Room *room = room_byid(roomid);
-	room_append_msg(room, strdup(sender), strdup(text));
+	room_append_msg(room, sender, text);
 	ui_cli_new_msg(room, sender, text);
 }
 
-void sync() {
-	MatrixEvent *ev;
-	while ((ev = matrix_next_event()) != NULL) {
-		switch (ev->type) {
-		case EVENT_ROOM_CREATE:
-			process_room_create(ev->roomcreate.id);
-			break;
-		case EVENT_ROOM_NAME:
-			process_room_name(ev->roomname.id, ev->roomname.name);
-			break;
-		case EVENT_ROOM_JOIN:
-			process_room_join(ev->roomjoin.roomid,
-				ev->roomjoin.sender);
-			break;
-		case EVENT_MSG:
-			process_msg(ev->msg.roomid, ev->msg.sender, ev->msg.text);
-			break;
-		case EVENT_ERROR:
-			printf("%s\n", ev->error.error);
-			exit(1);
-			break;
-		case EVENT_LOGGED_IN:
-			logged_in = true;
-			cache_set("access_token", ev->login.token);
-			break;
-		case EVENT_CONN_ERROR:
-			//puts("Connection error.\n");
-			break;
-		}
-		matrix_free_event(ev);
+void handle_matrix_event(MatrixEvent ev) {
+	switch (ev.type) {
+	case EVENT_ROOM_CREATE:
+		process_room_create(ev.roomcreate.id);
+		break;
+	case EVENT_ROOM_NAME:
+		process_room_name(ev.roomname.id, ev.roomname.name);
+		break;
+	case EVENT_ROOM_JOIN:
+		process_room_join(ev.roomjoin.roomid,
+			ev.roomjoin.sender);
+		break;
+	case EVENT_MSG:
+		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);
+		break;
+	case EVENT_ERROR:
+		printf("%s\n", strbuf_buf(ev.error.error));
+		exit(1);
+		break;
+	case EVENT_LOGGED_IN:
+		logged_in = true;
+		cache_set("access_token", strbuf_buf(ev.login.token));
+		break;
+	case EVENT_CONN_ERROR:
+		//puts("Connection error.\n");
+		break;
+	}
+}
+
+void handle_ui_event(UiEvent ev) {
+	switch (ev.type) {
+	case UIEVENTTYPE_SYNC:
+		if (logged_in)
+			matrix_sync();
+		break;
+	case UIEVENTTYPE_SENDMSG:
+		matrix_send_message(ev.msg.roomid, ev.msg.text);
+		break;
 	}
 }
