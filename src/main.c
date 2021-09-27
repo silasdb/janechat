@@ -24,8 +24,17 @@ void handle_ui_event(UiEvent ev);
 
 bool logged_in = false;
 
+struct ui_hooks {
+	void (*iter)();
+	void (*new_msg)();
+} ui_hooks;
+
 int main(int argc, char *argv[]) {
 	ui_set_event_handler(handle_ui_event);
+	ui_hooks = (struct ui_hooks){
+		.iter = ui_cli_iter,
+		.new_msg = ui_cli_new_msg,
+	};
 	matrix_set_event_handler(handle_matrix_event);
 
 	/* TODO: what if the access_token expires or is invalid? */
@@ -53,7 +62,7 @@ int main(int argc, char *argv[]) {
 	for (;;) {
 		switch (select_matrix_stdin()) {
 		case SELECTSTATUS_STDINREADY:
-			ui_cli_iter();
+			ui_hooks.iter();
 			break;
 		case SELECTSTATUS_MATRIXRESUME:
 			matrix_resume();
@@ -149,7 +158,7 @@ void print_msg(StrBuf *roomname, StrBuf *sender, StrBuf *text) {
 void process_msg(StrBuf *roomid, StrBuf *sender, StrBuf *text) {
 	Room *room = room_byid(roomid);
 	room_append_msg(room, sender, text);
-	ui_cli_new_msg(room, sender, text);
+	ui_hooks.new_msg(room, sender, text);
 }
 
 void handle_matrix_event(MatrixEvent ev) {
