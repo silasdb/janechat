@@ -148,13 +148,6 @@ void process_room_join(StrBuf *roomid, StrBuf *sender) {
 	room_append_user(room, sender);
 }
 
-void print_msg(StrBuf *roomname, StrBuf *sender, StrBuf *text) {
-	printf("%c[38;5;4m%s%c[m: %c[38;5;2m%s%c[m: %s\n",
-		0x1b, strbuf_buf(roomname), 0x1b,
-		0x1b, strbuf_buf(sender), 0x1b,
-		strbuf_buf(text));
-}
-
 void process_msg(StrBuf *roomid, StrBuf *sender, StrBuf *text) {
 	Room *room = room_byid(roomid);
 	room_append_msg(room, sender, text);
