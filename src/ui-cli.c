@@ -6,7 +6,6 @@
 #include "ui-cli.h"
 
 Room *current_room = NULL;
-void (*event_handler_callback)(UiEvent) = NULL;
 
 static void process_input(char *);
 static void print_messages(Room *room);
@@ -31,11 +30,6 @@ void ui_cli_new_msg(Room *room, StrBuf *sender, StrBuf *text) {
 	 */
 	print_msg(room->name, sender, text);
 	room->unread_msgs = 0;
-}
-
-/* TODO: move to ui.c to be common to all frontends */
-void ui_set_event_handler(void (*callback)(UiEvent)) {
-	event_handler_callback = callback;
 }
 
 /*
@@ -89,13 +83,13 @@ void process_input(char *s) {
 
 	if (strcmp(s, "/sync") == 0) {
 		ev.type = UIEVENTTYPE_SYNC;
-		event_handler_callback(ev);
+		ui_event_handler_callback(ev);
 		return;
 	}
 
 	if (*s == '\0') {
 		ev.type = UIEVENTTYPE_SYNC;
-		event_handler_callback(ev);
+		ui_event_handler_callback(ev);
 		return;
 	}
 
@@ -117,7 +111,7 @@ void process_input(char *s) {
 	ev.type = UIEVENTTYPE_SENDMSG;
 	ev.msg.roomid = strbuf_incref(current_room->id);
 	ev.msg.text = strbuf_new_c(s);
-	event_handler_callback(ev);
+	ui_event_handler_callback(ev);
 	strbuf_decref(ev.msg.roomid);
 	strbuf_decref(ev.msg.text);
 }

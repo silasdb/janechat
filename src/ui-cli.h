@@ -5,7 +5,6 @@
 #include "rooms.h"
 
 void ui_cli_iter();
-void ui_set_event_handler(void (*callback)(UiEvent)); /* TODO: move to ui.h */
 void ui_cli_new_msg(Room *room, StrBuf *sender, StrBuf *msg);
 
 #endif

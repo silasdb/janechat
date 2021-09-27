@@ -24,4 +24,8 @@ struct UiEvent {
 
 typedef struct UiEvent UiEvent;
 
+extern void (*ui_event_handler_callback)(UiEvent);
+
+void ui_set_event_handler(void (*callback)(UiEvent));
+
 #endif

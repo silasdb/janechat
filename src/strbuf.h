@@ -1,6 +1,8 @@
 #ifndef JANECHAT_STRBUF_H
 #define JANECHAT_STRBUF_H
 
+#include <stddef.h>
+
 typedef struct StrBuf StrBuf;
 
 /*
