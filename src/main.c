@@ -18,7 +18,6 @@
 
 bool do_matrix_send_token();
 void do_matrix_login();
-void process_input(char *s);
 void handle_matrix_event(MatrixEvent ev);
 void handle_ui_event(UiEvent ev);
 
