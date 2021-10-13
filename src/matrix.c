@@ -122,8 +122,8 @@ void matrix_login(const char *server, const char *user, const char *password) {
 static void process_direct_event(const char *sender, json_t *roomid) {
 	MatrixEvent event;
 	event.type = EVENT_ROOM_NAME;
-	event.roomname.id = strbuf_new_c(json_string_value(roomid));
-	event.roomname.name = strbuf_new_c(sender);
+	event.roomname.id = strbuf_new(.cstr = json_string_value(roomid));
+	event.roomname.name = strbuf_new(.cstr = sender);
 	event_handler_callback(event);
 	strbuf_decref(event.roomname.id);
 	strbuf_decref(event.roomname.name);
@@ -138,15 +138,15 @@ static void process_room_event(json_t *item, const char *roomid) {
 		const char *name = json_string_value(nam);
 		MatrixEvent event;
 		event.type = EVENT_ROOM_NAME;
-		event.roomname.id = strbuf_new_c(roomid);
-		event.roomname.name = strbuf_new_c(name);
+		event.roomname.id = strbuf_new(.cstr = roomid);
+		event.roomname.name = strbuf_new(.cstr = name);
 		event_handler_callback(event);
 		strbuf_decref(event.roomname.id);
 		strbuf_decref(event.roomname.name);
 	} else if (strcmp(json_string_value(type), "m.room.create") == 0) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_CREATE;
-		event.roomcreate.id = strbuf_new_c(roomid);
+		event.roomcreate.id = strbuf_new(.cstr = roomid);
 		event_handler_callback(event);
 		strbuf_decref(event.roomcreate.id);
 	} else if (strcmp(json_string_value(type), "m.room.member") == 0) {
@@ -158,8 +158,8 @@ static void process_room_event(json_t *item, const char *roomid) {
 		assert(sender != NULL);
 		MatrixEvent event;
 		event.type = EVENT_ROOM_JOIN;
-		event.roomjoin.roomid = strbuf_new_c(roomid);
-		event.roomjoin.sender = strbuf_new_c(json_string_value(sender));
+		event.roomjoin.roomid = strbuf_new(.cstr = roomid);
+		event.roomjoin.sender = strbuf_new(.cstr = json_string_value(sender));
 		event_handler_callback(event);
 		strbuf_decref(event.roomjoin.roomid);
 		strbuf_decref(event.roomjoin.sender);
@@ -188,9 +188,9 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 		assert(body != NULL);
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.sender = strbuf_new_c(json_string_value(sender));
-		event.msg.roomid = strbuf_new_c(roomid);
-		event.msg.text = strbuf_new_c(json_string_value(body));
+		event.msg.sender = strbuf_new(.cstr = json_string_value(sender));
+		event.msg.roomid = strbuf_new(.cstr = roomid);
+		event.msg.text = strbuf_new(.cstr = json_string_value(body));
 		event_handler_callback(event);
 		strbuf_decref(event.msg.sender);
 		strbuf_decref(event.msg.roomid);
@@ -198,9 +198,9 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 	} else if (strcmp(json_string_value(type), "m.room.encrypted") == 0) {
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.sender = strbuf_new_c(json_string_value(sender));
-		event.msg.roomid = strbuf_new_c(roomid);
-		event.msg.text = strbuf_new_c("== encrypted message ==");
+		event.msg.sender = strbuf_new(.cstr = json_string_value(sender));
+		event.msg.roomid = strbuf_new(.cstr = roomid);
+		event.msg.text = strbuf_new(.cstr = "== encrypted message ==");
 		event_handler_callback(event);
 		strbuf_decref(event.msg.sender);
 		strbuf_decref(event.msg.roomid);
@@ -211,8 +211,8 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 static void process_error(json_t *root) {
 	MatrixEvent event;
 	event.type = EVENT_ERROR;
-	event.error.errorcode = strbuf_new_c(json_string_value(json_object_get(root, "errcode")));
-	event.error.error = strbuf_new_c(json_string_value(json_object_get(root, "error")));
+	event.error.errorcode = strbuf_new(.cstr = json_string_value(json_object_get(root, "errcode")));
+	event.error.error = strbuf_new(.cstr = json_string_value(json_object_get(root, "error")));
 	event_handler_callback(event);
 	strbuf_decref(event.error.errorcode);
 	strbuf_decref(event.error.error);
@@ -242,7 +242,7 @@ static void process_sync_response(const char *output) {
 		token = strdup(json_string_value(tok));
 		MatrixEvent event;
 		event.type = EVENT_LOGGED_IN;
-		event.login.token = strbuf_new_c(token);
+		event.login.token = strbuf_new(.cstr = token);
 		json_decref(root);
 		event_handler_callback(event);
 		strbuf_decref(event.login.token);

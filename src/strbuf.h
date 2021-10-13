@@ -21,8 +21,16 @@ inline const char *strbuf_buf(const StrBuf *ss) { return ss->buf; }
 
 size_t strbuf_len(const StrBuf *);
 int strbuf_cmp(const StrBuf *, const StrBuf *);
-StrBuf *strbuf_new();
-StrBuf *strbuf_new_c(const char *s);
+
+struct strbuf_new_params {
+	int dummy;
+	size_t len;
+	const char *cstr;
+};
+#define strbuf_new(...) \
+	strbuf_new_((struct strbuf_new_params){.dummy = 0, __VA_ARGS__})
+StrBuf *strbuf_new_(struct strbuf_new_params);
+
 void strbuf_cat_c(StrBuf *ss, const char *s);
 void strbuf_ncat_c(StrBuf *, const char *, size_t);
 void strbuf_reset(StrBuf *);
