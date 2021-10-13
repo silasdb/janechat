@@ -50,7 +50,6 @@ void strbuf_reset(StrBuf *);
 StrBuf *strbuf_incref(StrBuf *);
 void strbuf_decref(StrBuf *);
 size_t strbuf_len(const StrBuf *);
-char *strbuf_detach(StrBuf *);
 
 
 #endif /* !JANECHAT_STRBUF_H */
