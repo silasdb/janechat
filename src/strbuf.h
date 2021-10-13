@@ -24,13 +24,11 @@ int strbuf_cmp(const StrBuf *, const StrBuf *);
 
 /* Optional parameters for the strbuf_new() function. */
 struct strbuf_new_params {
-	int dummy;      /* Necessary parameter so struct initialization don't
-			 * expand to {}, which is forbidden by ISO C */
-	size_t len;	/* Initial length of internal string array */
+	size_t len;		/* Initial length of internal string array */
 	const char *cstr;	/* An optional C string to be copied */
 };
 #define strbuf_new(...) \
-	strbuf_new_((struct strbuf_new_params){.dummy = 0, __VA_ARGS__})
+	strbuf_new_((struct strbuf_new_params){.len = 0, .cstr = NULL, __VA_ARGS__})
 StrBuf *strbuf_new_(struct strbuf_new_params);
 
 void strbuf_cat_c(StrBuf *ss, const char *s);
