@@ -37,7 +37,7 @@ enum HTTPMethod {
 char *next_batch = NULL;
 char *token = NULL;
 const char *matrix_server = NULL;
-void (*event_handler_callback)(MatrixEvent) = NULL;
+static void (*event_handler_callback)(MatrixEvent) = NULL;
 
 static void matrix_send(enum HTTPMethod, const char *, const char *,
 	void (*callback)(const char *));

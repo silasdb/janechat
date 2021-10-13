@@ -1,4 +1,14 @@
 LDFLAGS += -lasan -g
+OBJS = cache.o \
+	hash.o \
+	list.o \
+	main.o \
+	matrix.o \
+	rooms.o \
+	strbuf.o \
+	ui.o \
+	ui-cli.o \
+	utils.o
 
 -include ../config.mk
 
@@ -7,16 +17,8 @@ CC ?= gcc
 CFLAGS += -fsanitize=address -g -std=c11 -Wall -Wpedantic
 LDFLAGS += -lasan
 
-janechat: cache.o strbuf.o hash.o list.o main.o matrix.o rooms.o utils.o
-	$(CC) ${LDFLAGS} -o $@ \
-		cache.o \
-		hash.o \
-		list.o \
-		main.o \
-		matrix.o \
-		rooms.o \
-		strbuf.o \
-		utils.o
+janechat: ${OBJS}
+	$(CC) ${LDFLAGS} -o $@ ${OBJS}
 
 hash.o: hash.c hash.h list.h
 	$(CC) ${CFLAGS} -c -o hash.o hash.c
@@ -30,7 +32,7 @@ strbuf.o: strbuf.c strbuf.h
 cache.o: cache.h cache.c
 	$(CC) ${CFLAGS} -c -o cache.o cache.c
 
-main.o: main.c  cache.h hash.h strbuf.h
+main.o: main.c cache.h hash.h strbuf.h ui.h 
 	$(CC) ${CFLAGS} -c -o main.o main.c
 
 matrix.o: matrix.c  list.h matrix.h strbuf.h utils.h
@@ -38,6 +40,12 @@ matrix.o: matrix.c  list.h matrix.h strbuf.h utils.h
 
 rooms.o: hash.h list.h rooms.c rooms.h
 	$(CC) ${CFLAGS} -c -o rooms.o rooms.c
+
+ui.o: ui.h
+	$(CC) ${CFLAGS} -c -o ui.o ui.c
+
+ui-cli.o: rooms.h ui-cli.c ui-cli.h utils.h ui.h
+	$(CC) ${CFLAGS} -c -o ui-cli.o ui-cli.c
 	
 utils.o: utils.c utils.h
 	$(CC) ${CFLAGS} -c -o utils.o utils.c
