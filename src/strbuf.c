@@ -18,23 +18,26 @@ StrBuf *strbuf_new_(struct strbuf_new_params params) {
 	ss->max = params.len;
 	ss->rc = 1;
 	if (params.cstr)
-		strbuf_cat_c(ss, params.cstr);
+		strbuf_append(ss, params.cstr);
 	return ss;
 }
 
-void strbuf_cat_c(StrBuf *ss, const char *s) {
+void strbuf_append_(
+	StrBuf *ss,
+	const char *s,
+	struct strbuf_append_params params
+) {
 	/*
 	 * TODO: It is now O(2*strlen(s))) but we can make it O(strlen(s)) by
 	 * not calculating strlen(s) and passing to strbuf_ncat_c() but
 	 * appending characters to ss until we find '\0'.
 	 */
-	strbuf_ncat_c(ss, s, strlen(s));
-}
+	if (params.len == 0)
+		params.len = strlen(s);
 
-void strbuf_ncat_c(StrBuf *ss, const char *s, size_t size) {
 	char *sb;
 	sb = &ss->buf[ss->len];
-	while (size > 0) {
+	while (params.len > 0) {
 		assert(ss->len <= ss->max);
 		if (ss->len == ss->max) {
 			ss->max *= 2;
@@ -46,7 +49,7 @@ void strbuf_ncat_c(StrBuf *ss, const char *s, size_t size) {
 		ss->len++;
 		sb++;
 		s++;
-		size--;
+		params.len--;
 	}
 	*sb = '\0';
 }

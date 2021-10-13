@@ -66,10 +66,10 @@ void matrix_set_event_handler(void (*callback)(MatrixEvent)) {
 
 void matrix_send_message(const StrBuf *roomid, const StrBuf *msg) {
 	StrBuf *url = strbuf_new();
-	strbuf_cat_c(url, "/_matrix/client/r0/rooms/");
-	strbuf_cat_c(url, strbuf_buf(roomid));
-	strbuf_cat_c(url, "/send/m.room.message?access_token=");
-	strbuf_cat_c(url, token);
+	strbuf_append(url, "/_matrix/client/r0/rooms/");
+	strbuf_append(url, strbuf_buf(roomid));
+	strbuf_append(url, "/send/m.room.message?access_token=");
+	strbuf_append(url, token);
 	json_t *root = json_object();
 	json_object_set(root, "msgtype", json_string("m.text"));
 	json_object_set(root, "body", json_string(strbuf_buf(msg)));
@@ -93,16 +93,16 @@ void matrix_sync() {
 		return;
 	insync = true;
 	StrBuf *url = strbuf_new();
-	strbuf_cat_c(url, "/_matrix/client/r0/sync");
+	strbuf_append(url, "/_matrix/client/r0/sync");
 	if (!next_batch)
-		strbuf_cat_c(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
+		strbuf_append(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
 	else {
-		strbuf_cat_c(url, "?since=");
-		strbuf_cat_c(url, next_batch);
-		strbuf_cat_c(url, "&timeout=10000");
+		strbuf_append(url, "?since=");
+		strbuf_append(url, next_batch);
+		strbuf_append(url, "&timeout=10000");
 	}
-	strbuf_cat_c(url, "&access_token=");
-	strbuf_cat_c(url, token);
+	strbuf_append(url, "&access_token=");
+	strbuf_append(url, token);
 	matrix_send(HTTP_GET, strbuf_buf(url), NULL, process_sync_response);
 	strbuf_decref(url);
 }
@@ -339,7 +339,7 @@ static size_t
 send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 {
 	StrBuf *s = (StrBuf *)userp;
-	strbuf_ncat_c(s, contents, size * nmemb);
+	strbuf_append(s, contents, .len = size*nmemb);
 	return size * nmemb;
 }
 
@@ -443,11 +443,11 @@ static void matrix_send(
 	
 	StrBuf *url = strbuf_new();
 	
-	strbuf_cat_c(url, "https://");
+	strbuf_append(url, "https://");
 	assert(matrix_server != NULL);
-	strbuf_cat_c(url, matrix_server);
-	strbuf_cat_c(url, ":443");
-	strbuf_cat_c(url, path);
+	strbuf_append(url, matrix_server);
+	strbuf_append(url, ":443");
+	strbuf_append(url, path);
 
 #if DEBUG_REQUEST
 	printf("DEBUG_REQUEST: url: %s\n", strbuf_buf(url));
