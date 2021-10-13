@@ -31,8 +31,21 @@ struct strbuf_new_params {
 	strbuf_new_((struct strbuf_new_params){.len = 0, .cstr = NULL, __VA_ARGS__})
 StrBuf *strbuf_new_(struct strbuf_new_params);
 
-void strbuf_cat_c(StrBuf *ss, const char *s);
-void strbuf_ncat_c(StrBuf *, const char *, size_t);
+#define NARGS(...) NARGS_(__VA_ARGS__, 5, 4, 3, 2, 1, 0)
+#define NARGS_(_5, _4, _3, _2, _1, N, ...) N
+#define CONC(A, B) CONC_(A, B)
+#define CONC_(A, B) A##B
+
+struct strbuf_append_params {
+	size_t len;
+};
+#define strbuf_append(...) CONC(strbuf_append_, NARGS(__VA_ARGS__))(__VA_ARGS__)
+#define strbuf_append_2(ss, s) \
+	strbuf_append_(ss, s, (struct strbuf_append_params){.len = 0})
+#define strbuf_append_3(ss, s, A) \
+	strbuf_append_(ss, s, (struct strbuf_append_params){A})
+void strbuf_append_(StrBuf *ss, const char *s, struct strbuf_append_params);
+
 void strbuf_reset(StrBuf *);
 StrBuf *strbuf_incref(StrBuf *);
 void strbuf_decref(StrBuf *);
