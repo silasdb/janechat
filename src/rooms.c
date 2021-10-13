@@ -83,6 +83,7 @@ void room_append_msg(Room *room, StrBuf *sender, StrBuf *text) {
 	msg->sender = strbuf_incref(sender);
 	msg->text = strbuf_incref(text);
 	list_append(room->msgs, msg);
+	room->unread_msgs++;
 }
 
 void room_append_user(Room *room, StrBuf *sender) {
