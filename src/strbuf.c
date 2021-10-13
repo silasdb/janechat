@@ -7,22 +7,19 @@
 
 #define INITSIZE 256
 
-StrBuf *strbuf_new() {
+StrBuf *strbuf_new_(struct strbuf_new_params params) {
+	if (params.len == 0)
+		params.len = INITSIZE;
 	StrBuf *ss;
 	ss = malloc(sizeof(struct StrBuf));
-	ss->buf = malloc(sizeof(char) * INITSIZE + 1); /* +1 for null byte */
+	ss->buf = malloc(sizeof(char) * params.len + 1); /* +1 for null byte */
 	ss->buf[0] = '\0';
 	ss->len = 0;
-	ss->max = INITSIZE;
+	ss->max = params.len;
 	ss->rc = 1;
+	if (params.cstr)
+		strbuf_cat_c(ss, params.cstr);
 	return ss;
-}
-
-StrBuf *strbuf_new_c(const char *s) {
-	StrBuf *sb;
-	sb = strbuf_new();
-	strbuf_cat_c(sb, s);
-	return sb;
 }
 
 void strbuf_cat_c(StrBuf *ss, const char *s) {
