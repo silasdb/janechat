@@ -21,11 +21,10 @@ struct StrBuf {
 
 inline const char *strbuf_buf(const StrBuf *ss) { return ss->buf; }
 
-inline bool streq_cstr_cstr(const char *x, const char *y) { return (strcmp(x, y) == 0); }
-inline bool streq_cstr_strbuf(const char *x, const StrBuf *y) { return (strcmp(x, strbuf_buf(y)) == 0); }
-inline bool streq_strbuf_cstr(const StrBuf *x, const char *y) { return (strcmp(strbuf_buf(x), y) == 0); }
-inline bool streq_strbuf_strbuf(const StrBuf *x, const StrBuf *y) { return (strcmp(strbuf_buf(x), strbuf_buf(y)) == 0); }
-
+/*
+ * Provide a common interface for string comparison that works for both C
+ * strings (char *) and StrBuf *.  Return true or false.
+ */
 #define streq(x, y) \
 	_Generic((x), \
 		const StrBuf *: _Generic((y), \
@@ -41,17 +40,25 @@ inline bool streq_strbuf_strbuf(const StrBuf *x, const StrBuf *y) { return (strc
 			StrBuf *: streq_cstr_strbuf, \
 			default: streq_cstr_cstr)) \
 	(x, y)
+inline bool streq_cstr_cstr(const char *x, const char *y) {
+	return (strcmp(x, y) == 0);
+}
+inline bool streq_cstr_strbuf(const char *x, const StrBuf *y) {
+	return (strcmp(x, strbuf_buf(y)) == 0);
+}
+inline bool streq_strbuf_cstr(const StrBuf *x, const char *y) {
+	return (strcmp(strbuf_buf(x), y) == 0);
+}
+inline bool streq_strbuf_strbuf(const StrBuf *x, const StrBuf *y) {
+	return (strcmp(strbuf_buf(x), strbuf_buf(y)) == 0);
+}
 
-size_t strbuf_len(const StrBuf *);
-int strbuf_cmp(const StrBuf *, const StrBuf *);
-
-/* Optional parameters for the strbuf_new() function. */
+#define strbuf_new(...) \
+	strbuf_new_((struct strbuf_new_params){.len = 0, .cstr = NULL, __VA_ARGS__})
 struct strbuf_new_params {
 	size_t len;		/* Initial length of internal string array */
 	const char *cstr;	/* An optional C string to be copied */
 };
-#define strbuf_new(...) \
-	strbuf_new_((struct strbuf_new_params){.len = 0, .cstr = NULL, __VA_ARGS__})
 StrBuf *strbuf_new_(struct strbuf_new_params);
 
 #define NARGS(...) NARGS_(__VA_ARGS__, 5, 4, 3, 2, 1, 0)
@@ -59,16 +66,18 @@ StrBuf *strbuf_new_(struct strbuf_new_params);
 #define CONC(A, B) CONC_(A, B)
 #define CONC_(A, B) A##B
 
+#define strbuf_append(...) CONC(strbuf_append_, NARGS(__VA_ARGS__))(__VA_ARGS__)
 struct strbuf_append_params {
 	size_t len;
 };
-#define strbuf_append(...) CONC(strbuf_append_, NARGS(__VA_ARGS__))(__VA_ARGS__)
 #define strbuf_append_2(ss, s) \
 	strbuf_append_(ss, s, (struct strbuf_append_params){.len = 0})
 #define strbuf_append_3(ss, s, A) \
 	strbuf_append_(ss, s, (struct strbuf_append_params){A})
 void strbuf_append_(StrBuf *ss, const char *s, struct strbuf_append_params);
 
+size_t strbuf_len(const StrBuf *);
+int strbuf_cmp(const StrBuf *, const StrBuf *);
 void strbuf_reset(StrBuf *);
 StrBuf *strbuf_incref(StrBuf *);
 void strbuf_decref(StrBuf *);
