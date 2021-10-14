@@ -28,26 +28,12 @@ inline bool streq_strbuf_strbuf(const StrBuf *x, const StrBuf *y) { return (strc
 
 #define streq(x, y) \
 	_Generic((x), \
-		char *: _Generic((y), \
-			char *: streq_cstr_cstr, \
-			const char *: streq_cstr_cstr, \
-			StrBuf *: streq_cstr_strbuf, \
-			const StrBuf *: streq_cstr_strbuf), \
-		const char *: _Generic((y), \
-			char *: streq_cstr_cstr, \
-			const char *: streq_cstr_cstr, \
-			StrBuf *: streq_cstr_strbuf, \
-			const StrBuf *: streq_cstr_strbuf), \
 		StrBuf *: _Generic((y), \
-			char *: streq_strbuf_cstr, \
-			const char *: streq_strbuf_cstr, \
 			StrBuf *: streq_strbuf_strbuf, \
-			const StrBuf *: streq_strbuf_strbuf), \
-		const StrBuf *: _Generic((y), \
-			char *: streq_strbuf_cstr, \
-			const char *: streq_strbuf_cstr, \
-			StrBuf *: streq_strbuf_strbuf, \
-			const StrBuf *: streq_strbuf_strbuf)) \
+			default: streq_strbuf_cstr), \
+		default: _Generic((y), \
+			StrBuf *: streq_cstr_strbuf, \
+			default: streq_cstr_cstr)) \
 	(x, y)
 
 size_t strbuf_len(const StrBuf *);
