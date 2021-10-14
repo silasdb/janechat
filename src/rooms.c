@@ -55,7 +55,7 @@ Room *room_byid(const StrBuf *id) {
 Room *room_byname(const StrBuf *name) {
 	ROOMS_FOREACH(iter) {
 		Room *r = iter;
-		if (streq(strbuf_buf(r->name), strbuf_buf(name)))
+		if (streq(r->name, name))
 			return r;
 	}
 	return NULL;
