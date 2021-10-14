@@ -4,6 +4,7 @@
 
 #include "hash.h"
 #include "list.h"
+#include "strbuf.h"
 
 #define HASH_SIZE 256
 
@@ -70,7 +71,7 @@ void hash_insert(Hash *h, const char *key, const void *val) {
 	List *l = h->table[idx];
 	LIST_FOREACH(l, item) {
 		// TODO: overwrite if it happens?
-		assert(strcmp(((struct hash_item *)item)->key, key) != 0);
+		assert(!streq(((struct hash_item *)item)->key, key));
 	}
 	struct hash_item *item = malloc(sizeof(struct hash_item));
 	item->key = key;
@@ -84,7 +85,7 @@ void *hash_get(const Hash *h, const char *key) {
 	if (!l)
 		return NULL;
 	LIST_FOREACH(l, item) {
-		if (strcmp(((struct hash_item *)item)->key, key) == 0)
+		if (streq(((struct hash_item *)item)->key, key))
 			return ((struct hash_item *)item)->val;
 	}
 	return NULL;

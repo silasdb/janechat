@@ -1,7 +1,9 @@
 #ifndef JANECHAT_STRBUF_H
 #define JANECHAT_STRBUF_H
 
+#include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
 typedef struct StrBuf StrBuf;
 
@@ -18,6 +20,35 @@ struct StrBuf {
 };
 
 inline const char *strbuf_buf(const StrBuf *ss) { return ss->buf; }
+
+inline bool streq_cstr_cstr(const char *x, const char *y) { return (strcmp(x, y) == 0); }
+inline bool streq_cstr_strbuf(const char *x, const StrBuf *y) { return (strcmp(x, strbuf_buf(y)) == 0); }
+inline bool streq_strbuf_cstr(const StrBuf *x, const char *y) { return (strcmp(strbuf_buf(x), y) == 0); }
+inline bool streq_strbuf_strbuf(const StrBuf *x, const StrBuf *y) { return (strcmp(strbuf_buf(x), strbuf_buf(y)) == 0); }
+
+#define streq(x, y) \
+	_Generic((x), \
+		char *: _Generic((y), \
+			char *: streq_cstr_cstr, \
+			const char *: streq_cstr_cstr, \
+			StrBuf *: streq_cstr_strbuf, \
+			const StrBuf *: streq_cstr_strbuf), \
+		const char *: _Generic((y), \
+			char *: streq_cstr_cstr, \
+			const char *: streq_cstr_cstr, \
+			StrBuf *: streq_cstr_strbuf, \
+			const StrBuf *: streq_cstr_strbuf), \
+		StrBuf *: _Generic((y), \
+			char *: streq_strbuf_cstr, \
+			const char *: streq_strbuf_cstr, \
+			StrBuf *: streq_strbuf_strbuf, \
+			const StrBuf *: streq_strbuf_strbuf), \
+		const StrBuf *: _Generic((y), \
+			char *: streq_strbuf_cstr, \
+			const char *: streq_strbuf_cstr, \
+			StrBuf *: streq_strbuf_strbuf, \
+			const StrBuf *: streq_strbuf_strbuf)) \
+	(x, y)
 
 size_t strbuf_len(const StrBuf *);
 int strbuf_cmp(const StrBuf *, const StrBuf *);

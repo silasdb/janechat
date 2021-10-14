@@ -43,10 +43,10 @@ void ui_cli_new_msg(Room *room, StrBuf *sender, StrBuf *text) {
  */
 void process_input(char *s) {
 	UiEvent ev;
-	if (strcmp(s, "/quit") == 0)
+	if (streq(s, "/quit"))
 		exit(0);
 
-	if (strcmp(s, "/stat") == 0) {
+	if (streq(s, "/stat")) {
 		ROOMS_FOREACH(iter) {
 			Room *room = iter;
 			printf("%s (unread messages: %zu)\n",
@@ -55,7 +55,7 @@ void process_input(char *s) {
 		return;
 	}
 
-	if (strcmp(s, "/names") == 0) {
+	if (streq(s, "/names")) {
 		if (!current_room) {
 			puts("No room selected.  Text not sent.\n");
 			return;
@@ -81,7 +81,7 @@ void process_input(char *s) {
 		return;
 	}
 
-	if (strcmp(s, "/sync") == 0) {
+	if (streq(s, "/sync")) {
 		ev.type = UIEVENTTYPE_SYNC;
 		ui_event_handler_callback(ev);
 		return;

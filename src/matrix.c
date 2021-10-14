@@ -132,7 +132,7 @@ static void process_direct_event(const char *sender, json_t *roomid) {
 static void process_room_event(json_t *item, const char *roomid) {
 	json_t *type = json_object_get(item, "type");
 	assert(type != NULL);
-	if (strcmp(json_string_value(type), "m.room.name") == 0) {
+	if (streq(json_string_value(type), "m.room.name")) {
 		json_t *nam = json_path(item, "content", "name", NULL);
 		assert(nam != NULL);
 		const char *name = json_string_value(nam);
@@ -143,16 +143,16 @@ static void process_room_event(json_t *item, const char *roomid) {
 		event_handler_callback(event);
 		strbuf_decref(event.roomname.id);
 		strbuf_decref(event.roomname.name);
-	} else if (strcmp(json_string_value(type), "m.room.create") == 0) {
+	} else if (streq(json_string_value(type), "m.room.create")) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_CREATE;
 		event.roomcreate.id = strbuf_new(.cstr = roomid);
 		event_handler_callback(event);
 		strbuf_decref(event.roomcreate.id);
-	} else if (strcmp(json_string_value(type), "m.room.member") == 0) {
+	} else if (streq(json_string_value(type), "m.room.member")) {
 		json_t *membership = json_path(item, "content", "membership", NULL);
 		assert(membership != NULL);
-		if (strcmp(json_string_value(membership), "join") != 0)
+		if (!streq(json_string_value(membership), "join"))
 			return;
 		json_t *sender = json_object_get(item, "sender");
 		assert(sender != NULL);
@@ -169,17 +169,17 @@ static void process_room_event(json_t *item, const char *roomid) {
 static void process_timeline_event(json_t *item, const char *roomid) {
 	json_t *type = json_object_get(item, "type");
 	assert(type != NULL);
-	if ((strcmp(json_string_value(type), "m.room.message") != 0)
-	&& (strcmp(json_string_value(type), "m.room.encrypted") != 0))
+	if ((!streq(json_string_value(type), "m.room.message"))
+	&& (!streq(json_string_value(type), "m.room.encrypted")))
 		return;
 	json_t *sender = json_object_get(item, "sender");
 	assert(sender != NULL);
 	json_t *content = json_object_get(item, "content");
 	assert(content != NULL);
-	if (strcmp(json_string_value(type), "m.room.message") == 0) {
+	if (streq(json_string_value(type), "m.room.message")) {
 		json_t *msgtype = json_object_get(content, "msgtype");
 		assert(msgtype != NULL);
-		if (strcmp(json_string_value(msgtype), "m.text") != 0) {
+		if (!streq(json_string_value(msgtype), "m.text")) {
 			printf("==== TODO: Type not supported: %s====\n",
 				json_string_value(msgtype));
 			return;
@@ -195,7 +195,7 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 		strbuf_decref(event.msg.sender);
 		strbuf_decref(event.msg.roomid);
 		strbuf_decref(event.msg.text);
-	} else if (strcmp(json_string_value(type), "m.room.encrypted") == 0) {
+	} else if (streq(json_string_value(type), "m.room.encrypted")) {
 		MatrixEvent event;
 		event.type = EVENT_MSG;
 		event.msg.sender = strbuf_new(.cstr = json_string_value(sender));
@@ -277,7 +277,7 @@ static void process_sync_response(const char *output) {
 		json_t *event;
 		json_array_foreach(events, i, event) {
 			json_t *type = json_object_get(event, "type");
-			if (strcmp(json_string_value(type), "m.room.create") == 0)
+			if (streq(json_string_value(type), "m.room.create"))
 				process_room_event(event, roomid);
 		}
 	}
@@ -292,7 +292,7 @@ static void process_sync_response(const char *output) {
 			assert(type != NULL);
 			const char *t;
 			t = json_string_value(type);
-			if (strcmp(t, "m.direct") == 0) {
+			if (streq(t, "m.direct")) {
 				json_t *content = json_object_get(item, "content"); 
 				const char *sender;
 				json_t *roomid;
@@ -315,7 +315,7 @@ static void process_sync_response(const char *output) {
 		json_t *event;
 		json_array_foreach(events, i, event) {
 			json_t *type = json_object_get(event, "type");
-			if (strcmp(json_string_value(type), "m.room.create") != 0)
+			if (!streq(json_string_value(type), "m.room.create"))
 				process_room_event(event, roomid);
 		}
 		events = json_path(item, "timeline", "events", NULL);
