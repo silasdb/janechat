@@ -29,8 +29,8 @@ void strbuf_append_(
 ) {
 	/*
 	 * TODO: It is now O(2*strlen(s))) but we can make it O(strlen(s)) by
-	 * not calculating strlen(s) and passing to strbuf_ncat_c() but
-	 * appending characters to ss until we find '\0'.
+	 * not calculating strlen(s), instead passing s to the loop below and
+	 * appending characters to ss->buf until we find '\0' in s.
 	 */
 	if (params.len == 0)
 		params.len = strlen(s);
