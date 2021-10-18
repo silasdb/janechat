@@ -4,7 +4,7 @@
 
 #include "hash.h"
 #include "list.h"
-#include "strbuf.h"
+#include "str.h"
 
 #define HASH_SIZE 256
 
