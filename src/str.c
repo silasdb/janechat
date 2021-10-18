@@ -3,23 +3,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "strbuf.h"
+#include "str.h"
 
 #define INITSIZE 256
 
-StrBuf *strbuf_new() {
-	return strbuf_new_len(INITSIZE);
+Str *str_new() {
+	return str_new_len(INITSIZE);
 }
 
-StrBuf *strbuf_new_cstr(const char *s) {
-	StrBuf *ss = strbuf_new();
-	strbuf_append_cstr(ss, s);
+Str *str_new_cstr(const char *s) {
+	Str *ss = str_new();
+	str_append_cstr(ss, s);
 	return ss;
 }
 
-StrBuf *strbuf_new_len(size_t len) {
-	StrBuf *ss;
-	ss = malloc(sizeof(struct StrBuf));
+Str *str_new_len(size_t len) {
+	Str *ss;
+	ss = malloc(sizeof(struct Str));
 	ss->buf = malloc(sizeof(char) * len + 1); /* +1 for null byte */
 	ss->buf[0] = '\0';
 	ss->len = 0;
@@ -28,17 +28,17 @@ StrBuf *strbuf_new_len(size_t len) {
 	return ss;
 }
 
-void strbuf_append_cstr(StrBuf *ss, const char *s) {
+void str_append_cstr(Str *ss, const char *s) {
 	/*
 	 * TODO: It is now O(2*strlen(s))) but we can make it O(strlen(s)) by
 	 * not calculating strlen(s), instead passing s to the loop in
-	 * strbuf_append_cstr_len() and appending characters to ss->buf until we
+	 * str_append_cstr_len() and appending characters to ss->buf until we
 	 * find '\0' in s.
 	 */
-	strbuf_append_cstr_len(ss, s, strlen(s));
+	str_append_cstr_len(ss, s, strlen(s));
 }
 
-void strbuf_append_cstr_len(StrBuf *ss, const char *s, size_t len) {
+void str_append_cstr_len(Str *ss, const char *s, size_t len) {
 	char *sb;
 	sb = &ss->buf[ss->len];
 	while (len > 0) {
@@ -58,12 +58,12 @@ void strbuf_append_cstr_len(StrBuf *ss, const char *s, size_t len) {
 	*sb = '\0';
 }
 
-StrBuf *strbuf_incref(StrBuf *ss) {
+Str *str_incref(Str *ss) {
 	ss->rc++;
 	return ss;
 }
 
-void strbuf_decref(StrBuf *ss) {
+void str_decref(Str *ss) {
 	ss->rc--;
 	if (ss->rc > 0)
 		return;
@@ -71,11 +71,11 @@ void strbuf_decref(StrBuf *ss) {
 	free(ss);
 }
 
-size_t strbuf_len(const StrBuf *ss) {
+size_t str_len(const Str *ss) {
 	return ss->len;
 }
 
-void strbuf_reset(StrBuf *ss) {
+void str_reset(Str *ss) {
 	ss->len = 0;
 	ss->buf[0] = '\0';
 }

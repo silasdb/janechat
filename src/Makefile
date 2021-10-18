@@ -5,7 +5,7 @@ OBJS = cache.o \
 	main.o \
 	matrix.o \
 	rooms.o \
-	strbuf.o \
+	str.o \
 	ui.o \
 	ui-cli.o \
 	utils.o
@@ -26,16 +26,16 @@ hash.o: hash.c hash.h list.h
 list.o: list.c list.h
 	$(CC) ${CFLAGS} -c -o list.o list.c
 
-strbuf.o: strbuf.c strbuf.h
-	$(CC) ${CFLAGS} -c -o strbuf.o strbuf.c
+str.o: str.c str.h
+	$(CC) ${CFLAGS} -c -o str.o str.c
 
 cache.o: cache.h cache.c
 	$(CC) ${CFLAGS} -c -o cache.o cache.c
 
-main.o: main.c cache.h hash.h strbuf.h ui.h 
+main.o: main.c cache.h hash.h str.h ui.h 
 	$(CC) ${CFLAGS} -c -o main.o main.c
 
-matrix.o: matrix.c  list.h matrix.h strbuf.h utils.h
+matrix.o: matrix.c  list.h matrix.h str.h utils.h
 	$(CC) ${CFLAGS} -c -o matrix.o matrix.c
 
 rooms.o: hash.h list.h rooms.c rooms.h

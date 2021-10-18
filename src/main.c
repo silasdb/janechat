@@ -132,22 +132,22 @@ void do_matrix_login() {
 	// TODO: free(password)?
 }
 
-void process_room_create(StrBuf *id) {
+void process_room_create(Str *id) {
 	room_new(id);
 }
 
-void process_room_name(StrBuf *roomid, StrBuf *name) {
+void process_room_name(Str *roomid, Str *name) {
 	Room *room = room_byid(roomid);
 	room_set_name(room, name);
 }
 
-void process_room_join(StrBuf *roomid, StrBuf *sender) {
+void process_room_join(Str *roomid, Str *sender) {
 	Room *room = room_byid(roomid);
 	assert(room);
 	room_append_user(room, sender);
 }
 
-void process_msg(StrBuf *roomid, StrBuf *sender, StrBuf *text) {
+void process_msg(Str *roomid, Str *sender, Str *text) {
 	Room *room = room_byid(roomid);
 	room_append_msg(room, sender, text);
 	ui_hooks.new_msg(room, sender, text);
@@ -169,12 +169,12 @@ void handle_matrix_event(MatrixEvent ev) {
 		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);
 		break;
 	case EVENT_ERROR:
-		printf("%s\n", strbuf_buf(ev.error.error));
+		printf("%s\n", str_buf(ev.error.error));
 		exit(1);
 		break;
 	case EVENT_LOGGED_IN:
 		logged_in = true;
-		cache_set("access_token", strbuf_buf(ev.login.token));
+		cache_set("access_token", str_buf(ev.login.token));
 		break;
 	case EVENT_CONN_ERROR:
 		//puts("Connection error.\n");

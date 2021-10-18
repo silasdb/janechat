@@ -1,7 +1,7 @@
 #ifndef JANECHAT_UI_H
 #define JANECHAT_UI_H
 
-#include "strbuf.h"
+#include "str.h"
 
 enum UiEventType {
 	UIEVENTTYPE_SYNC,
@@ -12,8 +12,8 @@ struct UiEvent {
 	enum UiEventType type;
 	union {
 		struct UiEventSendMessage {
-			StrBuf *roomid;
-			StrBuf *text;
+			Str *roomid;
+			Str *text;
 		} msg;
 		/*
 		 * UIEVENTTYPE_SYNC and UIEVENTTYPE_NONE have an associated

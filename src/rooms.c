@@ -17,7 +17,7 @@ void rooms_init() {
 /*
  * TODO: is this the best name, since it changes the global variable?
  */
-Room *room_new(StrBuf *id) {
+Room *room_new(Str *id) {
 	Room *room;
 	room = room_byid(id);
 	if (room) {
@@ -27,32 +27,32 @@ Room *room_new(StrBuf *id) {
 		 * Who creates the room?
 		 */
 		printf("Trying to create duplicated room (id: %s)\n",
-			strbuf_buf(id));
+			str_buf(id));
 		return room;
 	}
 	room = malloc(sizeof(Room));
-	room->id = strbuf_incref(id);
+	room->id = str_incref(id);
 	
 	/*
 	 * At the moment of creation, we don't know the room name yet, so we set
 	 * it to be temporarily the same as id and increment its reference
 	 * counter.
 	 */
-	room->name = strbuf_incref(id);
+	room->name = str_incref(id);
 
 	room->users = list_new();
 	room->msgs = list_new();
 	room->unread_msgs = 0;
-	hash_insert(rooms_hash, strbuf_buf(id), room);
+	hash_insert(rooms_hash, str_buf(id), room);
 	list_append(rooms_list, room);
 	return room;
 }
 
-Room *room_byid(const StrBuf *id) {
-	return hash_get(rooms_hash, strbuf_buf(id));
+Room *room_byid(const Str *id) {
+	return hash_get(rooms_hash, str_buf(id));
 }
 
-Room *room_byname(const StrBuf *name) {
+Room *room_byname(const Str *name) {
 	ROOMS_FOREACH(iter) {
 		Room *r = iter;
 		if (streq(r->name->buf, name->buf))
@@ -61,7 +61,7 @@ Room *room_byname(const StrBuf *name) {
 	return NULL;
 }
 
-void room_set_name(Room *r, StrBuf *name) {
+void room_set_name(Room *r, Str *name) {
 	/*
 	 * TODO: it seems client can receive m.room.name before m.room.create,
 	 * so we'll need to handle that.
@@ -70,22 +70,22 @@ void room_set_name(Room *r, StrBuf *name) {
 		return;
 
 	/*
-	 * We strbuf_decref() old value because it was set to the room id at
-	 * strbuf_new() while we don't receive the room name.
+	 * We str_decref() old value because it was set to the room id at
+	 * str_new() while we don't receive the room name.
 	 */
-	strbuf_decref(r->name);
+	str_decref(r->name);
 
-	r->name = strbuf_incref(name);
+	r->name = str_incref(name);
 }
 
-void room_append_msg(Room *room, StrBuf *sender, StrBuf *text) {
+void room_append_msg(Room *room, Str *sender, Str *text) {
 	Msg *msg = malloc(sizeof(Msg));
-	msg->sender = strbuf_incref(sender);
-	msg->text = strbuf_incref(text);
+	msg->sender = str_incref(sender);
+	msg->text = str_incref(text);
 	list_append(room->msgs, msg);
 	room->unread_msgs++;
 }
 
-void room_append_user(Room *room, StrBuf *sender) {
-	list_append(room->users, (void *)strbuf_buf(strbuf_incref(sender)));
+void room_append_user(Room *room, Str *sender) {
+	list_append(room->users, (void *)str_buf(str_incref(sender)));
 }

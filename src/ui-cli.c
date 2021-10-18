@@ -9,7 +9,7 @@ Room *current_room = NULL;
 
 static void process_input(char *);
 static void print_messages(Room *room);
-static void print_msg(StrBuf *roomname, StrBuf *sender, StrBuf *text);
+static void print_msg(Str *roomname, Str *sender, Str *text);
 
 void ui_cli_iter() {
 	char *line;
@@ -19,7 +19,7 @@ void ui_cli_iter() {
 	free(line);
 }
 
-void ui_cli_new_msg(Room *room, StrBuf *sender, StrBuf *text) {
+void ui_cli_new_msg(Room *room, Str *sender, Str *text) {
 	if (room != current_room)
 		return;
 
@@ -50,7 +50,7 @@ void process_input(char *s) {
 		ROOMS_FOREACH(iter) {
 			Room *room = iter;
 			printf("%s (unread messages: %zu)\n",
-				strbuf_buf(room->name), room->unread_msgs);
+				str_buf(room->name), room->unread_msgs);
 		}
 		return;
 	}
@@ -68,9 +68,9 @@ void process_input(char *s) {
 
 	if (strncmp(s, "/join ", strlen("/join ")) == 0) {
 		s += strlen("/join ");
-		StrBuf *ss = strbuf_new_cstr(s);
+		Str *ss = str_new_cstr(s);
 		Room *room = room_byname(ss);
-		strbuf_decref(ss);
+		str_decref(ss);
 		if (!room) {
 			printf("Room \"%s\" not found.\n", s);
 			return;
@@ -109,11 +109,11 @@ void process_input(char *s) {
 	}
 
 	ev.type = UIEVENTTYPE_SENDMSG;
-	ev.msg.roomid = strbuf_incref(current_room->id);
-	ev.msg.text = strbuf_new_cstr(s);
+	ev.msg.roomid = str_incref(current_room->id);
+	ev.msg.text = str_new_cstr(s);
 	ui_event_handler_callback(ev);
-	strbuf_decref(ev.msg.roomid);
-	strbuf_decref(ev.msg.text);
+	str_decref(ev.msg.roomid);
+	str_decref(ev.msg.text);
 }
 
 static void print_messages(Room *room) {
@@ -124,9 +124,9 @@ static void print_messages(Room *room) {
 	room->unread_msgs = 0;
 }
 
-static void print_msg(StrBuf *roomname, StrBuf *sender, StrBuf *text) {
+static void print_msg(Str *roomname, Str *sender, Str *text) {
 	printf("%c[38;5;4m%s%c[m: %c[38;5;2m%s%c[m: %s\n",
-		0x1b, strbuf_buf(roomname), 0x1b,
-		0x1b, strbuf_buf(sender), 0x1b,
-		strbuf_buf(text));
+		0x1b, str_buf(roomname), 0x1b,
+		0x1b, str_buf(sender), 0x1b,
+		str_buf(text));
 }
