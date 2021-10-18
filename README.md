@@ -23,5 +23,5 @@ $ make
 
 # Running
 ```
-$ ./src/janechat @user:hostname.com
+$ ./src/janechat
 ```
