@@ -68,7 +68,7 @@ void process_input(char *s) {
 
 	if (strncmp(s, "/join ", strlen("/join ")) == 0) {
 		s += strlen("/join ");
-		StrBuf *ss = strbuf_new(.cstr = s);
+		StrBuf *ss = strbuf_new_cstr(s);
 		Room *room = room_byname(ss);
 		strbuf_decref(ss);
 		if (!room) {
@@ -110,7 +110,7 @@ void process_input(char *s) {
 
 	ev.type = UIEVENTTYPE_SENDMSG;
 	ev.msg.roomid = strbuf_incref(current_room->id);
-	ev.msg.text = strbuf_new(.cstr = s);
+	ev.msg.text = strbuf_new_cstr(s);
 	ui_event_handler_callback(ev);
 	strbuf_decref(ev.msg.roomid);
 	strbuf_decref(ev.msg.text);
