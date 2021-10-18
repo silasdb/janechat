@@ -66,10 +66,10 @@ void matrix_set_event_handler(void (*callback)(MatrixEvent)) {
 
 void matrix_send_message(const StrBuf *roomid, const StrBuf *msg) {
 	StrBuf *url = strbuf_new();
-	strbuf_append(url, "/_matrix/client/r0/rooms/");
-	strbuf_append(url, strbuf_buf(roomid));
-	strbuf_append(url, "/send/m.room.message?access_token=");
-	strbuf_append(url, token);
+	strbuf_append_cstr(url, "/_matrix/client/r0/rooms/");
+	strbuf_append_cstr(url, strbuf_buf(roomid));
+	strbuf_append_cstr(url, "/send/m.room.message?access_token=");
+	strbuf_append_cstr(url, token);
 	json_t *root = json_object();
 	json_object_set(root, "msgtype", json_string("m.text"));
 	json_object_set(root, "body", json_string(strbuf_buf(msg)));
@@ -93,16 +93,16 @@ void matrix_sync() {
 		return;
 	insync = true;
 	StrBuf *url = strbuf_new();
-	strbuf_append(url, "/_matrix/client/r0/sync");
+	strbuf_append_cstr(url, "/_matrix/client/r0/sync");
 	if (!next_batch)
-		strbuf_append(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
+		strbuf_append_cstr(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
 	else {
-		strbuf_append(url, "?since=");
-		strbuf_append(url, next_batch);
-		strbuf_append(url, "&timeout=10000");
+		strbuf_append_cstr(url, "?since=");
+		strbuf_append_cstr(url, next_batch);
+		strbuf_append_cstr(url, "&timeout=10000");
 	}
-	strbuf_append(url, "&access_token=");
-	strbuf_append(url, token);
+	strbuf_append_cstr(url, "&access_token=");
+	strbuf_append_cstr(url, token);
 	matrix_send(HTTP_GET, strbuf_buf(url), NULL, process_sync_response);
 	strbuf_decref(url);
 }
@@ -122,8 +122,8 @@ void matrix_login(const char *server, const char *user, const char *password) {
 static void process_direct_event(const char *sender, json_t *roomid) {
 	MatrixEvent event;
 	event.type = EVENT_ROOM_NAME;
-	event.roomname.id = strbuf_new(.cstr = json_string_value(roomid));
-	event.roomname.name = strbuf_new(.cstr = sender);
+	event.roomname.id = strbuf_new_cstr(json_string_value(roomid));
+	event.roomname.name = strbuf_new_cstr(sender);
 	event_handler_callback(event);
 	strbuf_decref(event.roomname.id);
 	strbuf_decref(event.roomname.name);
@@ -138,15 +138,15 @@ static void process_room_event(json_t *item, const char *roomid) {
 		const char *name = json_string_value(nam);
 		MatrixEvent event;
 		event.type = EVENT_ROOM_NAME;
-		event.roomname.id = strbuf_new(.cstr = roomid);
-		event.roomname.name = strbuf_new(.cstr = name);
+		event.roomname.id = strbuf_new_cstr(roomid);
+		event.roomname.name = strbuf_new_cstr(name);
 		event_handler_callback(event);
 		strbuf_decref(event.roomname.id);
 		strbuf_decref(event.roomname.name);
 	} else if (streq(json_string_value(type), "m.room.create")) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_CREATE;
-		event.roomcreate.id = strbuf_new(.cstr = roomid);
+		event.roomcreate.id = strbuf_new_cstr(roomid);
 		event_handler_callback(event);
 		strbuf_decref(event.roomcreate.id);
 	} else if (streq(json_string_value(type), "m.room.member")) {
@@ -158,8 +158,8 @@ static void process_room_event(json_t *item, const char *roomid) {
 		assert(sender != NULL);
 		MatrixEvent event;
 		event.type = EVENT_ROOM_JOIN;
-		event.roomjoin.roomid = strbuf_new(.cstr = roomid);
-		event.roomjoin.sender = strbuf_new(.cstr = json_string_value(sender));
+		event.roomjoin.roomid = strbuf_new_cstr(roomid);
+		event.roomjoin.sender = strbuf_new_cstr(json_string_value(sender));
 		event_handler_callback(event);
 		strbuf_decref(event.roomjoin.roomid);
 		strbuf_decref(event.roomjoin.sender);
@@ -188,9 +188,9 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 		assert(body != NULL);
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.sender = strbuf_new(.cstr = json_string_value(sender));
-		event.msg.roomid = strbuf_new(.cstr = roomid);
-		event.msg.text = strbuf_new(.cstr = json_string_value(body));
+		event.msg.sender = strbuf_new_cstr(json_string_value(sender));
+		event.msg.roomid = strbuf_new_cstr(roomid);
+		event.msg.text = strbuf_new_cstr(json_string_value(body));
 		event_handler_callback(event);
 		strbuf_decref(event.msg.sender);
 		strbuf_decref(event.msg.roomid);
@@ -198,9 +198,9 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 	} else if (streq(json_string_value(type), "m.room.encrypted")) {
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.sender = strbuf_new(.cstr = json_string_value(sender));
-		event.msg.roomid = strbuf_new(.cstr = roomid);
-		event.msg.text = strbuf_new(.cstr = "== encrypted message ==");
+		event.msg.sender = strbuf_new_cstr(json_string_value(sender));
+		event.msg.roomid = strbuf_new_cstr(roomid);
+		event.msg.text = strbuf_new_cstr("== encrypted message ==");
 		event_handler_callback(event);
 		strbuf_decref(event.msg.sender);
 		strbuf_decref(event.msg.roomid);
@@ -211,8 +211,8 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 static void process_error(json_t *root) {
 	MatrixEvent event;
 	event.type = EVENT_ERROR;
-	event.error.errorcode = strbuf_new(.cstr = json_string_value(json_object_get(root, "errcode")));
-	event.error.error = strbuf_new(.cstr = json_string_value(json_object_get(root, "error")));
+	event.error.errorcode = strbuf_new_cstr(json_string_value(json_object_get(root, "errcode")));
+	event.error.error = strbuf_new_cstr(json_string_value(json_object_get(root, "error")));
 	event_handler_callback(event);
 	strbuf_decref(event.error.errorcode);
 	strbuf_decref(event.error.error);
@@ -242,7 +242,7 @@ static void process_sync_response(const char *output) {
 		token = strdup(json_string_value(tok));
 		MatrixEvent event;
 		event.type = EVENT_LOGGED_IN;
-		event.login.token = strbuf_new(.cstr = token);
+		event.login.token = strbuf_new_cstr(token);
 		json_decref(root);
 		event_handler_callback(event);
 		strbuf_decref(event.login.token);
@@ -339,7 +339,7 @@ static size_t
 send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 {
 	StrBuf *s = (StrBuf *)userp;
-	strbuf_append(s, contents, .len = size*nmemb);
+	strbuf_append_cstr_len(s, contents, size*nmemb);
 	return size * nmemb;
 }
 
@@ -443,11 +443,11 @@ static void matrix_send(
 	
 	StrBuf *url = strbuf_new();
 	
-	strbuf_append(url, "https://");
+	strbuf_append_cstr(url, "https://");
 	assert(matrix_server != NULL);
-	strbuf_append(url, matrix_server);
-	strbuf_append(url, ":443");
-	strbuf_append(url, path);
+	strbuf_append_cstr(url, matrix_server);
+	strbuf_append_cstr(url, ":443");
+	strbuf_append_cstr(url, path);
 
 #if DEBUG_REQUEST
 	printf("DEBUG_REQUEST: url: %s\n", strbuf_buf(url));
