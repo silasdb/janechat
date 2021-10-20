@@ -4,7 +4,7 @@ janechat is a small Matrix client for the terminal.
 
 [Oficial website](https://silas.net.br/projects/janechat)
 
-[Purl URL that redirects to the current oficial website](https://purl.org/net/janechat](https://purl.org/net/janechat)
+[Purl URL that redirects to the current oficial website](https://purl.org/net/janechat)
 
 [GitHub mirror](https://github.com/silasdb/janechat)
 
