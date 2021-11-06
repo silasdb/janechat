@@ -14,8 +14,9 @@ OBJS = cache.o \
 
 # TODO: split debug / release build rules
 CC ?= gcc
-CFLAGS += -fsanitize=address -g -std=c11 -Wall -Wpedantic -fno-omit-frame-pointer
-LDFLAGS += -lasan
+CFLAGS += -g -std=c11 -Wall -Wpedantic -fno-omit-frame-pointer
+CFLAGS += -fsanitize=address -fsanitize=undefined -fsanitize=signed-integer-overflow
+LDFLAGS += -lasan -lubsan
 
 janechat: ${OBJS}
 	$(CC) ${LDFLAGS} -o $@ ${OBJS}
