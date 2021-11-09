@@ -47,9 +47,14 @@ ui.o: ui.h
 
 ui-cli.o: rooms.h ui-cli.c ui-cli.h utils.h ui.h
 	$(CC) ${CFLAGS} -c -o ui-cli.o ui-cli.c
+
+ui-curses.o: ui-curses.c
+	$(CC) ${CFLAGS} -c -o ui-curses.o ui-curses.c
 	
 utils.o: utils.c utils.h
 	$(CC) ${CFLAGS} -c -o utils.o utils.c
+
+ui-curses: ui-curses.o str.o
 
 tags:
 	# Execute exctags, if not found, execute old ctags.
@@ -59,4 +64,4 @@ tags:
 
 .PHONY: clean
 clean:
-	rm -f janechat janechat.core *.o tags
+	rm -f janechat janechat.core *.o tags ui-curses
