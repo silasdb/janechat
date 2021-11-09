@@ -8,7 +8,8 @@ OBJS = cache.o \
 	str.o \
 	ui.o \
 	ui-cli.o \
-	utils.o
+	utils.o \
+	vector.o
 
 -include ../config.mk
 
@@ -54,7 +55,16 @@ ui-curses.o: ui-curses.c
 utils.o: utils.c utils.h
 	$(CC) ${CFLAGS} -c -o utils.o utils.c
 
-ui-curses: ui-curses.o str.o
+vector.o: vector.c vector.h
+	$(CC) ${CFLAGS} -c -o $@ vector.c
+
+# ui-curses-test
+
+ui-curses-test: ui-curses-test.o vector.o
+	$(CC) ${LDFLAGS} -o $@ ui-curses-test.o vector.o
+
+ui-curses-test.o: ui-curses.c
+	$(CC) -DUI_CURSES_TEST ${CFLAGS} -c -o $@ ui-curses.c
 
 tags:
 	# Execute exctags, if not found, execute old ctags.
@@ -64,4 +74,4 @@ tags:
 
 .PHONY: clean
 clean:
-	rm -f janechat janechat.core *.o tags ui-curses
+	rm -f janechat janechat.core *.o tags ui-curses-test

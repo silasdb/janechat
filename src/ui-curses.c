@@ -6,11 +6,11 @@
 #include <string.h>
 #include <curses.h>
 
-#define streq(a, b) (strcmp(a, b) == 0)
+#include "str.h"
+#include "vector.h"
 
 struct text_buffer {
-	char *msgs[2056];
-	size_t msgs_count;
+	Vector *msgs;
 	char buf[256];
 	size_t pos; /* Cursor position */
 	size_t len; /* String length - does not include the null byte*/
@@ -27,23 +27,7 @@ WINDOW *wchat_msgs;
 WINDOW *wchat_input;
 
 #define MAX_ROOMS 14
-
-struct text_buffer b[MAX_ROOMS] = {
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-	{.msgs_count = 0, .pos = 0, .len = 0, .last_line = -1},
-};
+struct text_buffer b[MAX_ROOMS];
 
 struct text_buffer *cur_buffer = &b[0];
 struct text_buffer index_buffer;
@@ -113,7 +97,7 @@ void fill_msgs() {
 	werase(wchat_msgs);
 	int last;
 	if (cur_buffer->last_line == -1)
-		last = cur_buffer->msgs_count-1;
+		last = cur_buffer->msgs->len-1;
 	if (last < 0)
 		return;
 	int maxy, maxx;
@@ -123,13 +107,13 @@ void fill_msgs() {
 	 */
 	int y = maxy;
 	for (int i = last; i >= 0; i--) {
-		size_t len = strlen(cur_buffer->msgs[i]);
+		size_t len = strlen(cur_buffer->msgs->elems[i]);
 		int height = len / maxx;
 		height++;
 		y -= height;
 		if (y < 0)
 			break;
-		mvwprintw(wchat_msgs, y, 0, "%s\n", cur_buffer->msgs[i]);
+		mvwprintw(wchat_msgs, y, 0, "%s\n", (char *)cur_buffer->msgs->elems[i]);
 	}
 	wrefresh(wchat_msgs);
 }
@@ -303,8 +287,7 @@ void process_input(WINDOW *w) {
 			change_cur_buffer(&index_buffer);
 			index_rooms_cursor_show();
 		} else {
-			cur_buffer->msgs[cur_buffer->msgs_count] = strdup(cur_buffer->buf);
-			cur_buffer->msgs_count++;
+			vector_append(cur_buffer->msgs, strdup(cur_buffer->buf));
 			fill_msgs();
 		}
 		cur_buffer->buf[0] = '\0';
@@ -327,14 +310,22 @@ void process_input(WINDOW *w) {
 	input_cursor_show();
 }
 
+#ifdef UI_CURSES_TEST
 int main(int argc, char *argv[]) {
+
+	for (size_t i = 0; i < MAX_ROOMS; i++) {
+		b[i].msgs = vector_new();
+		b[i].pos = 0;
+		b[i].len = 0;
+		b[i].last_line = -1;
+		b[i].buf[0] = '\0';
+	}
+
 	initscr();
 	clear();
 	nonl();
 	cbreak();
 	noecho();
-
-	cur_buffer->buf[0] = '\0';
 
 	int maxy, maxx;
 	getmaxyx(stdscr, maxy, maxx);
@@ -371,3 +362,4 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
+#endif
