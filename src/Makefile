@@ -8,7 +8,8 @@ OBJS = cache.o \
 	str.o \
 	ui.o \
 	ui-cli.o \
-	utils.o
+	utils.o \
+	vector.o
 
 -include ../config.mk
 
@@ -50,6 +51,9 @@ ui-cli.o: rooms.h ui-cli.c ui-cli.h utils.h ui.h
 	
 utils.o: utils.c utils.h
 	$(CC) ${CFLAGS} -c -o utils.o utils.c
+
+vector.o: vector.c vector.h
+	$(CC) ${CFLAGS} -c -o $@ vector.c
 
 tags:
 	# Execute exctags, if not found, execute old ctags.
