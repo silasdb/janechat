@@ -1,7 +1,7 @@
 #ifndef JANECHAT_ROOMS_H
 #define JANECHAT_ROOMS_H
 
-#include "list.h"
+#include "vector.h"
 #include "str.h"
 
 struct Msg {
@@ -13,8 +13,8 @@ typedef struct Msg Msg;
 struct Room {
 	Str *id;
 	Str *name;
-	List *users;		/* List of joined users */
-	List *msgs;
+	Vector *users;		/* Vector of joined users */
+	Vector *msgs;
 	size_t unread_msgs;	/* Should be reset by the caller */
 };
 typedef struct Room Room;
@@ -27,10 +27,10 @@ void room_set_name(Room *, Str *);
 void room_append_msg(Room *, Str *, Str *);
 void room_append_user(Room *, Str *);
 
-extern List *rooms_list;
+extern Vector *rooms_vector;
 
-#define ROOM_MESSAGES_FOREACH(r, iter) LIST_FOREACH(r->msgs, iter)
-#define ROOM_USERS_FOREACH(r, iter) LIST_FOREACH(r->users, iter)
-#define ROOMS_FOREACH(iter) LIST_FOREACH(rooms_list, iter)
+#define ROOM_MESSAGES_FOREACH(r, iter, i) VECTOR_FOREACH(r->msgs, iter, i)
+#define ROOM_USERS_FOREACH(r, iter, i) VECTOR_FOREACH(r->users, iter, i)
+#define ROOMS_FOREACH(iter, i) VECTOR_FOREACH(rooms_vector, iter, i)
 
 #endif /* !JANECHAT_ROOMS_H */

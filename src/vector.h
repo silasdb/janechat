@@ -14,4 +14,7 @@ typedef struct Vector Vector;
 Vector *vector_new();
 void vector_append(Vector *, void *);
 
+#define VECTOR_FOREACH(v, iter, i) \
+	for (i = 0; (i < v->len) && (iter = v->elems[i]); i++)
+
 #endif /* !JANECHAT_VECTOR_H */

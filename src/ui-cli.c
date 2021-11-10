@@ -47,8 +47,9 @@ void process_input(char *s) {
 		exit(0);
 
 	if (streq(s, "/stat")) {
-		ROOMS_FOREACH(iter) {
-			Room *room = iter;
+		Room *room;
+		size_t i;
+		ROOMS_FOREACH(room, i) {
 			printf("%s (unread messages: %zu)\n",
 				str_buf(room->name), room->unread_msgs);
 		}
@@ -60,8 +61,10 @@ void process_input(char *s) {
 			puts("No room selected.  Text not sent.\n");
 			return;
 		}
-		ROOM_USERS_FOREACH(current_room, iter) {
-			printf("%s\n", (char *)iter);
+		char *iter;
+		size_t i;
+		ROOM_USERS_FOREACH(current_room, iter, i) {
+			printf("%s\n", iter);
 		}
 		return;
 	}
@@ -117,8 +120,9 @@ void process_input(char *s) {
 }
 
 static void print_messages(Room *room) {
-	ROOM_MESSAGES_FOREACH(room, iter) {
-		Msg *msg = (Msg *)iter;
+	Msg *msg;
+	size_t i;
+	ROOM_MESSAGES_FOREACH(room, msg, i) {
 		print_msg(room->name, msg->sender, msg->text);
 	}
 	room->unread_msgs = 0;
