@@ -69,9 +69,10 @@ void hash_insert(Hash *h, const char *key, const void *val) {
 	if (!h->table[idx])
 		h->table[idx] = list_new();
 	List *l = h->table[idx];
-	LIST_FOREACH(l, item) {
+	struct hash_item *iter;
+	LIST_FOREACH(l, iter) {
 		// TODO: overwrite if it happens?
-		assert(!streq(((struct hash_item *)item)->key, key));
+		assert(!streq(iter->key, key));
 	}
 	struct hash_item *item = malloc(sizeof(struct hash_item));
 	item->key = key;
@@ -84,9 +85,10 @@ void *hash_get(const Hash *h, const char *key) {
 	List *l = h->table[idx];
 	if (!l)
 		return NULL;
+	struct hash_item *item;
 	LIST_FOREACH(l, item) {
-		if (streq(((struct hash_item *)item)->key, key))
-			return ((struct hash_item *)item)->val;
+		if (streq(item->key, key))
+			return item->val;
 	}
 	return NULL;
 }

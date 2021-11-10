@@ -6,12 +6,12 @@
 #include "rooms.h"
 
 Hash *rooms_hash;	/* Hash<const char *id, Room> */
-List *rooms_list;	/* List<Room> */
+Vector *rooms_vector;	/* Vector<Room> */
 size_t count;		/* Number of rooms */
 
 void rooms_init() {
 	rooms_hash = hash_new();
-	rooms_list = list_new();
+	rooms_vector = vector_new();
 }
 
 /*
@@ -40,11 +40,11 @@ Room *room_new(Str *id) {
 	 */
 	room->name = str_incref(id);
 
-	room->users = list_new();
-	room->msgs = list_new();
+	room->users = vector_new();
+	room->msgs = vector_new();
 	room->unread_msgs = 0;
 	hash_insert(rooms_hash, str_buf(id), room);
-	list_append(rooms_list, room);
+	vector_append(rooms_vector, room);
 	return room;
 }
 
@@ -53,10 +53,11 @@ Room *room_byid(const Str *id) {
 }
 
 Room *room_byname(const Str *name) {
-	ROOMS_FOREACH(iter) {
-		Room *r = iter;
-		if (streq(r->name->buf, name->buf))
-			return r;
+	Room *iter;
+	size_t i;
+	ROOMS_FOREACH(iter, i) {
+		if (streq(iter->name->buf, name->buf))
+			return iter;
 	}
 	return NULL;
 }
@@ -82,10 +83,10 @@ void room_append_msg(Room *room, Str *sender, Str *text) {
 	Msg *msg = malloc(sizeof(Msg));
 	msg->sender = str_incref(sender);
 	msg->text = str_incref(text);
-	list_append(room->msgs, msg);
+	vector_append(room->msgs, msg);
 	room->unread_msgs++;
 }
 
 void room_append_user(Room *room, Str *sender) {
-	list_append(room->users, (void *)str_buf(str_incref(sender)));
+	vector_append(room->users, (void *)str_buf(str_incref(sender)));
 }
