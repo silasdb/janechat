@@ -10,7 +10,7 @@
 #include "str.h"
 #include "vector.h"
 
-struct text_buffer {
+struct buffer {
 	Room *room;
 	char buf[256]; /* TODO: use Str? */
 	size_t pos; /* Cursor position */
@@ -27,10 +27,10 @@ WINDOW *wchat;
 WINDOW *wchat_msgs;
 WINDOW *wchat_input;
 
-Vector *b;
+Vector *buffers; /* Vector<struct buffer> */
 
-struct text_buffer *cur_buffer = NULL;
-struct text_buffer index_buffer = {.room = NULL};
+struct buffer *cur_buffer = NULL;
+struct buffer index_buffer = {.room = NULL};
 
 void debug(const char *path, const char *format, ...) {
 	FILE *f = fopen(path, "a");
@@ -61,8 +61,8 @@ enum Focus {
 	FOCUS_CHAT_INPUT,
 } focus = FOCUS_INDEX_ROOMS;
 
-void change_cur_buffer(struct text_buffer *b) {
-	cur_buffer = b;
+void change_cur_buffer(struct buffer *buffers) {
+	cur_buffer = buffers;
 	int maxy, maxx;
 	getmaxyx(wchat_input, maxy, maxx);
 	(void)maxy;
@@ -108,7 +108,7 @@ size_t bottom = 0;
 void index_rooms_cursor_inc(int offset) {
 	if (idx == 0 && offset < 0)
 		return;
-	if (idx >= vector_len(b)-1 && offset > 0)
+	if (idx >= vector_len(buffers)-1 && offset > 0)
 		return;
 	idx += offset;
 }
@@ -119,8 +119,8 @@ void index_rooms_update_top_bottom() {
 	(void)maxx;
 	top = 0;
 	bottom = maxy-1;
-	if (bottom >= vector_len(b)-1)
-		bottom = vector_len(b)-1;
+	if (bottom >= vector_len(buffers)-1)
+		bottom = vector_len(buffers)-1;
 }
 
 void index_rooms_cursor_show() {
@@ -133,14 +133,14 @@ void index_rooms_cursor_show() {
 		top = idx;
 	}
 
-	assert(top >= 0 && top < vector_len(b));
-	assert(bottom >= 0 && bottom < vector_len(b));
+	assert(top >= 0 && top < vector_len(buffers));
+	assert(bottom >= 0 && bottom < vector_len(buffers));
 	assert(idx >= top && idx <= bottom);
 
 	werase(windex_rooms);
 	for (size_t i = top; i <= bottom; i++) {
-		struct text_buffer *tb;
-		tb = vector_at(b, i);
+		struct buffer *tb;
+		tb = vector_at(buffers, i);
 		if (idx == i)
 			wattron(windex_rooms, A_REVERSE); 
 		mvwprintw(windex_rooms, i-top, 0, tb->room->name->buf);
@@ -225,7 +225,7 @@ void process_menu() {
 		break;
 	case 10:
 	case 13:
-		change_cur_buffer(vector_at(b, idx));
+		change_cur_buffer(vector_at(buffers, idx));
 		fill_msgs();
 		focus = FOCUS_CHAT_INPUT;
 		drawline(windex, '~');
@@ -299,14 +299,14 @@ void process_input(WINDOW *w) {
 #ifdef UI_CURSES_TEST
 int main(int argc, char *argv[]) {
 
-	b = vector_new();
+	buffers = vector_new();
 
-	struct text_buffer *tb;
+	struct buffer *tb;
 
 	rooms_init();
 
 #define new_room(id, name) \
-	tb = malloc(sizeof(struct text_buffer)); \
+	tb = malloc(sizeof(struct buffer)); \
 	tb->room = room_new(str_new_cstr(id)); \
 	tb->pos = 0; \
 	tb->len = 0; \
@@ -314,13 +314,13 @@ int main(int argc, char *argv[]) {
 	tb->right = 0; \
 	tb->last_line = -1; \
 	room_set_name(tb->room, str_new_cstr(name)); \
-	vector_append(b, tb);
+	vector_append(buffers, tb);
 
 	new_room("#test1:matrix.org", "Test 1");
 	new_room("#test2:matrix.org", "Test 2");
 	new_room("#test3:matrix.org", "Test 3");
 
-	bottom = vector_len(b);
+	bottom = vector_len(buffers);
 
 	initscr();
 	clear();
