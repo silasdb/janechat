@@ -6,6 +6,7 @@
 #include <string.h>
 #include <curses.h>
 
+#include "ui.h"
 #include "rooms.h"
 #include "str.h"
 #include "vector.h"
@@ -234,6 +235,13 @@ void send_msg() {
 }
 #else
 void send_msg() {
+	struct UiEvent ev;
+	ev.type = UIEVENTTYPE_SENDMSG,
+	ev.msg.roomid = str_incref(cur_buffer->room->id);
+	ev.msg.text = str_new_cstr(cur_buffer->buf);
+	ui_event_handler_callback(ev);
+	str_decref(ev.msg.roomid);
+	str_decref(ev.msg.text);
 }
 #endif
 
@@ -325,6 +333,12 @@ void ui_curses_init() {
 	wchat_input = subwin(wchat, 1, maxx, maxy-1, 0);
 	keypad(windex_rooms, TRUE);
 	keypad(wchat_input, TRUE);
+}
+
+void ui_curses_iter() {
+}
+
+void ui_curses_new_msg() {
 }
 
 #ifdef UI_CURSES_TEST
