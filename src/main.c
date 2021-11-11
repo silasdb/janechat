@@ -27,7 +27,8 @@ bool logged_in = false;
 struct ui_hooks {
 	void (*init)();
 	void (*iter)();
-	void (*new_msg)();
+	void (*msg_new)(Room *room, Str *sender, Str *msg);
+	void (*room_new)(Str *roomid);
 } ui_hooks;
 
 void usage() {
@@ -69,16 +70,16 @@ int main(int argc, char *argv[]) {
 	switch (ui_frontend) {
 	case UI_CLI:
 		ui_hooks = (struct ui_hooks){
-			.init = ui_cli_init,
 			.iter = ui_cli_iter,
-			.new_msg = ui_cli_new_msg,
+			.msg_new = ui_cli_msg_new,
 		};
 		break;
 	case UI_CURSES:
 		ui_hooks = (struct ui_hooks){
 			.init = ui_curses_init,
 			.iter = ui_curses_iter,
-			.new_msg = ui_curses_new_msg,
+			.msg_new = ui_curses_msg_new,
+			.room_new = ui_curses_room_new,
 		};
 		break;
 	}
@@ -106,17 +107,22 @@ int main(int argc, char *argv[]) {
 	}
 
 	rooms_init();
-	ui_hooks.init();
+
+	if (ui_hooks.init)
+		ui_hooks.init();
 
 	for (;;) {
 		switch (select_matrix_stdin()) {
 		case SELECTSTATUS_STDINREADY:
+			debug("/tmp/a", "SELECTSTATUS_STDINREADY\n");
 			ui_hooks.iter();
 			break;
 		case SELECTSTATUS_MATRIXRESUME:
+			debug("/tmp/a", "SELECTSTATUS_MATRIXRESUME\n");
 			matrix_resume();
 			break;
 		}
+		debug("/tmp/a", "done\n");
 		if (logged_in) {
 			static time_t past = 0, now = 0;
 			now = time(0);
@@ -184,6 +190,8 @@ void do_matrix_login() {
 
 void process_room_create(Str *id) {
 	room_new(id);
+	if (ui_hooks.room_new)
+		ui_hooks.room_new(id);
 }
 
 void process_room_name(Str *roomid, Str *name) {
@@ -200,7 +208,7 @@ void process_room_join(Str *roomid, Str *sender) {
 void process_msg(Str *roomid, Str *sender, Str *text) {
 	Room *room = room_byid(roomid);
 	room_append_msg(room, sender, text);
-	ui_hooks.new_msg(room, sender, text);
+	ui_hooks.msg_new(room, sender, text);
 }
 
 void handle_matrix_event(MatrixEvent ev) {

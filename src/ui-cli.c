@@ -11,10 +11,6 @@ static void process_input(char *);
 static void print_messages(Room *room);
 static void print_msg(Str *roomname, Str *sender, Str *text);
 
-void ui_cli_init() {
-	/* noop */
-}
-
 void ui_cli_iter() {
 	char *line;
 	line = read_line_alloc();
@@ -23,7 +19,7 @@ void ui_cli_iter() {
 	free(line);
 }
 
-void ui_cli_new_msg(Room *room, Str *sender, Str *text) {
+void ui_cli_msg_new(Room *room, Str *sender, Str *text) {
 	if (room != current_room)
 		return;
 
