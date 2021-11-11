@@ -24,6 +24,7 @@ void handle_ui_event(UiEvent ev);
 bool logged_in = false;
 
 struct ui_hooks {
+	void (*init)();
 	void (*iter)();
 	void (*new_msg)();
 } ui_hooks;
@@ -31,6 +32,7 @@ struct ui_hooks {
 int main(int argc, char *argv[]) {
 	ui_set_event_handler(handle_ui_event);
 	ui_hooks = (struct ui_hooks){
+		.init = ui_cli_init,
 		.iter = ui_cli_iter,
 		.new_msg = ui_cli_new_msg,
 	};
@@ -57,6 +59,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	rooms_init();
+	ui_hooks.init();
 
 	for (;;) {
 		switch (select_matrix_stdin()) {
