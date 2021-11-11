@@ -8,6 +8,7 @@ OBJS = cache.o \
 	str.o \
 	ui.o \
 	ui-cli.o \
+	ui-curses.o \
 	utils.o \
 	vector.o
 
@@ -49,7 +50,7 @@ ui.o: ui.h
 ui-cli.o: rooms.h ui-cli.c ui-cli.h utils.h ui.h
 	$(CC) ${CFLAGS} -c -o ui-cli.o ui-cli.c
 
-ui-curses.o: ui-curses.c
+ui-curses.o: rooms.h str.h ui-curses.c ui-curses.h ui.h vector.h
 	$(CC) ${CFLAGS} -c -o ui-curses.o ui-curses.c
 	
 utils.o: utils.c utils.h
@@ -63,7 +64,7 @@ vector.o: vector.c vector.h
 ui-curses-test: hash.o list.o rooms.o str.o ui-curses-test.o vector.o
 	$(CC) ${LDFLAGS} -o $@ hash.o list.o rooms.o str.o ui-curses-test.o vector.o
 
-ui-curses-test.o: ui-curses.c
+ui-curses-test.o: rooms.h str.h ui-curses.c ui-curses.h ui.h vector.h
 	$(CC) -DUI_CURSES_TEST ${CFLAGS} -c -o $@ ui-curses.c
 
 tags:

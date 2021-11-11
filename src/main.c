@@ -14,6 +14,7 @@
 #include "rooms.h"
 #include "ui.h"
 #include "ui-cli.h"
+#include "ui-curses.h"
 #include "utils.h"
 
 bool do_matrix_send_token();
@@ -29,13 +30,59 @@ struct ui_hooks {
 	void (*new_msg)();
 } ui_hooks;
 
+void usage() {
+	fputs("usage: janechat [-f cli|curses]", stderr);
+	exit(2);
+}
+
 int main(int argc, char *argv[]) {
+	enum Ui {
+		UI_CLI,
+		UI_CURSES,
+	} ui_frontend = UI_CLI;
+
+	/* Option processing */
+	int c;
+	extern char *optarg;
+	extern int optind;
+	while ((c = getopt(argc, argv, "f:")) != -1) {
+		switch (c) {
+		case 'f':
+			if (streq(optarg, "cli"))
+				ui_frontend = UI_CLI;
+			else if (streq(optarg, "curses"))
+				ui_frontend = UI_CURSES;
+			else
+				usage();
+			break;
+		default:
+			usage();
+		}
+	}
+	argc -= optind;
+	if (argc != 0)
+		usage();
+
 	ui_set_event_handler(handle_ui_event);
-	ui_hooks = (struct ui_hooks){
-		.init = ui_cli_init,
-		.iter = ui_cli_iter,
-		.new_msg = ui_cli_new_msg,
-	};
+
+	/* UI callback setup */
+	switch (ui_frontend) {
+	case UI_CLI:
+		ui_hooks = (struct ui_hooks){
+			.init = ui_cli_init,
+			.iter = ui_cli_iter,
+			.new_msg = ui_cli_new_msg,
+		};
+		break;
+	case UI_CURSES:
+		ui_hooks = (struct ui_hooks){
+			.init = ui_curses_init,
+			.iter = ui_curses_iter,
+			.new_msg = ui_curses_new_msg,
+		};
+		break;
+	}
+
 	matrix_set_event_handler(handle_matrix_event);
 
 	/* TODO: what if the access_token expires or is invalid? */
