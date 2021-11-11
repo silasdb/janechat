@@ -114,15 +114,12 @@ int main(int argc, char *argv[]) {
 	for (;;) {
 		switch (select_matrix_stdin()) {
 		case SELECTSTATUS_STDINREADY:
-			debug("/tmp/a", "SELECTSTATUS_STDINREADY\n");
 			ui_hooks.iter();
 			break;
 		case SELECTSTATUS_MATRIXRESUME:
-			debug("/tmp/a", "SELECTSTATUS_MATRIXRESUME\n");
 			matrix_resume();
 			break;
 		}
-		debug("/tmp/a", "done\n");
 		if (logged_in) {
 			static time_t past = 0, now = 0;
 			now = time(0);
