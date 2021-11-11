@@ -325,7 +325,6 @@ void ui_curses_init() {
 	wchat_input = subwin(wchat, 1, maxx, maxy-1, 0);
 	keypad(windex_rooms, TRUE);
 	keypad(wchat_input, TRUE);
-	//resize();
 }
 
 #ifdef UI_CURSES_TEST
