@@ -49,12 +49,6 @@ void redraw(WINDOW *w) {
 	wmove(w, 0, cur_buffer->pos - cur_buffer->left);
 }
 
-WINDOW *new_window(int h, int w, int y, int x) {
-	WINDOW *win;
-	win = newwin(h, w, y, x);
-	return win;
-}
-
 enum Focus {
 	FOCUS_INDEX_ROOMS,
 	FOCUS_INDEX_INPUT,
@@ -331,8 +325,8 @@ int main(int argc, char *argv[]) {
 	int maxy, maxx;
 	getmaxyx(stdscr, maxy, maxx);
 
-	wchat = new_window(maxy, maxx, 0, 0);
-	windex = new_window(maxy, maxx, 0, 0);
+	wchat = newwin(maxy, maxx, 0, 0);
+	windex = newwin(maxy, maxx, 0, 0);
 	windex_rooms = subwin(windex, maxy-2, maxx, 0, 0);
 	windex_input = subwin(windex, 1, maxx, maxy-1, 0);
 	wchat_msgs = subwin(wchat, maxy-1, maxx, 0, 0);
