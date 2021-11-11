@@ -1,7 +1,6 @@
 /* curses front-end for janechat */
 
 #include <assert.h>
-#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <curses.h>
@@ -32,14 +31,6 @@ Vector *buffers = NULL; /* Vector<struct buffer> */
 
 struct buffer *cur_buffer = NULL;
 struct buffer index_buffer = {.room = NULL};
-
-void debug(const char *path, const char *format, ...) {
-	FILE *f = fopen(path, "a");
-	va_list args;
-	va_start(args, format);
-	vfprintf(f, format, args);
-	fclose(f);
-}
 
 void redraw(WINDOW *w) {
 	werase(w);
@@ -356,7 +347,7 @@ void ui_curses_iter() {
 
 void ui_curses_new_msg(Room *room, Str *sender, Str *msg) {
 	/* TODO: what about other parameters? */
-	if (cur_buffer->room == room)
+	if (cur_buffer && cur_buffer->room == room)
 		fill_msgs();
 }
 
