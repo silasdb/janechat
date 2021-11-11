@@ -336,9 +336,28 @@ void ui_curses_init() {
 }
 
 void ui_curses_iter() {
+	switch (focus) {
+	case FOCUS_INDEX_ROOMS:
+		wrefresh(windex);
+		process_menu();
+		break;
+	case FOCUS_INDEX_INPUT:
+		redraw(windex_input);
+		wrefresh(windex);
+		process_input(windex_input);
+		break;
+	case FOCUS_CHAT_INPUT:
+		redraw(wchat_input);
+		wrefresh(wchat);
+		process_input(wchat_input);
+		break;
+	}
 }
 
-void ui_curses_new_msg() {
+void ui_curses_new_msg(Room *room, Str *sender, Str *msg) {
+	/* TODO: what about other parameters? */
+	if (cur_buffer->room == room)
+		fill_msgs();
 }
 
 #ifdef UI_CURSES_TEST
@@ -368,24 +387,8 @@ int main(int argc, char *argv[]) {
 
 	resize();
 
-	for (;;) {
-		switch (focus) {
-		case FOCUS_INDEX_ROOMS:
-			wrefresh(windex);
-			process_menu();
-			break;
-		case FOCUS_INDEX_INPUT:
-			redraw(windex_input);
-			wrefresh(windex);
-			process_input(windex_input);
-			break;
-		case FOCUS_CHAT_INPUT:
-			redraw(wchat_input);
-			wrefresh(wchat);
-			process_input(wchat_input);
-			break;
-		}
-	}
+	for (;;)
+		ui_curses_iter();
 
 	return 0;
 }
