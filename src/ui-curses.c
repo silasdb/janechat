@@ -110,6 +110,9 @@ void index_rooms_update_top_bottom() {
 }
 
 void index_rooms_cursor_show() {
+	if (vector_len(buffers) == 0)
+		return;
+
 	/* Cursor is below bottom */
 	if (idx > bottom) {
 		top += idx - bottom;
