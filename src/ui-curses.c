@@ -227,8 +227,19 @@ void process_menu() {
 	}
 }
 
+#if UI_CURSES_TEST
+void send_msg() {
+	vector_append(cur_buffer->room->msgs, strdup(cur_buffer->buf));
+	fill_msgs();
+}
+#else
+void send_msg() {
+}
+#endif
+
 void process_input(WINDOW *w) {
 	int c = wgetch(w);
+
 	switch (c) {
 	case 127: /* TODO: why do I need this in urxvt but not in xterm? - https://bbs.archlinux.org/viewtopic.php?id=56427*/
 	case KEY_BACKSPACE:
@@ -267,8 +278,7 @@ void process_input(WINDOW *w) {
 			change_cur_buffer(&index_buffer);
 			index_rooms_cursor_show();
 		} else {
-			vector_append(cur_buffer->room->msgs, strdup(cur_buffer->buf));
-			fill_msgs();
+			send_msg();
 		}
 		cur_buffer->buf[0] = '\0';
 		cur_buffer->pos = 0;
