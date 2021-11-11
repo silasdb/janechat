@@ -345,7 +345,19 @@ void ui_curses_iter() {
 	}
 }
 
-void ui_curses_new_msg(Room *room, Str *sender, Str *msg) {
+void ui_curses_room_new(Str *roomid) {
+	struct buffer *b;
+	b = malloc(sizeof(struct buffer));
+	b->room = room_byid(roomid);
+	b->pos = 0;
+	b->len = 0;
+	b->left = 0;
+	b->right = 0;
+	b->last_line = -1;
+	vector_append(buffers, b);
+}
+
+void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
 	/* TODO: what about other parameters? */
 	if (cur_buffer && cur_buffer->room == room)
 		fill_msgs();
