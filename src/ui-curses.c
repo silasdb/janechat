@@ -27,7 +27,7 @@ WINDOW *wchat;
 WINDOW *wchat_msgs;
 WINDOW *wchat_input;
 
-Vector *buffers; /* Vector<struct buffer> */
+Vector *buffers = NULL; /* Vector<struct buffer> */
 
 struct buffer *cur_buffer = NULL;
 struct buffer index_buffer = {.room = NULL};
@@ -300,31 +300,13 @@ void process_input(WINDOW *w) {
 	input_cursor_show();
 }
 
-#ifdef UI_CURSES_TEST
-int main(int argc, char *argv[]) {
-
-	buffers = vector_new();
-
-	struct buffer *tb;
-
-	rooms_init();
-
-#define new_room(id, name) \
-	tb = malloc(sizeof(struct buffer)); \
-	tb->room = room_new(str_new_cstr(id)); \
-	tb->pos = 0; \
-	tb->len = 0; \
-	tb->left = 0; \
-	tb->right = 0; \
-	tb->last_line = -1; \
-	room_set_name(tb->room, str_new_cstr(name)); \
-	vector_append(buffers, tb);
-
-	new_room("#test1:matrix.org", "Test 1");
-	new_room("#test2:matrix.org", "Test 2");
-	new_room("#test3:matrix.org", "Test 3");
-
-	bottom = vector_len(buffers);
+void ui_curses_init() {
+	/*
+	 * TODO: we check if buffers is already allocated because our test
+	 * main() can already have allocated it for testing purposes.
+	 */
+	if (!buffers)
+		buffers = vector_new();
 
 	initscr();
 	clear();
@@ -342,8 +324,35 @@ int main(int argc, char *argv[]) {
 	wchat_msgs = subwin(wchat, maxy-1, maxx, 0, 0);
 	wchat_input = subwin(wchat, 1, maxx, maxy-1, 0);
 	keypad(windex_rooms, TRUE);
-	//keypad(windex_input, TRUE);
 	keypad(wchat_input, TRUE);
+	//resize();
+}
+
+#ifdef UI_CURSES_TEST
+int main(int argc, char *argv[]) {
+	struct buffer *tb;
+
+	rooms_init();
+	buffers = vector_new();
+
+#define new_room(id, name) \
+	tb = malloc(sizeof(struct buffer)); \
+	tb->room = room_new(str_new_cstr(id)); \
+	tb->pos = 0; \
+	tb->len = 0; \
+	tb->left = 0; \
+	tb->right = 0; \
+	tb->last_line = -1; \
+	room_set_name(tb->room, str_new_cstr(name)); \
+	vector_append(buffers, tb);
+
+	new_room("#test1:matrix.org", "Test 1");
+	new_room("#test2:matrix.org", "Test 2");
+	new_room("#test3:matrix.org", "Test 3");
+
+	ui_curses_init();
+	bottom = vector_len(buffers);
+
 	resize();
 
 	for (;;) {
