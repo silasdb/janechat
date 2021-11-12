@@ -225,7 +225,10 @@ void process_menu() {
 
 #if UI_CURSES_TEST
 void send_msg() {
-	vector_append(cur_buffer->room->msgs, strdup(cur_buffer->buf));
+	Msg *msg = malloc(sizeof(struct Msg));
+	msg->sender = str_new_cstr("test");
+	msg->text = str_new_cstr(cur_buffer->buf);
+	vector_append(cur_buffer->room->msgs, msg);
 	fill_msgs();
 }
 #else
