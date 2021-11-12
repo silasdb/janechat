@@ -198,7 +198,6 @@ void resize() {
 		index_rooms_cursor_show();
 		break;
 	}
-	drawline(windex, '~');
 	drawline(wchat, '-');
 	if (cur_buffer)
 		change_cur_buffer(cur_buffer);
@@ -229,7 +228,6 @@ void process_menu() {
 		change_cur_buffer(vector_at(buffers, idx));
 		fill_msgs();
 		focus = FOCUS_CHAT_INPUT;
-		drawline(windex, '~');
 		break;
 	}
 }
