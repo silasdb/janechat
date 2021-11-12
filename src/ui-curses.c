@@ -1,6 +1,7 @@
 /* curses front-end for janechat */
 
 #include <assert.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <curses.h>
@@ -30,6 +31,22 @@ WINDOW *wchat_input;
 Vector *buffers = NULL; /* Vector<struct buffer> */
 
 struct buffer *cur_buffer = NULL;
+
+void redraw(WINDOW *w);
+
+void clear_cur_buffer_input() {
+	if (!cur_buffer)
+		return;
+	cur_buffer->buf[0] = '\0';
+	cur_buffer->pos = 0;
+	cur_buffer->len = 0;
+	redraw(wchat_input);
+}
+
+void handle_sigint(int sig) {
+	(void)sig;
+	clear_cur_buffer_input();
+}
 
 void redraw(WINDOW *w) {
 	werase(w);
@@ -271,9 +288,7 @@ void process_input(WINDOW *w) {
 		} else {
 			send_msg();
 		}
-		cur_buffer->buf[0] = '\0';
-		cur_buffer->pos = 0;
-		cur_buffer->len = 0;
+		clear_cur_buffer_input();
 		break;
 	default:
 		for (size_t i = cur_buffer->len; i > cur_buffer->pos; i--)
@@ -309,6 +324,8 @@ void ui_curses_init() {
 	wchat_msgs = subwin(wchat, maxy-1, maxx, 0, 0);
 	wchat_input = subwin(wchat, 1, maxx, maxy-1, 0);
 	keypad(windex, TRUE);
+
+	signal(SIGINT, handle_sigint);
 }
 
 void ui_curses_iter() {
