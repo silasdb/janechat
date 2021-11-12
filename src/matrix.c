@@ -7,6 +7,7 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -367,6 +368,12 @@ enum SelectStatus select_matrix_stdin() {
 	int res = select(maxfd + 2, &fdread, &fdwrite, &fdexcep, &timeout);
 	switch (res) {
 	case -1:
+		/*
+		 * TODO: is this the right thing to do (just ignore it) if
+		 * select() is interrupted by a signal?
+		 */
+		if (errno == EINTR)
+			return SELECTSTATUS_MATRIXRESUME;
 		perror("select()");
 		abort(); /* TODO */
 		break;
