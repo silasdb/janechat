@@ -34,11 +34,11 @@ struct buffer index_buffer = {.room = NULL};
 
 void redraw(WINDOW *w) {
 	werase(w);
-	wrefresh(w);
 	mvwprintw(w, 0, 0, "%.*s",
 		(int)(cur_buffer->right - cur_buffer->left + 1),
 		&cur_buffer->buf[cur_buffer->left]);
 	wmove(w, 0, cur_buffer->pos - cur_buffer->left);
+	wrefresh(w);
 }
 
 enum Focus {
@@ -337,7 +337,6 @@ void ui_curses_iter() {
 	/* TODO: fix draw order */
 	switch (focus) {
 	case FOCUS_INDEX_ROOMS:
-		wrefresh(windex);
 		process_menu();
 		wrefresh(windex);
 		break;
@@ -345,13 +344,11 @@ void ui_curses_iter() {
 		wrefresh(windex);
 		process_input(windex_input);
 		redraw(windex_input);
-		wrefresh(windex);
 		break;
 	case FOCUS_CHAT_INPUT:
-		redraw(wchat_input);
 		process_input(wchat_input);
-		redraw(wchat_input);
 		wrefresh(wchat);
+		redraw(wchat_input);
 		break;
 	}
 }
