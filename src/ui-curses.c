@@ -82,7 +82,8 @@ void fill_msgs() {
 		y -= height;
 		if (y < 0)
 			break;
-		mvwprintw(wchat_msgs, y, 0, "%s\n", (char *)vector_at(cur_buffer->room->msgs, i));
+		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
+		mvwprintw(wchat_msgs, y, 0, "%s\n", str_buf(msg->text));
 	}
 	wrefresh(wchat_msgs);
 }
