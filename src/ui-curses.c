@@ -196,6 +196,10 @@ void resize() {
 void process_menu() {
 	int c = wgetch(windex_rooms);
 	switch (c) {
+	case 'Q':
+		endwin();
+		exit(0);
+		break;
 	case 'k':
 	case KEY_UP:
 		index_rooms_cursor_inc(-1);
