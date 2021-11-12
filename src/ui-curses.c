@@ -330,20 +330,24 @@ void ui_curses_init() {
 }
 
 void ui_curses_iter() {
+	/* TODO: fix draw order */
 	switch (focus) {
 	case FOCUS_INDEX_ROOMS:
 		wrefresh(windex);
 		process_menu();
+		wrefresh(windex);
 		break;
 	case FOCUS_INDEX_INPUT:
-		redraw(windex_input);
 		wrefresh(windex);
 		process_input(windex_input);
+		redraw(windex_input);
+		wrefresh(windex);
 		break;
 	case FOCUS_CHAT_INPUT:
 		redraw(wchat_input);
-		wrefresh(wchat);
 		process_input(wchat_input);
+		redraw(wchat_input);
+		wrefresh(wchat);
 		break;
 	}
 }
