@@ -200,6 +200,7 @@ void resize() {
 	}
 	drawline(wchat, '-');
 	if (cur_buffer)
+		/* We force a redraw of the current buffer input window */
 		change_cur_buffer(cur_buffer);
 }
 
