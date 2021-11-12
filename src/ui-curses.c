@@ -272,6 +272,10 @@ void process_input(WINDOW *w) {
 				endwin();
 				exit(0);
 			}
+			cur_buffer->buf[0] = '\0';
+			cur_buffer->pos = 0;
+			cur_buffer->len = 0;
+			focus = FOCUS_INDEX_ROOMS;
 			break;
 		}
 		if (streq(cur_buffer->buf, "/quit")) {
