@@ -175,8 +175,7 @@ void input_cursor_show() {
 	} else if (*pos < *left) {
 		*right -= *left - *pos;
 		*left = *pos;
-	} else
-		return;
+	}
 }
 
 void resize() {
