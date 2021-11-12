@@ -10,6 +10,8 @@
 #include "str.h"
 #include "vector.h"
 
+#define CTRL(x) (x & 037)
+
 struct buffer {
 	Room *room;
 	char buf[256]; /* TODO: use Str? */
@@ -256,6 +258,10 @@ void process_input(WINDOW *w) {
 		break;
 	case KEY_RIGHT:
 		input_cursor_inc(+1);
+		break;
+	case CTRL('g'):
+		focus = FOCUS_INDEX;
+		index_rooms_cursor_show();
 		break;
 	case 10: /* LF */
 	case 13: /* CR */
