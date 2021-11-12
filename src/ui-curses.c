@@ -163,9 +163,6 @@ void input_cursor_inc(int offset) {
 }
 
 void input_cursor_show() {
-	//int maxy, maxx;
-	//getmaxyx(wchat_input, maxy, maxx);
-	//(void)maxy;
 	size_t *pos = &cur_buffer->pos;
 	size_t *left = &cur_buffer->left;
 	size_t *right = &cur_buffer->right;
@@ -187,7 +184,6 @@ void resize() {
 	wresize(wchat_msgs, maxy-2, maxx);
 	wresize(wchat_input, 1, maxx);
 	mvwin(wchat_input, maxy-1, 0);
-	//mvwin(windex, 0, 0);
 	switch (focus) {
 	case FOCUS_CHAT_INPUT:
 		fill_msgs();
