@@ -21,8 +21,6 @@ struct buffer {
 };
 
 WINDOW *windex;
-WINDOW *windex_rooms;
-WINDOW *windex_input;
 WINDOW *wchat;
 WINDOW *wchat_msgs;
 WINDOW *wchat_input;
@@ -30,7 +28,6 @@ WINDOW *wchat_input;
 Vector *buffers = NULL; /* Vector<struct buffer> */
 
 struct buffer *cur_buffer = NULL;
-struct buffer index_buffer = {.room = NULL};
 
 void redraw(WINDOW *w) {
 	werase(w);
@@ -42,10 +39,9 @@ void redraw(WINDOW *w) {
 }
 
 enum Focus {
-	FOCUS_INDEX_ROOMS,
-	FOCUS_INDEX_INPUT,
+	FOCUS_INDEX,
 	FOCUS_CHAT_INPUT,
-} focus = FOCUS_INDEX_ROOMS;
+} focus = FOCUS_INDEX;
 
 void change_cur_buffer(struct buffer *buffers) {
 	cur_buffer = buffers;
@@ -102,7 +98,7 @@ void index_rooms_cursor_inc(int offset) {
 
 void index_rooms_update_top_bottom() {
 	int maxy, maxx;
-	getmaxyx(windex_rooms, maxy, maxx);
+	getmaxyx(windex, maxy, maxx);
 	(void)maxx;
 	top = 0;
 	bottom = maxy-1;
@@ -127,15 +123,15 @@ void index_rooms_cursor_show() {
 	assert(bottom >= 0 && bottom < vector_len(buffers));
 	assert(idx >= top && idx <= bottom);
 
-	werase(windex_rooms);
+	werase(windex);
 	for (size_t i = top; i <= bottom; i++) {
 		struct buffer *tb;
 		tb = vector_at(buffers, i);
 		if (idx == i)
-			wattron(windex_rooms, A_REVERSE); 
-		mvwprintw(windex_rooms, i-top, 0, tb->room->name->buf);
+			wattron(windex, A_REVERSE); 
+		mvwprintw(windex, i-top, 0, tb->room->name->buf);
 		if (idx == i)
-			wattroff(windex_rooms, A_REVERSE); 
+			wattroff(windex, A_REVERSE); 
 	}
 }
 
@@ -171,18 +167,14 @@ void resize() {
 	wresize(windex, maxy, maxx);
 	wresize(wchat, maxy, maxx);
 	wresize(wchat_msgs, maxy-2, maxx);
-	wresize(windex_rooms, maxy-2, maxx);
-	wresize(windex_input, 1, maxx);
 	wresize(wchat_input, 1, maxx);
 	mvwin(wchat_input, maxy-1, 0);
-	mvwin(windex_input, maxy-1, 0);
-	mvwin(windex_rooms, 0, 0);
+	//mvwin(windex, 0, 0);
 	switch (focus) {
 	case FOCUS_CHAT_INPUT:
 		fill_msgs();
 		break;
-	case FOCUS_INDEX_INPUT:
-	case FOCUS_INDEX_ROOMS:
+	case FOCUS_INDEX:
 		index_rooms_update_top_bottom();
 		index_rooms_cursor_show();
 		break;
@@ -194,7 +186,7 @@ void resize() {
 }
 
 void process_menu() {
-	int c = wgetch(windex_rooms);
+	int c = wgetch(windex);
 	switch (c) {
 	case 'Q':
 		endwin();
@@ -212,10 +204,6 @@ void process_menu() {
 		break;
 	case KEY_RESIZE:
 		resize();
-		break;
-	case ':':
-		change_cur_buffer(&index_buffer);
-		focus = FOCUS_INDEX_INPUT;
 		break;
 	case 10:
 	case 13:
@@ -271,25 +259,10 @@ void process_input(WINDOW *w) {
 		break;
 	case 10: /* LF */
 	case 13: /* CR */
-		if (focus == FOCUS_INDEX_INPUT) {
-			if (streq(cur_buffer->buf, "quit")) {
-				endwin();
-				exit(0);
-			}
-			cur_buffer->buf[0] = '\0';
-			cur_buffer->pos = 0;
-			cur_buffer->len = 0;
-			focus = FOCUS_INDEX_ROOMS;
-			break;
-		}
 		if (streq(cur_buffer->buf, "/quit")) {
-			cur_buffer->buf[0] = '\0';
-			cur_buffer->len = 0;
-			cur_buffer->pos = 0;
 			erase();
 			refresh();
-			focus = FOCUS_INDEX_ROOMS;
-			change_cur_buffer(&index_buffer);
+			focus = FOCUS_INDEX;
 			index_rooms_cursor_show();
 		} else {
 			send_msg();
@@ -297,10 +270,6 @@ void process_input(WINDOW *w) {
 		cur_buffer->buf[0] = '\0';
 		cur_buffer->pos = 0;
 		cur_buffer->len = 0;
-		break;
-	case 27: /* Esc */
-		if (focus == FOCUS_INDEX_INPUT)
-			focus = FOCUS_INDEX_ROOMS;
 		break;
 	default:
 		for (size_t i = cur_buffer->len; i > cur_buffer->pos; i--)
@@ -333,25 +302,17 @@ void ui_curses_init() {
 
 	wchat = newwin(maxy, maxx, 0, 0);
 	windex = newwin(maxy, maxx, 0, 0);
-	windex_rooms = subwin(windex, maxy-2, maxx, 0, 0);
-	windex_input = subwin(windex, 1, maxx, maxy-1, 0);
 	wchat_msgs = subwin(wchat, maxy-1, maxx, 0, 0);
 	wchat_input = subwin(wchat, 1, maxx, maxy-1, 0);
-	keypad(windex_rooms, TRUE);
-	keypad(wchat_input, TRUE);
+	keypad(windex, TRUE);
 }
 
 void ui_curses_iter() {
 	/* TODO: fix draw order */
 	switch (focus) {
-	case FOCUS_INDEX_ROOMS:
+	case FOCUS_INDEX:
 		process_menu();
 		wrefresh(windex);
-		break;
-	case FOCUS_INDEX_INPUT:
-		wrefresh(windex);
-		process_input(windex_input);
-		redraw(windex_input);
 		break;
 	case FOCUS_CHAT_INPUT:
 		process_input(wchat_input);
