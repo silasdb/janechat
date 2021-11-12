@@ -266,8 +266,6 @@ void process_input(WINDOW *w) {
 	case 10: /* LF */
 	case 13: /* CR */
 		if (streq(cur_buffer->buf, "/quit")) {
-			erase();
-			refresh();
 			focus = FOCUS_INDEX;
 			index_rooms_cursor_show();
 		} else {
