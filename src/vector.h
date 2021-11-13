@@ -13,6 +13,7 @@ typedef struct Vector Vector;
 
 Vector *vector_new();
 void vector_append(Vector *, void *);
+int vector_sort(Vector *, int (*compar)(const void *, const void *));
 inline void *vector_at(Vector *v, size_t i) { return v->elems[i]; }
 inline size_t vector_len(Vector *v) { return v->len; }
 

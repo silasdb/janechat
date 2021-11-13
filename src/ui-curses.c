@@ -10,6 +10,7 @@
 #include "rooms.h"
 #include "str.h"
 #include "vector.h"
+#include "utils.h"
 
 #define CTRL(x) (x & 037)
 
@@ -355,10 +356,23 @@ void ui_curses_init() {
 	signal(SIGINT, handle_sigint);
 }
 
+int buffer_comparison(const void *a, const void *b) {
+	const struct buffer **x = (const struct buffer **)a;
+	const struct buffer **y = (const struct buffer **)b;
+	return strcmp(str_buf((*x)->room->name), str_buf((*y)->room->name));
+}
+
 void ui_curses_iter() {
 	/* TODO: fix draw order */
 	switch (focus) {
 	case FOCUS_INDEX:
+		/*
+		 * TODO: having it here the buffer be sorted for ever keystroke.
+		 * We should find a better place to have it.
+		 */
+		vector_sort(buffers, buffer_comparison);
+
+		wrefresh(windex);
 		process_menu();
 		wrefresh(windex);
 		break;
@@ -390,28 +404,25 @@ void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
 
 #ifdef UI_CURSES_TEST
 int main(int argc, char *argv[]) {
-	struct buffer *tb;
-
 	rooms_init();
 	buffers = vector_new();
 
+	Room *room;
+	Str *name_s;
+	Str *id_s;
 #define new_room(id, name) \
-	tb = malloc(sizeof(struct buffer)); \
-	tb->room = room_new(str_new_cstr(id)); \
-	tb->pos = 0; \
-	tb->len = 0; \
-	tb->left = 0; \
-	tb->right = 0; \
-	tb->last_line = -1; \
-	room_set_name(tb->room, str_new_cstr(name)); \
-	vector_append(buffers, tb);
+	id_s = str_new_cstr(id); \
+	name_s = str_new_cstr(name); \
+	room = room_new(id_s); \
+	room_set_name(room, name_s); \
+	ui_curses_room_new(id_s);
 
-	new_room("#test1:matrix.org", "Test 1");
-	new_room("#test2:matrix.org", "Test 2");
-	new_room("#test3:matrix.org", "Test 3");
+	new_room("#test1:matrix.org", "Test A");
+	new_room("#test2:matrix.org", "Test C");
+	new_room("#test3:matrix.org", "Test B");
 
 	/* Append a message to the last room */
-	room_append_msg(tb->room, str_new_cstr("sender"), str_new_cstr("text"));
+	room_append_msg(room, str_new_cstr("sender"), str_new_cstr("text"));
 
 	ui_curses_init();
 	bottom = vector_len(buffers);
