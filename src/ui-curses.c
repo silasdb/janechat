@@ -121,6 +121,18 @@ void index_rooms_cursor_inc(int offset) {
 	idx += offset;
 }
 
+/* Jump to the next room with unread message */
+void index_rooms_next_unread(int direction) {
+	int idx2 = idx;
+	do  {
+		index_rooms_cursor_inc(direction);
+		struct buffer *b;
+		b = vector_at(buffers, idx);
+		if (b->room->unread_msgs > 0)
+			break;
+	} while (idx2 != idx);
+}
+
 void index_rooms_update_top_bottom() {
 	int maxy, maxx;
 	getmaxyx(windex, maxy, maxx);
@@ -225,6 +237,14 @@ void process_menu() {
 	case 'j':
 	case KEY_DOWN:
 		index_rooms_cursor_inc(+1);
+		index_rooms_cursor_show();
+		break;
+	case 'K':
+		index_rooms_next_unread(-1);
+		index_rooms_cursor_show();
+		break;
+	case 'J':
+		index_rooms_next_unread(+1);
 		index_rooms_cursor_show();
 		break;
 	case KEY_RESIZE:
