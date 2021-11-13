@@ -69,6 +69,7 @@ void change_cur_buffer(struct buffer *buffers) {
 	(void)maxy;
 	cur_buffer->left = 0;
 	cur_buffer->right = maxx-1;
+	cur_buffer->room->unread_msgs = 0;
 }
 
 void drawline(WINDOW *w, char ch) {
@@ -152,9 +153,14 @@ void index_rooms_cursor_show() {
 		tb = vector_at(buffers, i);
 		if (idx == i)
 			wattron(windex, A_REVERSE); 
-		mvwprintw(windex, i-top, 0, tb->room->name->buf);
+		if (tb->room->unread_msgs > 0)
+			wattron(windex, A_BOLD);
+		mvwprintw(windex, i-top, 0, "%s (%zu)",
+			tb->room->name->buf, tb->room->unread_msgs);
 		if (idx == i)
 			wattroff(windex, A_REVERSE); 
+		if (tb->room->unread_msgs > 0)
+			wattroff(windex, A_BOLD);
 	}
 }
 
@@ -382,6 +388,9 @@ int main(int argc, char *argv[]) {
 	new_room("#test1:matrix.org", "Test 1");
 	new_room("#test2:matrix.org", "Test 2");
 	new_room("#test3:matrix.org", "Test 3");
+
+	/* Append a message to the last room */
+	room_append_msg(tb->room, str_new_cstr("sender"), str_new_cstr("text"));
 
 	ui_curses_init();
 	bottom = vector_len(buffers);
