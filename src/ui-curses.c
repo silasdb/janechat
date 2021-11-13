@@ -223,6 +223,7 @@ void process_menu() {
 	case 13:
 		change_cur_buffer(vector_at(buffers, idx));
 		fill_msgs();
+		wrefresh(wchat);
 		focus = FOCUS_CHAT_INPUT;
 		break;
 	}
