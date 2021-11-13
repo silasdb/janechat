@@ -319,6 +319,7 @@ void ui_curses_init() {
 	wchat_msgs = subwin(wchat, maxy-1, maxx, 0, 0);
 	wchat_input = subwin(wchat, 1, maxx, maxy-1, 0);
 	keypad(windex, TRUE);
+	keypad(wchat_input, TRUE);
 
 	signal(SIGINT, handle_sigint);
 }
