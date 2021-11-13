@@ -113,10 +113,11 @@ size_t top = 0;
 size_t bottom = 0;
 
 void index_rooms_cursor_inc(int offset) {
+	/* TODO: test case vector_len(buffers) == 0 */
 	if (idx == 0 && offset < 0)
-		return;
+		idx = vector_len(buffers);
 	if (idx >= vector_len(buffers)-1 && offset > 0)
-		return;
+		idx = -1;
 	idx += offset;
 }
 
