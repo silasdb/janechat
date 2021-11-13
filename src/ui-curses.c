@@ -91,14 +91,18 @@ void fill_msgs() {
 	 */
 	int y = maxy;
 	for (ssize_t i = last; i >= 0; i--) {
-		size_t len = strlen(vector_at(cur_buffer->room->msgs, i));
+		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
+		size_t len;
+		len = str_len(msg->sender);
+		len += 2; /* collon between sender and text */
+		len += str_len(msg->text);
 		int height = len / maxx;
 		height++;
 		y -= height;
 		if (y < 0)
 			break;
-		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
-		mvwprintw(wchat_msgs, y, 0, "%s\n", str_buf(msg->text));
+		mvwprintw(wchat_msgs, y, 0, "%s: %s\n",
+			str_buf(msg->sender), str_buf(msg->text));
 	}
 	wrefresh(wchat_msgs);
 }
