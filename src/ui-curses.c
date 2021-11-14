@@ -205,6 +205,7 @@ void change_focus(enum Focus f) {
 	focus = f;
 	switch (focus) {
 	case FOCUS_INDEX:
+		cur_buffer = NULL;
 		focus = FOCUS_INDEX;
 		index_rooms_cursor_show();
 		wrefresh(windex);
@@ -323,6 +324,7 @@ void process_input(WINDOW *w) {
 		break;
 	case CTRL('g'):
 		change_focus(FOCUS_INDEX);
+		return;
 		break;
 	case 10: /* LF */
 	case 13: /* CR */
