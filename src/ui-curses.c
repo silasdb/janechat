@@ -33,7 +33,13 @@ Vector *buffers = NULL; /* Vector<struct buffer> */
 
 struct buffer *cur_buffer = NULL;
 
+enum Focus {
+	FOCUS_INDEX,
+	FOCUS_CHAT_INPUT,
+} focus = FOCUS_INDEX;
+
 void redraw(WINDOW *w);
+void change_focus(enum Focus);
 
 void clear_cur_buffer_input() {
 	if (!cur_buffer)
@@ -57,11 +63,6 @@ void redraw(WINDOW *w) {
 	wmove(w, 0, cur_buffer->pos - cur_buffer->left);
 	wrefresh(w);
 }
-
-enum Focus {
-	FOCUS_INDEX,
-	FOCUS_CHAT_INPUT,
-} focus = FOCUS_INDEX;
 
 void change_cur_buffer(struct buffer *buffers) {
 	cur_buffer = buffers;
@@ -176,6 +177,7 @@ void index_rooms_cursor_show() {
 		if (tb->room->unread_msgs > 0)
 			wattroff(windex, A_BOLD);
 	}
+	wrefresh(windex);
 }
 
 void input_cursor_inc(int offset) {
@@ -196,6 +198,23 @@ void input_cursor_show() {
 	} else if (*pos < *left) {
 		*right -= *left - *pos;
 		*left = *pos;
+	}
+}
+
+void change_focus(enum Focus f) {
+	focus = f;
+	switch (focus) {
+	case FOCUS_INDEX:
+		focus = FOCUS_INDEX;
+		index_rooms_cursor_show();
+		wrefresh(windex);
+		break;
+	case FOCUS_CHAT_INPUT:
+		fill_msgs();
+		drawline(wchat, '-');
+		redraw(wchat_input);
+		wrefresh(wchat);
+		break;
 	}
 }
 
@@ -253,10 +272,9 @@ void process_menu() {
 		break;
 	case 10:
 	case 13:
+		/* TODO: what if buffers is empty? */
 		change_cur_buffer(vector_at(buffers, idx));
-		fill_msgs();
-		wrefresh(wchat);
-		focus = FOCUS_CHAT_INPUT;
+		change_focus(FOCUS_CHAT_INPUT);
 		break;
 	}
 }
@@ -304,14 +322,12 @@ void process_input(WINDOW *w) {
 		input_cursor_inc(+1);
 		break;
 	case CTRL('g'):
-		focus = FOCUS_INDEX;
-		index_rooms_cursor_show();
+		change_focus(FOCUS_INDEX);
 		break;
 	case 10: /* LF */
 	case 13: /* CR */
 		if (streq(cur_buffer->buf, "/quit")) {
-			focus = FOCUS_INDEX;
-			index_rooms_cursor_show();
+			change_focus(FOCUS_INDEX);
 		} else {
 			send_msg();
 		}
@@ -327,6 +343,7 @@ void process_input(WINDOW *w) {
 	}
 	cur_buffer->buf[cur_buffer->len] = '\0';
 	input_cursor_show();
+	redraw(wchat_input);
 }
 
 void ui_curses_init() {
@@ -372,14 +389,10 @@ void ui_curses_iter() {
 		 */
 		vector_sort(buffers, buffer_comparison);
 
-		wrefresh(windex);
 		process_menu();
-		wrefresh(windex);
 		break;
 	case FOCUS_CHAT_INPUT:
 		process_input(wchat_input);
-		wrefresh(wchat);
-		redraw(wchat_input);
 		break;
 	}
 }
