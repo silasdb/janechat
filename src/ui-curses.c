@@ -1,6 +1,7 @@
 /* curses front-end for janechat */
 
 #include <assert.h>
+#include <ctype.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -280,16 +281,24 @@ void process_menu() {
 	}
 }
 
-#if UI_CURSES_TEST
 void send_msg() {
+	/*
+	 * If buf is an empty string or only if it is only consisted of spaces,
+	 * don't send anything.
+	 */
+	char *c = &cur_buffer->buf[0];
+	while (isspace(*c))
+		c++;
+	if (*c == '\0')
+		return;
+
+#if UI_CURSES_TEST
 	Msg *msg = malloc(sizeof(struct Msg));
 	msg->sender = str_new_cstr("test");
 	msg->text = str_new_cstr(cur_buffer->buf);
 	vector_append(cur_buffer->room->msgs, msg);
 	fill_msgs();
-}
 #else
-void send_msg() {
 	struct UiEvent ev;
 	ev.type = UIEVENTTYPE_SENDMSG,
 	ev.msg.roomid = str_incref(cur_buffer->room->id);
@@ -297,8 +306,8 @@ void send_msg() {
 	ui_event_handler_callback(ev);
 	str_decref(ev.msg.roomid);
 	str_decref(ev.msg.text);
-}
 #endif
+}
 
 void process_input(WINDOW *w) {
 	int c = wgetch(w);
