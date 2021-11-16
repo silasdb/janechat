@@ -378,7 +378,15 @@ void ui_curses_init() {
 int buffer_comparison(const void *a, const void *b) {
 	const struct buffer **x = (const struct buffer **)a;
 	const struct buffer **y = (const struct buffer **)b;
-	return strcmp(str_buf((*x)->room->name), str_buf((*y)->room->name));
+	int res;
+	res = strcmp(str_buf((*x)->room->name), str_buf((*y)->room->name));
+	if (res)
+		return res;
+	/*
+	 * If both rooms have the same name, compare their ids - this prevent
+	 * random sorting on the UI
+	 */
+	return strcmp(str_buf((*x)->room->id), str_buf((*y)->room->id));
 }
 
 void ui_curses_iter() {
