@@ -92,6 +92,7 @@ void fill_msgs() {
 	getmaxyx(wchat_msgs, maxy, maxx);
 	/*
 	 * We make a naive calculation of line height and print them backwards.
+	 * TODO: consider that a message can have a line break.
 	 */
 	int y = maxy;
 	for (ssize_t i = last; i >= 0; i--) {
