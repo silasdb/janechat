@@ -430,8 +430,10 @@ void ui_curses_room_new(Str *roomid) {
 
 void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
 	/* TODO: what about other parameters? */
-	if (cur_buffer && cur_buffer->room == room)
+	if (cur_buffer && cur_buffer->room == room) {
+		cur_buffer->room->unread_msgs = 0;
 		fill_msgs();
+	}
 }
 
 #ifdef UI_CURSES_TEST
