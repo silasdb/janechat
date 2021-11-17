@@ -430,6 +430,10 @@ void ui_curses_room_new(Str *roomid) {
 }
 
 void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
+	if (focus == FOCUS_INDEX) {
+		index_rooms_cursor_show(); /* Update window */
+		return;
+	}
 	/* TODO: what about other parameters? */
 	if (cur_buffer && cur_buffer->room == room) {
 		cur_buffer->room->unread_msgs = 0;
