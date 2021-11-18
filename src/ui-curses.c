@@ -13,350 +13,77 @@
 #include "vector.h"
 #include "utils.h"
 
+/* We can detect Ctrl+key sequences by masking the return of getch() */
 #define CTRL(x) (x & 037)
 
+/*
+ * We call the data structure that holds the room information for the UI as
+ * "buffer".  We have very few UI elements, the only thing that changes is the
+ * buffer, that is unique for each room.
+ */
 struct buffer {
 	Room *room;
-	char buf[256]; /* TODO: use Str? */
+	char buf[256]; /* Input buffer. TODO: use Str? */
 	size_t pos; /* Cursor position */
-	size_t len; /* String length - does not include the null byte*/
-	size_t left;
-	size_t right;
+	size_t len; /* String length - does not include the null byte */
+	size_t left; /* left-most character index showed in the input window */
+	size_t right; /* right-most character index showed in the input window*/
+
+	/*
+	 * As messages text are rendered backwards (on the wchat_msgs window),
+	 * we need to store the index of the last line. If last_line == -1, then
+	 * the last line is the most recent message received.
+	 */
 	int last_line;
 };
 
-WINDOW *windex;
-WINDOW *wchat;
-WINDOW *wchat_msgs;
-WINDOW *wchat_input;
-
-Vector *buffers = NULL; /* Vector<struct buffer> */
-
-struct buffer *cur_buffer = NULL;
+WINDOW *windex; /* The index window - that shows rooms */
+WINDOW *wchat; /* The chat window, that show room messages and the input field */
+WINDOW *wchat_msgs; /* A subwindow for the chat window: show messages received */
+WINDOW *wchat_input; /* A subwindow for the chat window: input */
 
 enum Focus {
+	/* Focus is on the index window */
 	FOCUS_INDEX,
+	/* wchat window is visible and focus is on its input subwindow */
 	FOCUS_CHAT_INPUT,
 } focus = FOCUS_INDEX;
 
-void redraw(WINDOW *w);
-void change_focus(enum Focus);
+/* A vector of struct buffer. Used in the index window */
+Vector *buffers = NULL; /* Vector<struct buffer> */
 
-void clear_cur_buffer_input() {
-	if (!cur_buffer)
-		return;
-	cur_buffer->buf[0] = '\0';
-	cur_buffer->pos = 0;
-	cur_buffer->len = 0;
-	redraw(wchat_input);
-}
+/* Current buffer selected. NULL if focus is in index window */
+struct buffer *cur_buffer = NULL;
 
-void handle_sigint(int sig) {
-	(void)sig;
-	clear_cur_buffer_input();
-}
+/*
+ * Index for the current selected buffer. This is used not only to index buffers
+ * vector, but to correct draw cursor on the screen.
+ */
+size_t index_idx = 0;
 
-void redraw(WINDOW *w) {
-	werase(w);
-	mvwprintw(w, 0, 0, "%.*s",
-		(int)(cur_buffer->right - cur_buffer->left + 1),
-		&cur_buffer->buf[cur_buffer->left]);
-	wmove(w, 0, cur_buffer->pos - cur_buffer->left);
-	wrefresh(w);
-}
-
-void change_cur_buffer(struct buffer *buffers) {
-	cur_buffer = buffers;
-	int maxy, maxx;
-	getmaxyx(wchat_input, maxy, maxx);
-	(void)maxy;
-	cur_buffer->left = 0;
-	cur_buffer->right = maxx-1;
-	cur_buffer->room->unread_msgs = 0;
-}
-
-void drawline(WINDOW *w, char ch) {
-	int maxy, maxx;
-	getmaxyx(w, maxy, maxx);
-	mvwhline(w, maxy-2, 0, ch, maxx);
-}
-
-void fill_msgs() {
-	werase(wchat_msgs);
-	int last = -1;
-	if (cur_buffer->last_line == -1)
-		last = vector_len(cur_buffer->room->msgs)-1;
-	if (last < 0)
-		return;
-	int maxy, maxx;
-	getmaxyx(wchat_msgs, maxy, maxx);
-	/*
-	 * We make a naive calculation of line height and print them backwards.
-	 * TODO: consider that a message can have a line break.
-	 */
-	int y = maxy;
-	for (ssize_t i = last; i >= 0; i--) {
-		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
-		size_t len;
-		len = str_len(msg->sender);
-		len += 2; /* collon between sender and text */
-		len += str_len(msg->text);
-		int height = len / maxx;
-		height++;
-		y -= height;
-		if (y < 0)
-			break;
-		mvwprintw(wchat_msgs, y, 0, "%s: %s\n",
-			str_buf(msg->sender), str_buf(msg->text));
-	}
-	wrefresh(wchat_msgs);
-}
-
-size_t idx = 0;
+/* The first and last rooms showed in the index window. */
 size_t top = 0;
 size_t bottom = 0;
 
-void index_rooms_cursor_inc(int offset) {
-	/* TODO: test case vector_len(buffers) == 0 */
-	if (idx == 0 && offset < 0)
-		idx = vector_len(buffers);
-	if (idx >= vector_len(buffers)-1 && offset > 0)
-		idx = -1;
-	idx += offset;
+void chat_input_redraw(WINDOW *w);
+void set_focus(enum Focus);
+void index_next_unread(int);
+void index_draw(void);
+void chat_input_clear(void);
+void chat_msgs_fill(void);
+
+/*
+ * A SIGINT handler. We use Ctrl-C to cleanup buffer input, so we need to
+ * intercept SIGINT
+ */
+void handle_sigint(int sig) {
+	(void)sig;
+	chat_input_clear();
 }
 
-/* Jump to the next room with unread message */
-void index_rooms_next_unread(int direction) {
-	int idx2 = idx;
-	do  {
-		index_rooms_cursor_inc(direction);
-		struct buffer *b;
-		b = vector_at(buffers, idx);
-		if (b->room->unread_msgs > 0)
-			break;
-	} while (idx2 != idx);
-}
-
-void index_rooms_update_top_bottom() {
-	int maxy, maxx;
-	getmaxyx(windex, maxy, maxx);
-	(void)maxx;
-	top = 0;
-	bottom = maxy-1;
-	if (bottom >= vector_len(buffers)-1)
-		bottom = vector_len(buffers)-1;
-}
-
-void index_rooms_cursor_show() {
-	if (vector_len(buffers) == 0)
-		return;
-
-	/* Cursor is below bottom */
-	if (idx > bottom) {
-		top += idx - bottom;
-		bottom = idx;
-	} else if (idx < top) {
-		bottom -= top - idx;
-		top = idx;
-	}
-
-	assert(top >= 0 && top < vector_len(buffers));
-	assert(bottom >= 0 && bottom < vector_len(buffers));
-	assert(idx >= top && idx <= bottom);
-
-	werase(windex);
-	for (size_t i = top; i <= bottom; i++) {
-		struct buffer *tb;
-		tb = vector_at(buffers, i);
-		if (idx == i)
-			wattron(windex, A_REVERSE); 
-		if (tb->room->unread_msgs > 0)
-			wattron(windex, A_BOLD);
-		mvwprintw(windex, i-top, 0, "%s (%zu)",
-			tb->room->name->buf, tb->room->unread_msgs);
-		if (idx == i)
-			wattroff(windex, A_REVERSE); 
-		if (tb->room->unread_msgs > 0)
-			wattroff(windex, A_BOLD);
-	}
-	wrefresh(windex);
-}
-
-void input_cursor_inc(int offset) {
-	if (cur_buffer->pos + offset < 0)
-		return;
-	if (cur_buffer->pos + offset > cur_buffer->len)
-		return;
-	cur_buffer->pos += offset;
-}
-
-void input_cursor_show() {
-	size_t *pos = &cur_buffer->pos;
-	size_t *left = &cur_buffer->left;
-	size_t *right = &cur_buffer->right;
-	if (*pos > *right) {
-		*left += *pos - *right;
-		*right = *pos;
-	} else if (*pos < *left) {
-		*right -= *left - *pos;
-		*left = *pos;
-	}
-}
-
-void change_focus(enum Focus f) {
-	focus = f;
-	switch (focus) {
-	case FOCUS_INDEX:
-		cur_buffer = NULL;
-		focus = FOCUS_INDEX;
-		index_rooms_cursor_show();
-		wrefresh(windex);
-		break;
-	case FOCUS_CHAT_INPUT:
-		fill_msgs();
-		drawline(wchat, '-');
-		redraw(wchat_input);
-		wrefresh(wchat);
-		break;
-	}
-}
-
-void resize() {
-	int maxy, maxx;
-	clear();
-	getmaxyx(stdscr, maxy, maxx);
-	wresize(windex, maxy, maxx);
-	wresize(wchat, maxy, maxx);
-	wresize(wchat_msgs, maxy-2, maxx);
-	wresize(wchat_input, 1, maxx);
-	mvwin(wchat_input, maxy-1, 0);
-	switch (focus) {
-	case FOCUS_CHAT_INPUT:
-		fill_msgs();
-		break;
-	case FOCUS_INDEX:
-		index_rooms_update_top_bottom();
-		index_rooms_cursor_show();
-		break;
-	}
-	drawline(wchat, '-');
-	if (cur_buffer)
-		/* We force a redraw of the current buffer input window */
-		change_cur_buffer(cur_buffer);
-}
-
-void process_menu() {
-	int c = wgetch(windex);
-	switch (c) {
-	case 'Q':
-		endwin();
-		exit(0);
-		break;
-	case 'k':
-	case KEY_UP:
-		index_rooms_cursor_inc(-1);
-		index_rooms_cursor_show();
-		break;
-	case 'j':
-	case KEY_DOWN:
-		index_rooms_cursor_inc(+1);
-		index_rooms_cursor_show();
-		break;
-	case 'K':
-		index_rooms_next_unread(-1);
-		index_rooms_cursor_show();
-		break;
-	case 'J':
-		index_rooms_next_unread(+1);
-		index_rooms_cursor_show();
-		break;
-	case KEY_RESIZE:
-		resize();
-		break;
-	case 10:
-	case 13:
-		/* TODO: what if buffers is empty? */
-		change_cur_buffer(vector_at(buffers, idx));
-		change_focus(FOCUS_CHAT_INPUT);
-		break;
-	}
-}
-
-void send_msg() {
-	/*
-	 * If buf is an empty string or only if it is only consisted of spaces,
-	 * don't send anything.
-	 */
-	char *c = &cur_buffer->buf[0];
-	while (isspace(*c))
-		c++;
-	if (*c == '\0')
-		return;
-
-#if UI_CURSES_TEST
-	Msg *msg = malloc(sizeof(struct Msg));
-	msg->sender = str_new_cstr("test");
-	msg->text = str_new_cstr(cur_buffer->buf);
-	vector_append(cur_buffer->room->msgs, msg);
-	fill_msgs();
-#else
-	struct UiEvent ev;
-	ev.type = UIEVENTTYPE_SENDMSG,
-	ev.msg.roomid = str_incref(cur_buffer->room->id);
-	ev.msg.text = str_new_cstr(cur_buffer->buf);
-	ui_event_handler_callback(ev);
-	str_decref(ev.msg.roomid);
-	str_decref(ev.msg.text);
-#endif
-}
-
-void process_input(WINDOW *w) {
-	int c = wgetch(w);
-
-	switch (c) {
-	case 127: /* TODO: why do I need this in urxvt but not in xterm? - https://bbs.archlinux.org/viewtopic.php?id=56427*/
-	case KEY_BACKSPACE:
-		if (cur_buffer->pos == 0)
-			break;
-		for (size_t i = cur_buffer->pos-1; i < cur_buffer->len; i++)
-			cur_buffer->buf[i] = cur_buffer->buf[i+1];
-		cur_buffer->pos--;
-		cur_buffer->len--;
-		break;
-	case KEY_RESIZE:
-		resize();
-		break;
-	case KEY_LEFT:
-		input_cursor_inc(-1);
-		break;
-	case KEY_RIGHT:
-		input_cursor_inc(+1);
-		break;
-	case CTRL('g'):
-		change_focus(FOCUS_INDEX);
-		return;
-		break;
-	case 10: /* LF */
-	case 13: /* CR */
-		if (streq(cur_buffer->buf, "/quit")) {
-			change_focus(FOCUS_INDEX);
-		} else {
-			send_msg();
-		}
-		clear_cur_buffer_input();
-		break;
-	default:
-		for (size_t i = cur_buffer->len; i > cur_buffer->pos; i--)
-			cur_buffer->buf[i] = cur_buffer->buf[i-1];
-		cur_buffer->buf[cur_buffer->pos] = c;
-		cur_buffer->len++;
-		input_cursor_inc(+1);
-		break;
-	}
-	cur_buffer->buf[cur_buffer->len] = '\0';
-	input_cursor_show();
-	redraw(wchat_input);
-}
+/*
+ * Public functions
+ */
 
 void ui_curses_init() {
 	/*
@@ -385,20 +112,6 @@ void ui_curses_init() {
 	signal(SIGINT, handle_sigint);
 }
 
-int buffer_comparison(const void *a, const void *b) {
-	const struct buffer **x = (const struct buffer **)a;
-	const struct buffer **y = (const struct buffer **)b;
-	int res;
-	res = strcmp(str_buf((*x)->room->name), str_buf((*y)->room->name));
-	if (res)
-		return res;
-	/*
-	 * If both rooms have the same name, compare their ids - this prevent
-	 * random sorting on the UI
-	 */
-	return strcmp(str_buf((*x)->room->id), str_buf((*y)->room->id));
-}
-
 void ui_curses_iter() {
 	/* TODO: fix draw order */
 	switch (focus) {
@@ -409,10 +122,10 @@ void ui_curses_iter() {
 		 */
 		vector_sort(buffers, buffer_comparison);
 
-		process_menu();
+		index_key();
 		break;
 	case FOCUS_CHAT_INPUT:
-		process_input(wchat_input);
+		chat_input_key(wchat_input);
 		break;
 	}
 }
@@ -431,16 +144,22 @@ void ui_curses_room_new(Str *roomid) {
 
 void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
 	if (focus == FOCUS_INDEX) {
-		index_rooms_cursor_show(); /* Update window */
+		index_draw(); /* Update window */
 		return;
 	}
 	/* TODO: what about other parameters? */
 	if (cur_buffer && cur_buffer->room == room) {
 		cur_buffer->room->unread_msgs = 0;
-		fill_msgs();
+		chat_msgs_fill();
 	}
 }
 
+/*
+ * The main function is only used for testing purposes, if we want to test the
+ * ui-curses frontend without having to connect to a Matrix server. It creates
+ * fake rooms so we can mimic janechat behaviour. In order to enable this
+ * window, macro UI_CURSES_TEST have to be defined.
+ */
 #ifdef UI_CURSES_TEST
 int main(int argc, char *argv[]) {
 	rooms_init();
@@ -474,3 +193,336 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 #endif
+
+/*
+ * windex window code
+ */
+
+void index_key() {
+	int c = wgetch(windex);
+	switch (c) {
+	case 'Q':
+		endwin();
+		exit(0);
+		break;
+	case 'k':
+	case KEY_UP:
+		index_cursor_inc(-1);
+		index_draw();
+		break;
+	case 'j':
+	case KEY_DOWN:
+		index_cursor_inc(+1);
+		index_draw();
+		break;
+	case 'K':
+		index_next_unread(-1);
+		index_draw();
+		break;
+	case 'J':
+		index_next_unread(+1);
+		index_draw();
+		break;
+	case KEY_RESIZE:
+		resize();
+		break;
+	case 10:
+	case 13:
+		/* TODO: what if buffers is empty? */
+		set_cur_buffer(vector_at(buffers, index_idx));
+		set_focus(FOCUS_CHAT_INPUT);
+		break;
+	}
+}
+
+/* Increment cursor position. Cursor wraps around. */
+void index_cursor_inc(int offset) {
+	/* TODO: test case vector_len(buffers) == 0 */
+	if (index_idx == 0 && offset < 0)
+		index_idx = vector_len(buffers);
+	if (index_idx >= vector_len(buffers)-1 && offset > 0)
+		index_idx = -1;
+	index_idx += offset;
+}
+
+/* Jump to the next room with unread message. Cursor wraps around. */
+void index_next_unread(int direction) {
+	int idx = index_idx;
+	do  {
+		index_cursor_inc(direction);
+		struct buffer *b;
+		b = vector_at(buffers, index_idx);
+		if (b->room->unread_msgs > 0)
+			break;
+	} while (idx != index_idx);
+}
+
+/* Update top and bottom variables. Called when resizing. */
+void index_update_top_bottom(void) {
+	int maxy, maxx;
+	getmaxyx(windex, maxy, maxx);
+	(void)maxx;
+	top = 0;
+	bottom = maxy-1;
+	if (bottom >= vector_len(buffers)-1)
+		bottom = vector_len(buffers)-1;
+}
+
+/* Draw the windex window */
+void index_draw(void) {
+	if (vector_len(buffers) == 0)
+		return;
+
+	/* If cursor is off-screen, adjust top and bottom to show cursor. */
+	if (index_idx > bottom) {
+		top += index_idx - bottom;
+		bottom = index_idx;
+	} else if (index_idx < top) {
+		bottom -= top - index_idx;
+		top = index_idx;
+	}
+
+	assert(top >= 0 && top < vector_len(buffers));
+	assert(bottom >= 0 && bottom < vector_len(buffers));
+	assert(index_idx >= top && index_idx <= bottom);
+
+	/* Draw the window */
+	werase(windex);
+	for (size_t i = top; i <= bottom; i++) {
+		struct buffer *tb;
+		tb = vector_at(buffers, i);
+		if (index_idx == i)
+			wattron(windex, A_REVERSE); 
+		if (tb->room->unread_msgs > 0)
+			wattron(windex, A_BOLD);
+		mvwprintw(windex, i-top, 0, "%s (%zu)",
+			tb->room->name->buf, tb->room->unread_msgs);
+		if (index_idx == i)
+			wattroff(windex, A_REVERSE); 
+		if (tb->room->unread_msgs > 0)
+			wattroff(windex, A_BOLD);
+	}
+	wrefresh(windex);
+}
+
+/*
+ * wchat window code
+ */
+
+void chat_input_key(WINDOW *w) {
+	int c = wgetch(w);
+
+	switch (c) {
+	case 127: /* TODO: why do I need this in urxvt but not in xterm? - https://bbs.archlinux.org/viewtopic.php?id=56427*/
+	case KEY_BACKSPACE:
+		if (cur_buffer->pos == 0)
+			break;
+		for (size_t i = cur_buffer->pos-1; i < cur_buffer->len; i++)
+			cur_buffer->buf[i] = cur_buffer->buf[i+1];
+		cur_buffer->pos--;
+		cur_buffer->len--;
+		break;
+	case KEY_RESIZE:
+		resize();
+		break;
+	case KEY_LEFT:
+		chat_input_cursor_inc(-1);
+		break;
+	case KEY_RIGHT:
+		chat_input_cursor_inc(+1);
+		break;
+	case CTRL('g'):
+		set_focus(FOCUS_INDEX);
+		return;
+		break;
+	case 10: /* LF */
+	case 13: /* CR */
+		if (streq(cur_buffer->buf, "/quit")) {
+			set_focus(FOCUS_INDEX);
+		} else {
+			send_msg();
+		}
+		chat_input_clear();
+		break;
+	default:
+		for (size_t i = cur_buffer->len; i > cur_buffer->pos; i--)
+			cur_buffer->buf[i] = cur_buffer->buf[i-1];
+		cur_buffer->buf[cur_buffer->pos] = c;
+		cur_buffer->len++;
+		chat_input_cursor_inc(+1);
+		break;
+	}
+	cur_buffer->buf[cur_buffer->len] = '\0';
+	chat_input_cursor_show();
+	chat_input_redraw(wchat_input);
+}
+
+void chat_input_clear() {
+	if (!cur_buffer)
+		return;
+	cur_buffer->buf[0] = '\0';
+	cur_buffer->pos = 0;
+	cur_buffer->len = 0;
+	chat_input_redraw(wchat_input);
+}
+
+void chat_input_redraw(WINDOW *w) {
+	werase(w);
+	mvwprintw(w, 0, 0, "%.*s",
+		(int)(cur_buffer->right - cur_buffer->left + 1),
+		&cur_buffer->buf[cur_buffer->left]);
+	wmove(w, 0, cur_buffer->pos - cur_buffer->left);
+	wrefresh(w);
+}
+
+void chat_drawline(WINDOW *w, char ch) {
+	int maxy, maxx;
+	getmaxyx(w, maxy, maxx);
+	mvwhline(w, maxy-2, 0, ch, maxx);
+}
+
+void chat_msgs_fill(void) {
+	werase(wchat_msgs);
+	int last = -1;
+	if (cur_buffer->last_line == -1)
+		last = vector_len(cur_buffer->room->msgs)-1;
+	if (last < 0)
+		return;
+	int maxy, maxx;
+	getmaxyx(wchat_msgs, maxy, maxx);
+	/*
+	 * We make a naive calculation of line height and print them backwards.
+	 * TODO: consider that a message can have a line break.
+	 */
+	int y = maxy;
+	for (ssize_t i = last; i >= 0; i--) {
+		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
+		size_t len;
+		len = str_len(msg->sender);
+		len += 2; /* collon between sender and text */
+		len += str_len(msg->text);
+		int height = len / maxx;
+		height++;
+		y -= height;
+		if (y < 0)
+			break;
+		mvwprintw(wchat_msgs, y, 0, "%s: %s\n",
+			str_buf(msg->sender), str_buf(msg->text));
+	}
+	wrefresh(wchat_msgs);
+}
+
+void chat_input_cursor_inc(int offset) {
+	if (cur_buffer->pos + offset < 0)
+		return;
+	if (cur_buffer->pos + offset > cur_buffer->len)
+		return;
+	cur_buffer->pos += offset;
+}
+
+void chat_input_cursor_show() {
+	size_t *pos = &cur_buffer->pos;
+	size_t *left = &cur_buffer->left;
+	size_t *right = &cur_buffer->right;
+	if (*pos > *right) {
+		*left += *pos - *right;
+		*right = *pos;
+	} else if (*pos < *left) {
+		*right -= *left - *pos;
+		*left = *pos;
+	}
+}
+
+void set_cur_buffer(struct buffer *buffers) {
+	cur_buffer = buffers;
+	int maxy, maxx;
+	getmaxyx(wchat_input, maxy, maxx);
+	(void)maxy;
+	cur_buffer->left = 0;
+	cur_buffer->right = maxx-1;
+	cur_buffer->room->unread_msgs = 0;
+}
+
+void set_focus(enum Focus f) {
+	focus = f;
+	switch (focus) {
+	case FOCUS_INDEX:
+		cur_buffer = NULL;
+		focus = FOCUS_INDEX;
+		index_draw();
+		wrefresh(windex);
+		break;
+	case FOCUS_CHAT_INPUT:
+		chat_msgs_fill();
+		chat_drawline(wchat, '-');
+		chat_input_redraw(wchat_input);
+		wrefresh(wchat);
+		break;
+	}
+}
+
+void resize() {
+	int maxy, maxx;
+	clear();
+	getmaxyx(stdscr, maxy, maxx);
+	wresize(windex, maxy, maxx);
+	wresize(wchat, maxy, maxx);
+	wresize(wchat_msgs, maxy-2, maxx);
+	wresize(wchat_input, 1, maxx);
+	mvwin(wchat_input, maxy-1, 0);
+	switch (focus) {
+	case FOCUS_CHAT_INPUT:
+		chat_msgs_fill();
+		break;
+	case FOCUS_INDEX:
+		index_update_top_bottom();
+		index_draw();
+		break;
+	}
+	chat_drawline(wchat, '-');
+	if (cur_buffer)
+		/* We force a chat_input_redraw of the current buffer input window */
+		set_cur_buffer(cur_buffer);
+}
+
+void send_msg() {
+	/*
+	 * If buf is an empty string or only if it is only consisted of spaces,
+	 * don't send anything.
+	 */
+	char *c = &cur_buffer->buf[0];
+	while (isspace(*c))
+		c++;
+	if (*c == '\0')
+		return;
+
+#if UI_CURSES_TEST
+	Msg *msg = malloc(sizeof(struct Msg));
+	msg->sender = str_new_cstr("test");
+	msg->text = str_new_cstr(cur_buffer->buf);
+	vector_append(cur_buffer->room->msgs, msg);
+	chat_msgs_fill();
+#else
+	struct UiEvent ev;
+	ev.type = UIEVENTTYPE_SENDMSG,
+	ev.msg.roomid = str_incref(cur_buffer->room->id);
+	ev.msg.text = str_new_cstr(cur_buffer->buf);
+	ui_event_handler_callback(ev);
+	str_decref(ev.msg.roomid);
+	str_decref(ev.msg.text);
+#endif
+}
+
+int buffer_comparison(const void *a, const void *b) {
+	const struct buffer **x = (const struct buffer **)a;
+	const struct buffer **y = (const struct buffer **)b;
+	int res;
+	res = strcmp(str_buf((*x)->room->name), str_buf((*y)->room->name));
+	if (res)
+		return res;
+	/*
+	 * If both rooms have the same name, compare their ids - this prevent
+	 * random sorting on the UI
+	 */
+	return strcmp(str_buf((*x)->room->id), str_buf((*y)->room->id));
+}
