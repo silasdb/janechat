@@ -4,7 +4,7 @@
 #include "ui.h"
 #include "rooms.h"
 
-void ui_cli_iter();
+void ui_cli_iter(void);
 void ui_cli_msg_new(Room *room, Str *sender, Str *msg);
 
 #endif

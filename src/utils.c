@@ -13,7 +13,7 @@ void debug(const char *path, const char *format, ...) {
 	fclose(f);
 }
 
-char *read_line_alloc() {
+char *read_line_alloc(void) {
 	char *line = NULL;
 	size_t linesize = 0, len;
 	len = getline(&line, &linesize, stdin);

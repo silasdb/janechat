@@ -332,7 +332,7 @@ void chat_msgs_fill(void) {
 	wrefresh(wchat_msgs);
 }
 
-void chat_input_clear() {
+void chat_input_clear(void) {
 	if (!cur_buffer)
 		return;
 	cur_buffer->buf[0] = '\0';
@@ -422,7 +422,7 @@ void chat_input_key(void) {
  * Public functions
  */
 
-void ui_curses_init() {
+void ui_curses_init(void) {
 	/*
 	 * TODO: we check if buffers is already allocated because our test
 	 * main() can already have allocated it for testing purposes.
@@ -449,7 +449,7 @@ void ui_curses_init() {
 	signal(SIGINT, handle_sigint);
 }
 
-void ui_curses_iter() {
+void ui_curses_iter(void) {
 	/* TODO: fix draw order */
 	switch (focus) {
 	case FOCUS_INDEX:
