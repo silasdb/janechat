@@ -5,7 +5,7 @@
 
 #define INITSIZE 256
 
-Vector *vector_new() {
+Vector *vector_new(void) {
 	Vector *v;
 	v = malloc(sizeof(struct Vector)); 
 	v->elems = malloc(sizeof(void *) * INITSIZE);

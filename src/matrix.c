@@ -89,7 +89,7 @@ void matrix_set_token(char *tok) {
 }
 
 
-void matrix_sync() {
+void matrix_sync(void) {
 	if (insync)
 		return;
 	insync = true;
@@ -344,7 +344,7 @@ send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 	return size * nmemb;
 }
 
-enum SelectStatus select_matrix_stdin() {
+enum SelectStatus select_matrix_stdin(void) {
 	struct timeval timeout;
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 100;
@@ -389,7 +389,7 @@ enum SelectStatus select_matrix_stdin() {
 	return SELECTSTATUS_MATRIXRESUME;
 }
 
-void matrix_resume() {
+void matrix_resume(void) {
 	curl_multi_perform(mhandle, &still_running);
 	
 	/* TODO: check return value of curl_multi_perform() for errors */
