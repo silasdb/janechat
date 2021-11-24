@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 
+void debug(const char *path, const char *format, ...);
 char *read_line_alloc();
 char *read_file_alloc(FILE *);
 

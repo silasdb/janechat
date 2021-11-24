@@ -13,3 +13,8 @@ cat >>config.mk <<-EOF
 	LDFLAGS += $(pkg-config --libs jansson)
 	CFLAGS += $(pkg-config --cflags jansson)
 EOF
+
+# TODO: use pkg-config to find ncurses?
+cat >>config.mk <<-EOF
+	LDFLAGS += -lcurses
+EOF

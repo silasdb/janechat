@@ -8,6 +8,7 @@ OBJS = cache.o \
 	str.o \
 	ui.o \
 	ui-cli.o \
+	ui-curses.o \
 	utils.o \
 	vector.o
 
@@ -48,12 +49,23 @@ ui.o: ui.h
 
 ui-cli.o: rooms.h ui-cli.c ui-cli.h utils.h ui.h
 	$(CC) ${CFLAGS} -c -o ui-cli.o ui-cli.c
+
+ui-curses.o: rooms.h str.h ui-curses.c ui-curses.h ui.h vector.h
+	$(CC) ${CFLAGS} -c -o ui-curses.o ui-curses.c
 	
 utils.o: utils.c utils.h
 	$(CC) ${CFLAGS} -c -o utils.o utils.c
 
 vector.o: vector.c vector.h
 	$(CC) ${CFLAGS} -c -o $@ vector.c
+
+# ui-curses-test
+
+ui-curses-test: hash.o list.o rooms.o str.o ui-curses-test.o utils.o vector.o
+	$(CC) ${LDFLAGS} -o $@ hash.o list.o rooms.o str.o ui-curses-test.o utils.o vector.o
+
+ui-curses-test.o: rooms.h str.h ui-curses.c ui-curses.h ui.h vector.h
+	$(CC) -DUI_CURSES_TEST ${CFLAGS} -c -o $@ ui-curses.c
 
 tags:
 	# Execute exctags, if not found, execute old ctags.
@@ -63,4 +75,4 @@ tags:
 
 .PHONY: clean
 clean:
-	rm -f janechat janechat.core *.o tags
+	rm -f janechat janechat.core *.o tags ui-curses-test
