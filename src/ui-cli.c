@@ -19,7 +19,7 @@ void ui_cli_iter() {
 	free(line);
 }
 
-void ui_cli_new_msg(Room *room, Str *sender, Str *text) {
+void ui_cli_msg_new(Room *room, Str *sender, Str *text) {
 	if (room != current_room)
 		return;
 

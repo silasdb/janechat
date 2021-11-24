@@ -1,8 +1,17 @@
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "utils.h"
+
+void debug(const char *path, const char *format, ...) {
+	FILE *f = fopen(path, "a");
+	va_list args;
+	va_start(args, format);
+	vfprintf(f, format, args);
+	fclose(f);
+}
 
 char *read_line_alloc() {
 	char *line = NULL;

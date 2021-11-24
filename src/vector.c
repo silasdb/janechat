@@ -22,3 +22,7 @@ void vector_append(Vector *v, void *elem) {
 	v->elems[v->len] = elem;
 	v->len++;
 }
+
+int vector_sort(Vector *v, int (*compar)(const void *, const void *)) {
+	qsort(v->elems, v->len, sizeof(void *), compar);
+}

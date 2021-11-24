@@ -14,6 +14,7 @@
 #include "rooms.h"
 #include "ui.h"
 #include "ui-cli.h"
+#include "ui-curses.h"
 #include "utils.h"
 
 bool do_matrix_send_token();
@@ -24,16 +25,65 @@ void handle_ui_event(UiEvent ev);
 bool logged_in = false;
 
 struct ui_hooks {
+	void (*init)();
 	void (*iter)();
-	void (*new_msg)();
+	void (*msg_new)(Room *room, Str *sender, Str *msg);
+	void (*room_new)(Str *roomid);
 } ui_hooks;
 
+void usage() {
+	fputs("usage: janechat [-f cli|curses]", stderr);
+	exit(2);
+}
+
 int main(int argc, char *argv[]) {
+	enum Ui {
+		UI_CLI,
+		UI_CURSES,
+	} ui_frontend = UI_CLI;
+
+	/* Option processing */
+	int c;
+	extern char *optarg;
+	extern int optind;
+	while ((c = getopt(argc, argv, "f:")) != -1) {
+		switch (c) {
+		case 'f':
+			if (streq(optarg, "cli"))
+				ui_frontend = UI_CLI;
+			else if (streq(optarg, "curses"))
+				ui_frontend = UI_CURSES;
+			else
+				usage();
+			break;
+		default:
+			usage();
+		}
+	}
+	argc -= optind;
+	if (argc != 0)
+		usage();
+
 	ui_set_event_handler(handle_ui_event);
-	ui_hooks = (struct ui_hooks){
-		.iter = ui_cli_iter,
-		.new_msg = ui_cli_new_msg,
-	};
+
+	/* UI callback setup */
+	switch (ui_frontend) {
+	case UI_CLI:
+		ui_hooks = (struct ui_hooks){
+			.iter = ui_cli_iter,
+			.msg_new = ui_cli_msg_new,
+		};
+		break;
+	case UI_CURSES:
+		ui_hooks = (struct ui_hooks){
+			.init = ui_curses_init,
+			.iter = ui_curses_iter,
+			.msg_new = ui_curses_msg_new,
+			.room_new = ui_curses_room_new,
+		};
+		break;
+	}
+
 	matrix_set_event_handler(handle_matrix_event);
 
 	/* TODO: what if the access_token expires or is invalid? */
@@ -57,6 +107,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	rooms_init();
+
+	if (ui_hooks.init)
+		ui_hooks.init();
 
 	for (;;) {
 		switch (select_matrix_stdin()) {
@@ -134,6 +187,8 @@ void do_matrix_login() {
 
 void process_room_create(Str *id) {
 	room_new(id);
+	if (ui_hooks.room_new)
+		ui_hooks.room_new(id);
 }
 
 void process_room_name(Str *roomid, Str *name) {
@@ -150,7 +205,7 @@ void process_room_join(Str *roomid, Str *sender) {
 void process_msg(Str *roomid, Str *sender, Str *text) {
 	Room *room = room_byid(roomid);
 	room_append_msg(room, sender, text);
-	ui_hooks.new_msg(room, sender, text);
+	ui_hooks.msg_new(room, sender, text);
 }
 
 void handle_matrix_event(MatrixEvent ev) {
