@@ -180,18 +180,21 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 	if (streq(json_string_value(type), "m.room.message")) {
 		json_t *msgtype = json_object_get(content, "msgtype");
 		assert(msgtype != NULL);
-		if (!streq(json_string_value(msgtype), "m.text")) {
-			printf("==== TODO: Type not supported: %s====\n",
-				json_string_value(msgtype));
-			return;
-		}
 		json_t *body = json_object_get(content, "body");
 		assert(body != NULL);
 		MatrixEvent event;
 		event.type = EVENT_MSG;
 		event.msg.sender = str_new_cstr(json_string_value(sender));
 		event.msg.roomid = str_new_cstr(roomid);
-		event.msg.text = str_new_cstr(json_string_value(body));
+		if (streq(json_string_value(msgtype), "m.text"))
+			event.msg.text = str_new_cstr(json_string_value(body));
+		else {
+			event.msg.text = str_new();
+			str_append_cstr(event.msg.text, "==== ");
+			str_append_cstr(event.msg.text, "TODO: Type not supported: ");
+			str_append_cstr(event.msg.text, json_string_value(msgtype));
+			str_append_cstr(event.msg.text, " ====");
+		}
 		event_handler_callback(event);
 		str_decref(event.msg.sender);
 		str_decref(event.msg.roomid);
