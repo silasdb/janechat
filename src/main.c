@@ -17,8 +17,8 @@
 #include "ui-curses.h"
 #include "utils.h"
 
-bool do_matrix_send_token();
-void do_matrix_login();
+bool do_matrix_send_token(void);
+void do_matrix_login(void);
 void handle_matrix_event(MatrixEvent ev);
 void handle_ui_event(UiEvent ev);
 
@@ -31,7 +31,7 @@ struct ui_hooks {
 	void (*room_new)(Str *roomid);
 } ui_hooks;
 
-void usage() {
+void usage(void) {
 	fputs("usage: janechat [-f cli|curses]", stderr);
 	exit(2);
 }
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-bool do_matrix_send_token() {
+bool do_matrix_send_token(void) {
 	char *token = cache_get_alloc("access_token");
 	if (!token)
 		return false;
@@ -141,7 +141,7 @@ bool do_matrix_send_token() {
 	return true;
 }
 
-void do_matrix_login() {
+void do_matrix_login(void) {
 	char *id, *ptr;
 	char *password;
 

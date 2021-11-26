@@ -89,7 +89,7 @@ void matrix_set_token(char *tok) {
 }
 
 
-void matrix_sync() {
+void matrix_sync(void) {
 	if (insync)
 		return;
 	insync = true;
@@ -180,18 +180,21 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 	if (streq(json_string_value(type), "m.room.message")) {
 		json_t *msgtype = json_object_get(content, "msgtype");
 		assert(msgtype != NULL);
-		if (!streq(json_string_value(msgtype), "m.text")) {
-			printf("==== TODO: Type not supported: %s====\n",
-				json_string_value(msgtype));
-			return;
-		}
 		json_t *body = json_object_get(content, "body");
 		assert(body != NULL);
 		MatrixEvent event;
 		event.type = EVENT_MSG;
 		event.msg.sender = str_new_cstr(json_string_value(sender));
 		event.msg.roomid = str_new_cstr(roomid);
-		event.msg.text = str_new_cstr(json_string_value(body));
+		if (streq(json_string_value(msgtype), "m.text"))
+			event.msg.text = str_new_cstr(json_string_value(body));
+		else {
+			event.msg.text = str_new();
+			str_append_cstr(event.msg.text, "==== ");
+			str_append_cstr(event.msg.text, "TODO: Type not supported: ");
+			str_append_cstr(event.msg.text, json_string_value(msgtype));
+			str_append_cstr(event.msg.text, " ====");
+		}
 		event_handler_callback(event);
 		str_decref(event.msg.sender);
 		str_decref(event.msg.roomid);
@@ -344,7 +347,7 @@ send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 	return size * nmemb;
 }
 
-enum SelectStatus select_matrix_stdin() {
+enum SelectStatus select_matrix_stdin(void) {
 	struct timeval timeout;
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 100;
@@ -368,10 +371,6 @@ enum SelectStatus select_matrix_stdin() {
 	int res = select(maxfd + 2, &fdread, &fdwrite, &fdexcep, &timeout);
 	switch (res) {
 	case -1:
-		/*
-		 * TODO: is this the right thing to do (just ignore it) if
-		 * select() is interrupted by a signal?
-		 */
 		if (errno == EINTR)
 			return SELECTSTATUS_MATRIXRESUME;
 		perror("select()");
@@ -389,7 +388,7 @@ enum SelectStatus select_matrix_stdin() {
 	return SELECTSTATUS_MATRIXRESUME;
 }
 
-void matrix_resume() {
+void matrix_resume(void) {
 	curl_multi_perform(mhandle, &still_running);
 	
 	/* TODO: check return value of curl_multi_perform() for errors */
@@ -536,11 +535,6 @@ static json_t *str2json_alloc(const char *s) {
 	j = json_loads(s, 0, &error);
 	if (!j) {
 		printf("Error when parsing JSON line %d: %s\n", error.line, error.text);
-		return NULL;
-	}
-	if (j == NULL) {
-		/* TODO: how to handle this error? */
-		printf("Error when parsing string: %s\n", s);
 		return NULL;
 	}
 	return j;

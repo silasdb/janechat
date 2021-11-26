@@ -58,7 +58,7 @@ typedef struct Hash Hash[HASH_SIZE];
 
 static size_t hash_calculate_idx(const char *);
 
-Hash *hash_new() {
+Hash *hash_new(void) {
 	Hash *h = malloc(sizeof(Hash));
 	memset(h->table, 0x0, sizeof(h->table));
 	return h;

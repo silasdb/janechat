@@ -22,7 +22,7 @@ struct Str {
 inline const char *str_buf(const Str *ss) { return ss->buf; }
 
 #define streq(x, y) (strcmp(x, y) == 0)
-Str *str_new();
+Str *str_new(void);
 Str *str_new_cstr(const char *);
 Str *str_new_len(size_t);
 void str_append_cstr(Str *ss, const char *s);

@@ -9,7 +9,7 @@ Hash *rooms_hash;	/* Hash<const char *id, Room> */
 Vector *rooms_vector;	/* Vector<Room> */
 size_t count;		/* Number of rooms */
 
-void rooms_init() {
+void rooms_init(void) {
 	rooms_hash = hash_new();
 	rooms_vector = vector_new();
 }

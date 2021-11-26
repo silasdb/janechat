@@ -19,7 +19,7 @@ struct Room {
 };
 typedef struct Room Room;
 
-void rooms_init();
+void rooms_init(void);
 Room *room_new(Str *);
 Room *room_byid(const Str *);
 Room *room_byname(const Str *);
