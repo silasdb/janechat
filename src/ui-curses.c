@@ -213,8 +213,10 @@ void index_update_top_bottom(void) {
 	(void)maxx;
 	top = 0;
 	bottom = maxy-1;
-	if (bottom >= vector_len(buffers)-1)
-		bottom = vector_len(buffers)-1;
+	if (bottom > vector_len(buffers))
+		bottom = vector_len(buffers);
+	if (bottom)
+		bottom--;
 }
 
 /* Draw the windex window */
