@@ -37,6 +37,8 @@ struct buffer {
 	int last_line;
 };
 
+bool curses_init = false; /* Did we started curses? */
+
 WINDOW *windex; /* The index window - that shows rooms */
 WINDOW *wchat; /* The chat window, that show room messages and the input field */
 WINDOW *wchat_msgs; /* A subwindow for the chat window: show messages received */
@@ -441,6 +443,7 @@ void ui_curses_setup(void) {
 }
 
 void ui_curses_init(void) {
+	curses_init = true;
 	initscr();
 	clear();
 	nonl();
@@ -459,9 +462,12 @@ void ui_curses_init(void) {
 
 	signal(SIGINT, handle_sigint);
 	signal(SIGWINCH, handle_sigwinch);
+	resize();
 }
 
 void ui_curses_iter(void) {
+	if (!curses_init)
+		return;
 	/* TODO: fix draw order */
 	switch (focus) {
 	case FOCUS_INDEX:
@@ -489,10 +495,13 @@ void ui_curses_room_new(Str *roomid) {
 	b->right = 0;
 	b->last_line = -1;
 	vector_append(buffers, b);
-	index_update_top_bottom();
+	if (curses_init)
+		index_update_top_bottom();
 }
 
 void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
+	if (!curses_init)
+		return;
 	if (focus == FOCUS_INDEX) {
 		index_draw(); /* Update window */
 		return;

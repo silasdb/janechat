@@ -54,6 +54,7 @@ enum SelectStatus {
 };
 
 void matrix_set_event_handler(void (*callback)(MatrixEvent));
+bool matrix_initial_sync(void);
 void matrix_sync(void);
 void matrix_send_message(const Str *roomid, const Str *msg);
 MatrixEvent * matrix_next_event();
