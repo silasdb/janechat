@@ -68,6 +68,7 @@ size_t bottom = 0;
 void chat_input_redraw(void);
 void set_focus(enum Focus);
 void index_draw(void);
+void resize(void);
 void index_update_top_bottom(void);
 void chat_input_clear(void);
 void chat_drawline(void);
