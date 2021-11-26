@@ -17,7 +17,7 @@
  * editing them can break janechat.
  */
 
-static char *cache_dir();
+static char *cache_dir(void);
 static void mkdir_r(const char *);
 
 void cache_set(const char *key, const char *value) {
@@ -48,7 +48,7 @@ char *cache_get_alloc(const char *key) {
  * Return a internal pointer to the cache directory.  This pointer is a static
  * object and should not be freed.
  */
-static char *cache_dir() {
+static char *cache_dir(void) {
 	static char dir[PATH_MAX] = { '\0' };
 
 	if (dir[0] != '\0')

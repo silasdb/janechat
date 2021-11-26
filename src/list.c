@@ -6,7 +6,7 @@
 
 static void alloc_head(List *, void *);
 
-List *list_new() {
+List *list_new(void) {
 	List *l = malloc(sizeof(List));
 	l->head = NULL;
 	l->tail = NULL;

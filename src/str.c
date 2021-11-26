@@ -7,7 +7,7 @@
 
 #define INITSIZE 256
 
-Str *str_new() {
+Str *str_new(void) {
 	return str_new_len(INITSIZE);
 }
 
