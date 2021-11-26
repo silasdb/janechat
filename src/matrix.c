@@ -537,10 +537,5 @@ static json_t *str2json_alloc(const char *s) {
 		printf("Error when parsing JSON line %d: %s\n", error.line, error.text);
 		return NULL;
 	}
-	if (j == NULL) {
-		/* TODO: how to handle this error? */
-		printf("Error when parsing string: %s\n", s);
-		return NULL;
-	}
 	return j;
 }
