@@ -68,6 +68,7 @@ size_t bottom = 0;
 void chat_input_redraw(void);
 void set_focus(enum Focus);
 void index_draw(void);
+void resize(void);
 void index_update_top_bottom(void);
 void chat_input_clear(void);
 void chat_drawline(void);
@@ -80,6 +81,22 @@ void chat_msgs_fill(void);
 void handle_sigint(int sig) {
 	(void)sig;
 	chat_input_clear();
+}
+
+/*
+ * A SIGWINCH handler to redraw everything after terminal resize.
+ */
+void handle_sigwinch(int sig) {
+	(void)sig;
+	/*
+	 * endwin(); refresh(); needs to be called in the correct order, in
+	 * order to make curses initialize its internal data structures
+	 * correctly.
+	 */
+	endwin();
+	refresh();
+	index_update_top_bottom();
+	resize();
 }
 
 /*
@@ -213,8 +230,10 @@ void index_update_top_bottom(void) {
 	(void)maxx;
 	top = 0;
 	bottom = maxy-1;
-	if (bottom >= vector_len(buffers)-1)
-		bottom = vector_len(buffers)-1;
+	if (bottom > vector_len(buffers))
+		bottom = vector_len(buffers);
+	if (bottom)
+		bottom--;
 }
 
 /* Draw the windex window */
@@ -278,9 +297,6 @@ void index_key(void) {
 	case 'J':
 		index_next_unread(+1);
 		index_draw();
-		break;
-	case KEY_RESIZE:
-		resize();
 		break;
 	case 10:
 	case 13:
@@ -383,9 +399,6 @@ void chat_input_key(void) {
 		cur_buffer->pos--;
 		cur_buffer->len--;
 		break;
-	case KEY_RESIZE:
-		resize();
-		break;
 	case KEY_LEFT:
 		chat_input_cursor_inc(-1);
 		break;
@@ -447,6 +460,7 @@ void ui_curses_init(void) {
 	keypad(wchat_input, TRUE);
 
 	signal(SIGINT, handle_sigint);
+	signal(SIGWINCH, handle_sigwinch);
 }
 
 void ui_curses_iter(void) {
@@ -477,6 +491,7 @@ void ui_curses_room_new(Str *roomid) {
 	b->right = 0;
 	b->last_line = -1;
 	vector_append(buffers, b);
+	index_update_top_bottom();
 }
 
 void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
