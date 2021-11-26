@@ -479,6 +479,7 @@ void ui_curses_room_new(Str *roomid) {
 	b->right = 0;
 	b->last_line = -1;
 	vector_append(buffers, b);
+	index_update_top_bottom();
 }
 
 void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
