@@ -88,6 +88,8 @@ int main(int argc, char *argv[]) {
 
 	matrix_set_event_handler(handle_matrix_event);
 
+	rooms_init();
+
 	if (ui_hooks.setup)
 		ui_hooks.setup();
 
@@ -108,10 +110,14 @@ int main(int argc, char *argv[]) {
 		 * hardcode the server we are testing against.
 		 */
 		matrix_set_server("matrix.org");
-		matrix_sync();
+		puts("Performing initial sync...");
+		if (!matrix_initial_sync()) {
+			fprintf(stderr,
+				"Error when performing initial sync. Exit.");
+			exit(1);
+		}
+		puts("Done.");
 	}
-
-	rooms_init();
 
 	if (ui_hooks.init)
 		ui_hooks.init();

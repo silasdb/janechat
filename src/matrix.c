@@ -65,6 +65,15 @@ void matrix_set_event_handler(void (*callback)(MatrixEvent)) {
 	event_handler_callback = callback;
 }
 
+/* Callback used for libcurl to retrieve web content. */
+static size_t
+send_callback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+	Str *s = (Str *)userp;
+	str_append_cstr_len(s, contents, size*nmemb);
+	return size * nmemb;
+}
+
 void matrix_send_message(const Str *roomid, const Str *msg) {
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/r0/rooms/");
@@ -88,6 +97,34 @@ void matrix_set_token(char *tok) {
 	token = tok;
 }
 
+bool matrix_initial_sync(void) {
+	Str *url = str_new();
+	str_append_cstr(url, "https://");
+	assert(matrix_server != NULL);
+	str_append_cstr(url, matrix_server);
+	str_append_cstr(url, ":443");
+	str_append_cstr(url, "/_matrix/client/r0/sync");
+	str_append_cstr(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
+	str_append_cstr(url, "&access_token=");
+	str_append_cstr(url, token);
+	CURL *handle = curl_easy_init();
+	assert(handle);
+	CURLcode res;
+	Str *aux = str_new();
+	curl_easy_setopt(handle, CURLOPT_URL, str_buf(url));
+	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
+	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
+	res = curl_easy_perform(handle);
+	if (res != CURLE_OK) {
+		fprintf(stderr, "curl error: %s\n", curl_easy_strerror(res));
+		return false;
+	}
+	curl_easy_cleanup(handle);
+	str_decref(url);
+	process_sync_response(str_buf(aux));
+	str_decref(aux);
+	return true;
+}
 
 void matrix_sync(void) {
 	if (insync)
@@ -95,13 +132,9 @@ void matrix_sync(void) {
 	insync = true;
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/r0/sync");
-	if (!next_batch)
-		str_append_cstr(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
-	else {
-		str_append_cstr(url, "?since=");
-		str_append_cstr(url, next_batch);
-		str_append_cstr(url, "&timeout=10000");
-	}
+	str_append_cstr(url, "?since=");
+	str_append_cstr(url, next_batch);
+	str_append_cstr(url, "&timeout=10000");
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
 	matrix_send(HTTP_GET, str_buf(url), NULL, process_sync_response);
@@ -336,15 +369,6 @@ static void process_sync_response(const char *output) {
 	next_batch = strdup(json_string_value(n));
 	json_decref(root);
 	
-}
-
-/* Callback used for libcurl to retrieve web content. */
-static size_t
-send_callback(void *contents, size_t size, size_t nmemb, void *userp)
-{
-	Str *s = (Str *)userp;
-	str_append_cstr_len(s, contents, size*nmemb);
-	return size * nmemb;
 }
 
 enum SelectStatus select_matrix_stdin(void) {
