@@ -435,14 +435,12 @@ void chat_input_key(void) {
  * Public functions
  */
 
-void ui_curses_init(void) {
-	/*
-	 * TODO: we check if buffers is already allocated because our test
-	 * main() can already have allocated it for testing purposes.
-	 */
+void ui_curses_setup(void) {
 	if (!buffers)
 		buffers = vector_new();
+}
 
+void ui_curses_init(void) {
 	initscr();
 	clear();
 	nonl();
@@ -515,7 +513,7 @@ void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
 #ifdef UI_CURSES_TEST
 int main(int argc, char *argv[]) {
 	rooms_init();
-	buffers = vector_new();
+	ui_curses_setup();
 
 	Room *room;
 	Str *name_s;

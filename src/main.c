@@ -25,6 +25,7 @@ void handle_ui_event(UiEvent ev);
 bool logged_in = false;
 
 struct ui_hooks {
+	void (*setup)();
 	void (*init)();
 	void (*iter)();
 	void (*msg_new)(Room *room, Str *sender, Str *msg);
@@ -76,6 +77,7 @@ int main(int argc, char *argv[]) {
 		break;
 	case UI_CURSES:
 		ui_hooks = (struct ui_hooks){
+			.setup = ui_curses_setup,
 			.init = ui_curses_init,
 			.iter = ui_curses_iter,
 			.msg_new = ui_curses_msg_new,
@@ -85,6 +87,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	matrix_set_event_handler(handle_matrix_event);
+
+	if (ui_hooks.setup)
+		ui_hooks.setup();
 
 	/* TODO: what if the access_token expires or is invalid? */
 	if (!do_matrix_send_token())
