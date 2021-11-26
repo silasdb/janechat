@@ -83,6 +83,22 @@ void handle_sigint(int sig) {
 }
 
 /*
+ * A SIGWINCH handler to redraw everything after terminal resize.
+ */
+void handle_sigwinch(int sig) {
+	(void)sig;
+	/*
+	 * endwin(); refresh(); needs to be called in the correct order, in
+	 * order to make curses initialize its internal data structures
+	 * correctly.
+	 */
+	endwin();
+	refresh();
+	index_update_top_bottom();
+	resize();
+}
+
+/*
  * Private helper functions
  */
 
@@ -281,9 +297,6 @@ void index_key(void) {
 		index_next_unread(+1);
 		index_draw();
 		break;
-	case KEY_RESIZE:
-		resize();
-		break;
 	case 10:
 	case 13:
 		/* TODO: what if buffers is empty? */
@@ -385,9 +398,6 @@ void chat_input_key(void) {
 		cur_buffer->pos--;
 		cur_buffer->len--;
 		break;
-	case KEY_RESIZE:
-		resize();
-		break;
 	case KEY_LEFT:
 		chat_input_cursor_inc(-1);
 		break;
@@ -449,6 +459,7 @@ void ui_curses_init(void) {
 	keypad(wchat_input, TRUE);
 
 	signal(SIGINT, handle_sigint);
+	signal(SIGWINCH, handle_sigwinch);
 }
 
 void ui_curses_iter(void) {
