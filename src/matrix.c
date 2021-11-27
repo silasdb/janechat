@@ -67,7 +67,38 @@ send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 	return size * nmemb;
 }
 
-static void matrix_send(
+static bool matrix_send_sync(
+	enum HTTPMethod method,
+	const char *path,
+	const char *json,
+	void (*callback)(const char *))
+{
+	Str *url = str_new();
+	str_append_cstr(url, "https://");
+	assert(matrix_server != NULL);
+	str_append_cstr(url, matrix_server);
+	str_append_cstr(url, ":443");
+	str_append_cstr(url, path);
+	CURL *handle = curl_easy_init();
+	assert(handle);
+	CURLcode res;
+	Str *aux = str_new();
+	curl_easy_setopt(handle, CURLOPT_URL, str_buf(url));
+	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
+	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
+	res = curl_easy_perform(handle);
+	if (res != CURLE_OK) {
+		fprintf(stderr, "curl error: %s\n", curl_easy_strerror(res));
+		return false;
+	}
+	curl_easy_cleanup(handle);
+	str_decref(url);
+	callback(str_buf(aux));
+	str_decref(aux);
+	return true;
+}
+
+static void matrix_send_async(
 	enum HTTPMethod method,
 	const char *path,
 	const char *json,
@@ -199,7 +230,7 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 	json_object_set(root, "msgtype", json_string("m.text"));
 	json_object_set(root, "body", json_string(str_buf(msg)));
 	const char *s = json2str_alloc(root);
-	matrix_send(HTTP_POST, str_buf(url), s, NULL);
+	matrix_send_async(HTTP_POST, str_buf(url), s, NULL);
 	free((void *)s);
 	str_decref(url);
 }
@@ -468,36 +499,16 @@ static void process_sync_response(const char *output) {
 	assert(n != NULL);
 	next_batch = strdup(json_string_value(n));
 	json_decref(root);
-	
 }
 
 
 bool matrix_initial_sync(void) {
 	Str *url = str_new();
-	str_append_cstr(url, "https://");
-	assert(matrix_server != NULL);
-	str_append_cstr(url, matrix_server);
-	str_append_cstr(url, ":443");
 	str_append_cstr(url, "/_matrix/client/r0/sync");
 	str_append_cstr(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
-	CURL *handle = curl_easy_init();
-	assert(handle);
-	CURLcode res;
-	Str *aux = str_new();
-	curl_easy_setopt(handle, CURLOPT_URL, str_buf(url));
-	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
-	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
-	res = curl_easy_perform(handle);
-	if (res != CURLE_OK) {
-		fprintf(stderr, "curl error: %s\n", curl_easy_strerror(res));
-		return false;
-	}
-	curl_easy_cleanup(handle);
-	str_decref(url);
-	process_sync_response(str_buf(aux));
-	str_decref(aux);
+	matrix_send_sync(HTTP_GET, str_buf(url), NULL, process_sync_response);
 	return true;
 }
 
@@ -512,7 +523,7 @@ void matrix_sync(void) {
 	str_append_cstr(url, "&timeout=10000");
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
-	matrix_send(HTTP_GET, str_buf(url), NULL, process_sync_response);
+	matrix_send_async(HTTP_GET, str_buf(url), NULL, process_sync_response);
 	str_decref(url);
 }
 
@@ -524,7 +535,7 @@ void matrix_login(const char *server, const char *user, const char *password) {
 	json_object_set(root, "password", json_string(password));
 	json_object_set(root, "initial_device_display_name", json_string("janechat"));
 	const char *s = json2str_alloc(root);
-	matrix_send(HTTP_POST, "/_matrix/client/r0/login", s, process_sync_response);
+	matrix_send_async(HTTP_POST, "/_matrix/client/r0/login", s, process_sync_response);
 	free((void *)s);
 }
 
