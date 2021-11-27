@@ -22,8 +22,6 @@ void do_matrix_login(void);
 void handle_matrix_event(MatrixEvent ev);
 void handle_ui_event(UiEvent ev);
 
-bool logged_in = false;
-
 struct ui_hooks {
 	void (*setup)();
 	void (*init)();
@@ -96,28 +94,21 @@ int main(int argc, char *argv[]) {
 	/* TODO: what if the access_token expires or is invalid? */
 	if (!do_matrix_send_token())
 		do_matrix_login();
-		/*
-		 * do_matrix_login() asks for user's id and password and, using
-		 * matrix.c API, sends it to the matrix server, but it happens
-		 * asynchronously, i.e., it is set only after we EVENT_LOGGED_IN
-		 * is received.  So, we cannot call matrix_sync() right now and
-		 * have to wait until logged_in variable is set to true.
-		 */
 	else {
-		logged_in = true;
 		/*
 		 * TODO: while we don't store the servername in cache,
 		 * hardcode the server we are testing against.
 		 */
 		matrix_set_server("matrix.org");
-		puts("Performing initial sync...");
-		if (!matrix_initial_sync()) {
-			fprintf(stderr,
-				"Error when performing initial sync. Exit.");
-			exit(1);
-		}
-		puts("Done.");
 	}
+
+	puts("Performing initial sync...");
+	if (!matrix_initial_sync()) {
+		fprintf(stderr,
+			"Error when performing initial sync. Exit.");
+		exit(1);
+	}
+	puts("Done.");
 
 	if (ui_hooks.init)
 		ui_hooks.init();
@@ -131,13 +122,11 @@ int main(int argc, char *argv[]) {
 			matrix_resume();
 			break;
 		}
-		if (logged_in) {
-			static time_t past = 0, now = 0;
-			now = time(0);
-			if (now > past + 1) {
-				matrix_sync();
-				past = now;
-			}
+		static time_t past = 0, now = 0;
+		now = time(0);
+		if (now > past + 1) {
+			matrix_sync();
+			past = now;
 		}
 	}
 	
@@ -187,8 +176,15 @@ void do_matrix_login(void) {
 	password = getpass("Password: ");
 
 	puts("Logging in...");
-	matrix_login(server, user, password);
+	const char *access_token = matrix_login_alloc(server, user, password);
+	matrix_set_token(strdup(access_token));
+	if (!access_token) {
+		fprintf(stderr, "Wrong username or password. Exit.");
+		exit(1);
+	}
 	puts("Logged in.");
+	cache_set("access_token", access_token);
+	free((void *)access_token);
 
 	memset(password, 0x0, strlen(password)); // TODO: is this optimized out?
 
@@ -238,10 +234,6 @@ void handle_matrix_event(MatrixEvent ev) {
 		printf("%s\n", str_buf(ev.error.error));
 		exit(1);
 		break;
-	case EVENT_LOGGED_IN:
-		logged_in = true;
-		cache_set("access_token", str_buf(ev.login.token));
-		break;
 	case EVENT_CONN_ERROR:
 		//puts("Connection error.\n");
 		break;
@@ -251,8 +243,7 @@ void handle_matrix_event(MatrixEvent ev) {
 void handle_ui_event(UiEvent ev) {
 	switch (ev.type) {
 	case UIEVENTTYPE_SYNC:
-		if (logged_in)
-			matrix_sync();
+		matrix_sync();
 		break;
 	case UIEVENTTYPE_SENDMSG:
 		matrix_send_message(ev.msg.roomid, ev.msg.text);

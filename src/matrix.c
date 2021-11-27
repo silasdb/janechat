@@ -36,7 +36,7 @@ enum HTTPMethod {
 };
 
 char *next_batch = NULL;
-char *token = NULL;
+const char *token = NULL;
 const char *matrix_server = NULL;
 static void (*event_handler_callback)(MatrixEvent) = NULL;
 
@@ -85,6 +85,23 @@ Str * matrix_send_sync_alloc(
 	curl_easy_setopt(handle, CURLOPT_URL, str_buf(url));
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
+
+	switch (method) {
+	case HTTP_POST:
+		/*
+		 * TODO: According to
+		 * https://curl.se/libcurl/c/curl_easy_setopt.html, we cannot
+		 * handle strings longer than 8 MB.  Should we validate the
+		 * string length?
+		 */
+		curl_easy_setopt(handle, CURLOPT_POST, 1L);
+		curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, (long)strlen(json));
+		curl_easy_setopt(handle, CURLOPT_COPYPOSTFIELDS, json);
+		break;
+	default:
+		break;
+	}
+
 	res = curl_easy_perform(handle);
 	if (res != CURLE_OK) {
 		fprintf(stderr, "curl error: %s\n", curl_easy_strerror(res));
@@ -401,18 +418,6 @@ static void process_sync_response(const char *output) {
 		json_decref(root);
 		return;
 	}
-	json_t *tok = json_object_get(root, "access_token");
-	if (tok) {
-		assert(token == NULL);
-		token = strdup(json_string_value(tok));
-		MatrixEvent event;
-		event.type = EVENT_LOGGED_IN;
-		event.login.token = str_new_cstr(token);
-		json_decref(root);
-		event_handler_callback(event);
-		str_decref(event.login.token);
-		return;
-	}
 
 	json_t *rooms = json_object_get(root, "rooms");
 	if (!rooms) {
@@ -528,7 +533,16 @@ void matrix_sync(void) {
 	str_decref(url);
 }
 
-void matrix_login(const char *server, const char *user, const char *password) {
+const char *matrix_login_alloc(
+	const char *server,
+	const char *user,
+	const char *password)
+{
+	Str *username = str_new();
+	str_append_cstr(username, "@");
+	str_append_cstr(username, user);
+	str_append_cstr(username, ":");
+	str_append_cstr(username, server);
 	matrix_server = strdup(server);
 	json_t *root = json_object();
 	json_object_set(root, "type", json_string("m.login.password"));
@@ -536,8 +550,18 @@ void matrix_login(const char *server, const char *user, const char *password) {
 	json_object_set(root, "password", json_string(password));
 	json_object_set(root, "initial_device_display_name", json_string("janechat"));
 	const char *s = json2str_alloc(root);
-	matrix_send_async(HTTP_POST, "/_matrix/client/r0/login", s, process_sync_response);
+	json_decref(root);
+	Str *res = matrix_send_sync_alloc(HTTP_POST,
+		"/_matrix/client/v3/login", s);
 	free((void *)s);
+	json_t *jsonres = str2json_alloc(str_buf(res));
+	str_decref(res);
+	json_t *tok = json_object_get(jsonres, "access_token");
+	if (!tok)
+		return NULL;
+	token = strdup(json_string_value(tok));
+	json_decref(jsonres);
+	return token;
 }
 
 void matrix_resume(void) {

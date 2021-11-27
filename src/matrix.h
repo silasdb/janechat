@@ -11,7 +11,6 @@ enum MatrixEventType {
 	EVENT_ROOM_NAME,
 	EVENT_ROOM_JOIN,
 	EVENT_ERROR,
-	EVENT_LOGGED_IN,
 	EVENT_CONN_ERROR,
 };
 
@@ -39,9 +38,6 @@ struct MatrixEvent {
 			Str *errorcode;
 			Str *error;
 		} error;
-		struct MatrixEventLogin {
-			Str *token;
-		} login;
 		// MatrixEventConnError - empty struct
 	};
 };
@@ -60,7 +56,7 @@ void matrix_send_message(const Str *roomid, const Str *msg);
 MatrixEvent * matrix_next_event();
 void matrix_set_server(char *token);
 void matrix_set_token(char *token);
-void matrix_login(const char *server, const char *user, const char *password);
+const char *matrix_login_alloc(const char *server, const char *user, const char *password);
 void matrix_free_event(MatrixEvent *);
 bool matrix_select(void);
 void matrix_resume(void);
