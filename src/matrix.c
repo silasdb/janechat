@@ -67,11 +67,10 @@ send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 	return size * nmemb;
 }
 
-static bool matrix_send_sync(
+Str * matrix_send_sync_alloc(
 	enum HTTPMethod method,
 	const char *path,
-	const char *json,
-	void (*callback)(const char *))
+	const char *json)
 {
 	Str *url = str_new();
 	str_append_cstr(url, "https://");
@@ -89,13 +88,11 @@ static bool matrix_send_sync(
 	res = curl_easy_perform(handle);
 	if (res != CURLE_OK) {
 		fprintf(stderr, "curl error: %s\n", curl_easy_strerror(res));
-		return false;
+		return NULL;
 	}
 	curl_easy_cleanup(handle);
 	str_decref(url);
-	callback(str_buf(aux));
-	str_decref(aux);
-	return true;
+	return aux;
 }
 
 static void matrix_send_async(
@@ -508,7 +505,11 @@ bool matrix_initial_sync(void) {
 	str_append_cstr(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
-	matrix_send_sync(HTTP_GET, str_buf(url), NULL, process_sync_response);
+	Str *res = matrix_send_sync_alloc(HTTP_GET, str_buf(url), NULL);
+	if (!res)
+		return false;
+	process_sync_response(str_buf(res));
+	str_decref(res);
 	return true;
 }
 
