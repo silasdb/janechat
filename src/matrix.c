@@ -532,12 +532,9 @@ void matrix_login(const char *server, const char *user, const char *password) {
 	matrix_server = strdup(server);
 	json_t *root = json_object();
 	json_object_set(root, "type", json_string("m.login.password"));
+	json_object_set(root, "user", json_string(user));
 	json_object_set(root, "password", json_string(password));
-	json_t *identifier = json_object();
-	json_object_set(root, "identifier", identifier);
-	json_object_set(identifier, "type", json_string("m.id.user"));
-	json_object_set(identifier, "user", json_string(user));
-
+	json_object_set(root, "initial_device_display_name", json_string("janechat"));
 	const char *s = json2str_alloc(root);
 	matrix_send_async(HTTP_POST, "/_matrix/client/r0/login", s, process_sync_response);
 	free((void *)s);
