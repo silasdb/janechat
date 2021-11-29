@@ -37,6 +37,8 @@ struct buffer {
 	int last_line;
 };
 
+bool curses_init = false; /* Did we started curses? */
+
 WINDOW *windex; /* The index window - that shows rooms */
 WINDOW *wchat; /* The chat window, that show room messages and the input field */
 WINDOW *wchat_msgs; /* A subwindow for the chat window: show messages received */
@@ -435,14 +437,13 @@ void chat_input_key(void) {
  * Public functions
  */
 
-void ui_curses_init(void) {
-	/*
-	 * TODO: we check if buffers is already allocated because our test
-	 * main() can already have allocated it for testing purposes.
-	 */
+void ui_curses_setup(void) {
 	if (!buffers)
 		buffers = vector_new();
+}
 
+void ui_curses_init(void) {
+	curses_init = true;
 	initscr();
 	clear();
 	nonl();
@@ -461,18 +462,16 @@ void ui_curses_init(void) {
 
 	signal(SIGINT, handle_sigint);
 	signal(SIGWINCH, handle_sigwinch);
+	vector_sort(buffers, buffer_comparison);
+	resize();
 }
 
 void ui_curses_iter(void) {
+	if (!curses_init)
+		return;
 	/* TODO: fix draw order */
 	switch (focus) {
 	case FOCUS_INDEX:
-		/*
-		 * TODO: having it here the buffer be sorted for ever keystroke.
-		 * We should find a better place to have it.
-		 */
-		vector_sort(buffers, buffer_comparison);
-
 		index_key();
 		break;
 	case FOCUS_CHAT_INPUT:
@@ -491,10 +490,15 @@ void ui_curses_room_new(Str *roomid) {
 	b->right = 0;
 	b->last_line = -1;
 	vector_append(buffers, b);
-	index_update_top_bottom();
+	if (curses_init) {
+		vector_sort(buffers, buffer_comparison);
+		index_update_top_bottom();
+	}
 }
 
 void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
+	if (!curses_init)
+		return;
 	if (focus == FOCUS_INDEX) {
 		index_draw(); /* Update window */
 		return;
@@ -515,7 +519,7 @@ void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
 #ifdef UI_CURSES_TEST
 int main(int argc, char *argv[]) {
 	rooms_init();
-	buffers = vector_new();
+	ui_curses_setup();
 
 	Room *room;
 	Str *name_s;
