@@ -503,11 +503,23 @@ static void process_sync_response(const char *output) {
 	json_decref(root);
 }
 
-
 bool matrix_initial_sync(void) {
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/r0/sync");
-	str_append_cstr(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
+	str_append_cstr(url, "?filter={"
+		"\"room\":{"
+			"\"account_data\":{\"not_types\":[\"*\"]},"
+			"\"ephemeral\":{\"not_types\":[\"*\"]},"
+			"\"state\":{"
+				"\"not_types\":[\"*\"]"
+			"},"
+			"\"timeline\":{"
+				"\"not_types\":[\"*\"],"
+				"\"limit\":1"
+			"}"
+		"},"
+		"\"account_data\":{\"not_types\":[\"*\"]}"
+	"}");
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
 	Str *res = matrix_send_sync_alloc(HTTP_GET, str_buf(url), NULL);
@@ -525,6 +537,7 @@ void matrix_sync(void) {
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/r0/sync");
 	str_append_cstr(url, "?since=");
+	assert(next_batch);
 	str_append_cstr(url, next_batch);
 	str_append_cstr(url, "&timeout=10000");
 	str_append_cstr(url, "&access_token=");
