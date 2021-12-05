@@ -37,7 +37,6 @@ void ui_cli_msg_new(Room *room, Str *sender, Str *text) {
  *
  * /quit -> exit this program
  * /stat -> list all rooms and number of unread messages
- * /names -> list all users in current room
  * /join room -> change the current room
  * text -> send "text" to the current room
  */
@@ -52,19 +51,6 @@ void process_input(char *s) {
 		ROOMS_FOREACH(room, i) {
 			printf("%s (unread messages: %zu)\n",
 				str_buf(room->name), room->unread_msgs);
-		}
-		return;
-	}
-
-	if (streq(s, "/names")) {
-		if (!current_room) {
-			puts("No room selected.  Text not sent.\n");
-			return;
-		}
-		char *iter;
-		size_t i;
-		ROOM_USERS_FOREACH(current_room, iter, i) {
-			printf("%s\n", iter);
 		}
 		return;
 	}
