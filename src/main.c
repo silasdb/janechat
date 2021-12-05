@@ -203,12 +203,6 @@ void process_room_name(Str *roomid, Str *name) {
 	room_set_name(room, name);
 }
 
-void process_room_join(Str *roomid, Str *sender) {
-	Room *room = room_byid(roomid);
-	assert(room);
-	room_append_user(room, sender);
-}
-
 void process_msg(Str *roomid, Str *sender, Str *text) {
 	Room *room = room_byid(roomid);
 	room_append_msg(room, sender, text);
@@ -222,10 +216,6 @@ void handle_matrix_event(MatrixEvent ev) {
 		break;
 	case EVENT_ROOM_NAME:
 		process_room_name(ev.roomname.id, ev.roomname.name);
-		break;
-	case EVENT_ROOM_JOIN:
-		process_room_join(ev.roomjoin.roomid,
-			ev.roomjoin.sender);
 		break;
 	case EVENT_MSG:
 		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);

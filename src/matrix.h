@@ -9,7 +9,6 @@ enum MatrixEventType {
 	EVENT_MSG,
 	EVENT_ROOM_CREATE,
 	EVENT_ROOM_NAME,
-	EVENT_ROOM_JOIN,
 	EVENT_ERROR,
 	EVENT_CONN_ERROR,
 };
@@ -30,10 +29,6 @@ struct MatrixEvent {
 			Str *id;
 			Str *name;
 		} roomname;
-		struct MatrixEventRoomJoin {
-			Str *roomid;
-			Str *sender;
-		} roomjoin;
 		struct MatrixEventError {
 			Str *errorcode;
 			Str *error;
