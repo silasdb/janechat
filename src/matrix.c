@@ -287,6 +287,20 @@ static void process_room_event(json_t *item, const char *roomid) {
 		event.roomcreate.id = str_new_cstr(roomid);
 		event_handler_callback(event);
 		str_decref(event.roomcreate.id);
+	} else if (streq(json_string_value(type), "m.room.member")) {
+		json_t *membership = json_path(item, "content", "membership", NULL);
+		assert(membership != NULL);
+		if (!streq(json_string_value(membership), "join"))
+			return;
+		json_t *sender = json_object_get(item, "sender");
+		assert(sender != NULL);
+		MatrixEvent event;
+		event.type = EVENT_ROOM_JOIN;
+		event.roomjoin.roomid = str_new_cstr(roomid);
+		event.roomjoin.sender = str_new_cstr(json_string_value(sender));
+		event_handler_callback(event);
+		str_decref(event.roomjoin.roomid);
+		str_decref(event.roomjoin.sender);
 	}
 }
 
@@ -423,6 +437,8 @@ static void process_push_rules(json_t *rule) {
 }
 
 static void process_sync_response(const char *output) {
+	debug("/silas/tmp/a1", output);
+	exit(1);
 	insync = false;
 	if (!output) {
 		MatrixEvent event;
@@ -551,6 +567,7 @@ const char *sync_request_filter =
 			"\"state\":{"
 				"\"types\":["
 					"\"m.room.create\","
+					"\"m.room.member\","
 					"\"m.room.name\""
 				"]"
 			"},"
