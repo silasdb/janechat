@@ -437,8 +437,6 @@ static void process_push_rules(json_t *rule) {
 }
 
 static void process_sync_response(const char *output) {
-	debug("/silas/tmp/a1", output);
-	exit(1);
 	insync = false;
 	if (!output) {
 		MatrixEvent event;
