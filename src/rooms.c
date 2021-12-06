@@ -40,6 +40,7 @@ Room *room_new(Str *id) {
 	 */
 	room->name = str_incref(id);
 
+	room->users = vector_new();
 	room->msgs = vector_new();
 	room->unread_msgs = 0;
 	room->notify = true;
@@ -85,4 +86,8 @@ void room_append_msg(Room *room, Str *sender, Str *text) {
 	msg->text = str_incref(text);
 	vector_append(room->msgs, msg);
 	room->unread_msgs++;
+}
+
+void room_append_user(Room *room, Str *sender) {
+	vector_append(room->users, (void *)str_buf(str_incref(sender)));
 }
