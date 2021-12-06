@@ -386,6 +386,42 @@ static void process_error(json_t *root) {
 	str_decref(event.error.error);
 }
 
+static void process_push_rules(json_t *rule) {
+	bool enabled = json_boolean_value(json_object_get(rule, "enabled"));
+	/*
+	 * TODO: check if the usage of "enabled" -> why would the server keep
+	 * this rule if it is not enabled?
+	 */
+	if (!enabled)
+		return;
+
+	json_t *actions = json_object_get(rule, "actions");
+
+	size_t i;
+	json_t *item;
+	json_array_foreach(actions, i, item) {
+		if (!json_is_string(item))
+			continue;
+		if (streq(json_string_value(item), "dont_notify")) {
+			MatrixEvent event;
+
+			/*
+			 * In the case of room rules, rule_id == roomid.
+			 * See https://matrix.org/docs/spec/client_server/r0.6.1#predefined-rules
+			 */
+			const char *roomid =json_string_value(
+				json_object_get(rule, "rule_id"));
+
+			event.type = EVENT_ROOM_NOTIFY_STATUS;
+			event.roomnotifystatus.roomid = str_new_cstr(roomid);
+			event.roomnotifystatus.enabled = false;
+			event_handler_callback(event);
+			str_decref(event.roomnotifystatus.roomid);
+			return;
+		}
+	}
+}
+
 static void process_sync_response(const char *output) {
 	insync = false;
 	if (!output) {
@@ -438,6 +474,26 @@ static void process_sync_response(const char *output) {
 		}
 	}
 
+	json_object_foreach(join, roomid, item)
+	{
+		json_t *events;
+		events = json_path(item, "state", "events", NULL);
+		assert(events != NULL);
+		size_t i;
+		json_t *event;
+		json_array_foreach(events, i, event) {
+			json_t *type = json_object_get(event, "type");
+			if (!streq(json_string_value(type), "m.room.create"))
+				process_room_event(event, roomid);
+		}
+		events = json_path(item, "timeline", "events", NULL);
+		assert(events != NULL);
+		json_array_foreach(events, i, item) {
+			assert(item != NULL);
+			process_timeline_event(item, roomid);
+		}
+	}
+
 	json_t *events = json_path(root, "account_data", "events", NULL);
 	if (events) {
 		size_t i;
@@ -458,29 +514,23 @@ static void process_sync_response(const char *output) {
 					json_array_foreach(roomid, i, it)
 						process_direct_event(sender, it);
 				}
+			} else if (streq(t, "m.push_rules")) {
+				size_t j;
+				json_t *rule;
+
+				json_t *room_rules = json_path(item,
+					"content", "global", "room", NULL);
+				json_array_foreach(room_rules, j, rule)
+					process_push_rules(rule);
+
+				json_t *override_rules = json_path(item,
+					"content", "global", "override", NULL);
+				json_array_foreach(override_rules, j, rule)
+					process_push_rules(rule);
 			}
 		}
 	}
 
-	json_object_foreach(join, roomid, item)
-	{
-		json_t *events;
-		events = json_path(item, "state", "events", NULL);
-		assert(events != NULL);
-		size_t i;
-		json_t *event;
-		json_array_foreach(events, i, event) {
-			json_t *type = json_object_get(event, "type");
-			if (!streq(json_string_value(type), "m.room.create"))
-				process_room_event(event, roomid);
-		}
-		events = json_path(item, "timeline", "events", NULL);
-		assert(events != NULL);
-		json_array_foreach(events, i, item) {
-			assert(item != NULL);
-			process_timeline_event(item, roomid);
-		}
-	}
 
 	free(next_batch);
 	json_t *n = json_object_get(root, "next_batch");
@@ -514,7 +564,8 @@ const char *sync_request_filter =
 		"},"
 		"\"account_data\":{"
 			"\"types\":["
-				"\"m.direct\""
+				"\"m.direct\","
+				"\"m.push_rules\""
 			"]"
 		"}"
 	"}";

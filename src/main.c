@@ -217,6 +217,15 @@ void handle_matrix_event(MatrixEvent ev) {
 	case EVENT_ROOM_NAME:
 		process_room_name(ev.roomname.id, ev.roomname.name);
 		break;
+	case EVENT_ROOM_NOTIFY_STATUS:
+		{
+		Room *room = room_byid(ev.roomnotifystatus.roomid);
+		/* TODO: why there are room push_rules if the room is not created? */
+		if (!room)
+			return;
+		room->notify = ev.roomnotifystatus.enabled;
+		}
+		break;
 	case EVENT_MSG:
 		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);
 		break;

@@ -42,6 +42,7 @@ Room *room_new(Str *id) {
 
 	room->msgs = vector_new();
 	room->unread_msgs = 0;
+	room->notify = true;
 	hash_insert(rooms_hash, str_buf(id), room);
 	vector_append(rooms_vector, room);
 	return room;
