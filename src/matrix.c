@@ -563,6 +563,7 @@ const char *sync_request_filter =
 			"\"account_data\":{\"not_types\":[\"*\"]},"
 			"\"ephemeral\":{\"not_types\":[\"*\"]},"
 			"\"state\":{"
+				"\"lazy_load_members\":true,"
 				"\"types\":["
 					"\"m.room.create\","
 					"\"m.room.member\","
