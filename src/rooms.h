@@ -15,6 +15,7 @@ struct Room {
 	Str *name;
 	Vector *msgs;
 	size_t unread_msgs;	/* Should be reset by the caller */
+	bool notify;
 };
 typedef struct Room Room;
 

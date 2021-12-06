@@ -220,7 +220,7 @@ void index_next_unread(int direction) {
 		index_cursor_inc(direction);
 		struct buffer *b;
 		b = vector_at(buffers, index_idx);
-		if (b->room->unread_msgs > 0)
+		if (b->room->unread_msgs > 0 && b->room->notify)
 			break;
 	} while (idx != index_idx);
 }
@@ -263,13 +263,13 @@ void index_draw(void) {
 		tb = vector_at(buffers, i);
 		if (index_idx == i)
 			wattron(windex, A_REVERSE); 
-		if (tb->room->unread_msgs > 0)
+		if (tb->room->unread_msgs > 0 && tb->room->notify)
 			wattron(windex, A_BOLD);
 		mvwprintw(windex, i-top, 0, "%s (%zu)",
 			tb->room->name->buf, tb->room->unread_msgs);
 		if (index_idx == i)
 			wattroff(windex, A_REVERSE); 
-		if (tb->room->unread_msgs > 0)
+		if (tb->room->unread_msgs > 0 && tb->room->notify)
 			wattroff(windex, A_BOLD);
 	}
 	wrefresh(windex);
