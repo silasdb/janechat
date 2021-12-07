@@ -357,7 +357,29 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 	assert(content != NULL);
 	if (streq(json_string_value(type), "m.room.message")) {
 		json_t *msgtype = json_object_get(content, "msgtype");
-		assert(msgtype != NULL);
+
+		/*
+		 * There can be m.room.messages without a "msgtype", for
+		 * instance, a m.room.redaction event. JSON is therefore in the following form:
+		 *
+		 * {
+		 *	"content": {},
+		 *	"type": "m.room.message",
+		 *	"unsigned": {
+		 *		"redacted_by": ...
+		 *		"redacted_because": {
+		 *			...
+		 *			"type": "m.room.redaction",
+		 *			...
+		 *		}
+		 *	}
+		 * }
+		 *
+		 * If we find such events, we just ignore them.
+		 */
+		if (!msgtype)
+			return;
+
 		json_t *body = json_object_get(content, "body");
 		assert(body != NULL);
 		MatrixEvent event;
