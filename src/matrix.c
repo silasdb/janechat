@@ -573,42 +573,49 @@ static void process_sync_response(const char *output) {
 
 /*
  * This sync filter is used in both both initial and later access to the sync
- * endpoint.
+ * endpoint. There is a very important difference between both, though: the
+ * initial sync can specify a "limit":1 parameter to the timeline object,
+ * limiting the response. We cannot have this limitation in later calls to the
+ * sync endpoint because we can lose messages. In order to avoid duplicating
+ * this string, we define it in a macro and let callers pass a random parameter
+ * to the timeline object. Note that this parameter shall be an empty string or
+ * include a trailing comma, to separate it from other parameter in the JSON
+ * string.
  */
-const char *sync_request_filter =
-	"filter={"
-		"\"room\":{"
-			"\"account_data\":{\"not_types\":[\"*\"]},"
-			"\"ephemeral\":{\"not_types\":[\"*\"]},"
-			"\"state\":{"
-				"\"lazy_load_members\":true,"
-				"\"types\":["
-					"\"m.room.create\","
-					"\"m.room.member\","
-					"\"m.room.name\""
-				"]"
-			"},"
-			"\"timeline\":{"
-				"\"types\":["
-					"\"m.room.message\","
-					"\"m.room.encrypted\""
-				"],"
-				"\"limit\":1"
-			"}"
-		"},"
-		"\"account_data\":{"
-			"\"types\":["
-				"\"m.direct\","
-				"\"m.push_rules\""
-			"]"
-		"}"
-	"}";
+#define SYNC_REQUEST_FILTER(timeline_arg) \
+	"filter={" \
+		"\"room\":{" \
+			"\"account_data\":{\"not_types\":[\"*\"]}," \
+			"\"ephemeral\":{\"not_types\":[\"*\"]}," \
+			"\"state\":{" \
+				"\"lazy_load_members\":true," \
+				"\"types\":[" \
+					"\"m.room.create\"," \
+					"\"m.room.member\"," \
+					"\"m.room.name\"" \
+				"]" \
+			"}," \
+			"\"timeline\":{" \
+				timeline_arg \
+				"\"types\":[" \
+					"\"m.room.message\"," \
+					"\"m.room.encrypted\"" \
+				"]" \
+			"}" \
+		"}," \
+		"\"account_data\":{" \
+			"\"types\":[" \
+				"\"m.direct\"," \
+				"\"m.push_rules\"" \
+			"]" \
+		"}" \
+	"}"
 
 bool matrix_initial_sync(void) {
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/r0/sync");
 	str_append_cstr(url, "?");
-	str_append_cstr(url, sync_request_filter);
+	str_append_cstr(url, SYNC_REQUEST_FILTER("\"limit\":1,"));
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
 	Str *res = matrix_send_sync_alloc(HTTP_GET, str_buf(url), NULL);
@@ -626,7 +633,7 @@ void matrix_sync(void) {
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/r0/sync");
 	str_append_cstr(url, "?");
-	str_append_cstr(url, sync_request_filter);
+	str_append_cstr(url, SYNC_REQUEST_FILTER(""));
 	str_append_cstr(url, "&since=");
 	assert(next_batch);
 	str_append_cstr(url, next_batch);
