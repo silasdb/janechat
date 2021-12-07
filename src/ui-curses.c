@@ -319,6 +319,19 @@ void chat_drawline(void) {
 	mvwhline(wchat, maxy-2, 0, '-', maxx);
 }
 
+int text_height(const Str *sender, const Str *text, int width) {
+	/* TODO: still need to consider UTF-8 characters */
+	int height = 1;
+	int w = str_len(sender) + 2; /* +2 because of ": " */
+	char *c;
+	for (c = str_buf(text); *c != '\0'; c++, w++)
+		if (*c == '\n' || w >= width) {
+			height++;
+			w = 0;
+		}
+	return height;
+}
+
 void chat_msgs_fill(void) {
 	werase(wchat_msgs);
 	int last = -1;
@@ -335,12 +348,7 @@ void chat_msgs_fill(void) {
 	int y = maxy;
 	for (ssize_t i = last; i >= 0; i--) {
 		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
-		size_t len;
-		len = str_len(msg->sender);
-		len += 2; /* collon between sender and text */
-		len += str_len(msg->text);
-		int height = len / maxx;
-		height++;
+		int height = text_height(msg->sender, msg->text, maxx);
 		y -= height;
 		if (y < 0)
 			break;
