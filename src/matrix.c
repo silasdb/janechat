@@ -458,6 +458,51 @@ static void process_push_rules(json_t *rule) {
 	}
 }
 
+static void process_rooms_join(json_t *root) {
+	const char *roomid;
+	json_t *item;
+
+	/*
+	 * m.room.create events come in room state events list, which is
+	 * unsorted.  But when passing EVENT_ROOM_CREATE events to upper layers,
+	 * we have to pass it before other events that alter the room state
+	 * (because the room object need already to be created in order to
+	 * receive these other events), so we look for events of this type first.
+	 */
+	json_object_foreach(root, roomid, item) {
+		json_t *events;
+		events = json_path(item, "state", "events", NULL);
+		size_t i;
+		json_t *event;
+		json_array_foreach(events, i, event) {
+			json_t *type = json_object_get(event, "type");
+			if (streq(json_string_value(type), "m.room.create"))
+				process_room_event(event, roomid);
+		}
+	}
+
+	json_object_foreach(root, roomid, item)
+	{
+		json_t *events;
+		events = json_path(item, "state", "events", NULL);
+		assert(events != NULL);
+		size_t i;
+		json_t *event;
+		json_array_foreach(events, i, event) {
+			json_t *type = json_object_get(event, "type");
+			if (!streq(json_string_value(type), "m.room.create"))
+				process_room_event(event, roomid);
+		}
+		events = json_path(item, "timeline", "events", NULL);
+		assert(events != NULL);
+		json_array_foreach(events, i, item) {
+			assert(item != NULL);
+			process_timeline_event(item, roomid);
+		}
+	}
+
+}
+
 static void process_sync_response(const char *output) {
 	insync = false;
 	if (!output) {
@@ -477,58 +522,9 @@ static void process_sync_response(const char *output) {
 		return;
 	}
 
-	json_t *rooms = json_object_get(root, "rooms");
-	if (!rooms) {
-		json_decref(root);
-		return;
-	}
-	json_t *join = json_object_get(rooms, "join");
-	if (!join) {
-		json_decref(root);
-		return;
-	}
-
-	const char *roomid;
-	json_t *item;
-
-	/*
-	 * m.room.create events come in room state events list, which is
-	 * unsorted.  But when passing EVENT_ROOM_CREATE events to upper layers,
-	 * we have to pass it before other events that alter the room state
-	 * (because the room object need already to be created in order to
-	 * receive these other events), so we look for events of this type first.
-	 */
-	json_object_foreach(join, roomid, item) {
-		json_t *events;
-		events = json_path(item, "state", "events", NULL);
-		size_t i;
-		json_t *event;
-		json_array_foreach(events, i, event) {
-			json_t *type = json_object_get(event, "type");
-			if (streq(json_string_value(type), "m.room.create"))
-				process_room_event(event, roomid);
-		}
-	}
-
-	json_object_foreach(join, roomid, item)
-	{
-		json_t *events;
-		events = json_path(item, "state", "events", NULL);
-		assert(events != NULL);
-		size_t i;
-		json_t *event;
-		json_array_foreach(events, i, event) {
-			json_t *type = json_object_get(event, "type");
-			if (!streq(json_string_value(type), "m.room.create"))
-				process_room_event(event, roomid);
-		}
-		events = json_path(item, "timeline", "events", NULL);
-		assert(events != NULL);
-		json_array_foreach(events, i, item) {
-			assert(item != NULL);
-			process_timeline_event(item, roomid);
-		}
-	}
+	json_t *rooms_join = json_path(root, "rooms", "join", NULL);
+	if (rooms_join)
+		process_rooms_join(rooms_join);
 
 	json_t *events = json_path(root, "account_data", "events", NULL);
 	if (events) {
