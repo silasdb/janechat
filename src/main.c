@@ -239,7 +239,7 @@ void handle_matrix_event(MatrixEvent ev) {
 	case EVENT_MSG:
 		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);
 		break;
-	case EVENT_ERROR:
+	case EVENT_MATRIX_ERROR:
 		printf("%s\n", str_buf(ev.error.error));
 		exit(1);
 		break;
