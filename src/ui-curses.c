@@ -352,7 +352,7 @@ void chat_msgs_fill(void) {
 		y -= height;
 		if (y < 0)
 			break;
-		mvwprintw(wchat_msgs, y, 0, "%s: %s\n",
+		mvwprintw(wchat_msgs, y, 0, "%s: %s",
 			str_buf(msg->sender), str_buf(msg->text));
 	}
 	wrefresh(wchat_msgs);
