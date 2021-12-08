@@ -414,7 +414,7 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 
 static void process_error(json_t *root) {
 	MatrixEvent event;
-	event.type = EVENT_ERROR;
+	event.type = EVENT_MATRIX_ERROR;
 	event.error.errorcode = str_new_cstr(json_string_value(json_object_get(root, "errcode")));
 	event.error.error = str_new_cstr(json_string_value(json_object_get(root, "error")));
 	event_handler_callback(event);
