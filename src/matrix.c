@@ -504,13 +504,10 @@ static void process_rooms_join(json_t *root) {
 }
 
 static void process_sync_response(const char *output) {
+	assert(output);
+
 	insync = false;
-	if (!output) {
-		MatrixEvent event;
-		event.type = EVENT_CONN_ERROR;
-		event_handler_callback(event);
-		return;
-	}
+
 	json_t *root;
 	root = str2json_alloc(output);
 	if (!root)
@@ -679,15 +676,32 @@ void matrix_resume(void) {
 	curl_multi_perform(mhandle, &still_running);
 	
 	/* TODO: check return value of curl_multi_perform() for errors */
-	/*
-	TODO: also, check for errors in easy handler
-	if (res != CURLE_OK) {
-		printf("curl error: %s\n", curl_easy_strerror(res));
-	}
-	*/
 	int msgs_in_queue;
 	CURLMsg *msg;
 	msg = curl_multi_info_read(mhandle, &msgs_in_queue);
+
+	if (!msg)
+		/*
+		 * TODO: in what cases it can be NULL? Should we handle it as an
+		 * error?
+		 */
+		return;
+
+	if (msg->data.result != CURLE_OK) {
+		/*
+		 * TODO: handle possible values for curl error and send them as
+		 * an enum to upper layers, so they can show something in the UI
+		 * beautifuly.
+		 */
+		fprintf(stderr, "curl error: %d: %s\n",
+			(int)msg->data.result,
+			curl_easy_strerror(msg->data.result));
+		MatrixEvent event;
+		event.type = EVENT_CONN_ERROR;
+		event_handler_callback(event);
+		return;
+	}
+
 	if (msg && msg->msg == CURLMSG_DONE) {
 		CURL *handle;
 		handle = msg->easy_handle;
