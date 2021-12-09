@@ -571,7 +571,7 @@ static void process_sync_response(const char *output) {
 /*
  * This sync filter is used in both both initial and later access to the sync
  * endpoint. There is a very important difference between both, though: the
- * initial sync can specify a "limit":1 parameter to the timeline object,
+ * initial sync can specify a "limit":0 parameter to the timeline object,
  * limiting the response. We cannot have this limitation in later calls to the
  * sync endpoint because we can lose messages. In order to avoid duplicating
  * this string, we define it in a macro and let callers pass a random parameter
@@ -612,7 +612,7 @@ bool matrix_initial_sync(void) {
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/r0/sync");
 	str_append_cstr(url, "?");
-	str_append_cstr(url, SYNC_REQUEST_FILTER("\"limit\":1,"));
+	str_append_cstr(url, SYNC_REQUEST_FILTER("\"limit\":0,"));
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
 	Str *res = matrix_send_sync_alloc(HTTP_GET, str_buf(url), NULL);
