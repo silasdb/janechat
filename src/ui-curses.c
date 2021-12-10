@@ -348,8 +348,14 @@ void chat_msgs_fill(void) {
 		y -= height;
 		if (y < 0)
 			break;
-		mvwprintw(wchat_msgs, y, 0, "%s: %s",
-			str_buf(msg->sender), str_buf(msg->text));
+
+		wattron(wchat_msgs, COLOR_PAIR(1));
+		mvwprintw(wchat_msgs, y, 0, "%s", str_buf(msg->sender));
+
+		/* TODO: why does it set background to COLOR_BLACK? */
+		wattroff(wchat_msgs, COLOR_PAIR(1));
+
+		wprintw(wchat_msgs, ": %s", str_buf(msg->text));
 	}
 	wrefresh(wchat_msgs);
 }
@@ -463,6 +469,10 @@ void ui_curses_init(void) {
 	wchat_input = subwin(wchat, 1, maxx, maxy-1, 0);
 	keypad(windex, TRUE);
 	keypad(wchat_input, TRUE);
+
+	start_color();
+	use_default_colors();
+	init_pair(1, COLOR_GREEN, -1);
 
 	signal(SIGINT, handle_sigint);
 	signal(SIGWINCH, handle_sigwinch);
