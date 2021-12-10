@@ -17,6 +17,7 @@
 #include <curl/curl.h>
 #include <jansson.h>
 
+#include "cache.h"
 #include "list.h"
 #include "str.h"
 #include "matrix.h"
@@ -565,6 +566,11 @@ static void process_sync_response(const char *output) {
 	json_t *n = json_object_get(root, "next_batch");
 	assert(n != NULL);
 	next_batch = strdup(json_string_value(n));
+	/*
+	 * TODO: it is better to store next_batch when exiting gracefully from
+	 * janechat.
+	 */
+	cache_set("next_batch", next_batch);
 	json_decref(root);
 }
 
@@ -608,6 +614,10 @@ static void process_sync_response(const char *output) {
 		"}" \
 	"}"
 
+/*
+ * Perform the initial sync, to retrieve initial state from the matrix server.
+ * No message is retrieved in this phase.
+ */
 bool matrix_initial_sync(void) {
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/r0/sync");
@@ -618,7 +628,50 @@ bool matrix_initial_sync(void) {
 	Str *res = matrix_send_sync_alloc(HTTP_GET, str_buf(url), NULL);
 	if (!res)
 		return false;
+
+	/*
+	 * next_batch is stored with cache_set() in process_sync_response(), so
+	 * we can retrieve it between different janechat executions.  Since
+	 * process_sync_response() overwrites next_batch, we retrieve next_batch
+	 * from the cache and stored it temporarely in n and, after
+	 * process_sync_response() execution, we store it in next_batch.
+	 *
+	 * So, when starting janechat, the program either:
+	 *
+	 * 1) calls matrix_initial_sync() (to fetch state information from
+	 * the server) that calls process_sync_response() and store next_batch
+	 * from the retrieved json.
+	 *
+	 * 2) calls matrix_initial_sync() (to fetch state information from
+	 * the server) that calls process_sync_response(), but retrieve
+	 * next_batch from the cache, so the next sync will fetch information
+	 * not received since last time janechat ran.
+	 *
+	 * The approach we have here fetch all information from the server,
+	 * making it unnecessary to serialize and persist information (such as
+	 * rooms, etc.) between different janechat executions. We achieve some
+	 * level of preemption without too much complication!
+	 *
+	 * TODO: This approach surely has problems: what to do with users if
+	 * lazy_load_members is enabled? Nowadays it is not a problem because we
+	 * are not keeping a data structure to translate user ids to user names,
+	 * but we'll do it soon. In case 2 above, we does not receive user
+	 * information (because we received it somewhere in the past, before the
+	 * stored next_batch), so some level of serialization might be
+	 * necessary.
+	 *
+	 * TODO: next_batch handling is still very spaghetti code using a
+	 * global variable scattered among different functions. How can we make
+	 * it less spaghetti?
+	 */
+
+	char *n = cache_get_alloc("next_batch");
+
 	process_sync_response(str_buf(res));
+
+	if (n)
+		next_batch = n;
+
 	str_decref(res);
 	return true;
 }
