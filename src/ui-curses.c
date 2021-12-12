@@ -23,7 +23,7 @@
  */
 struct buffer {
 	Room *room;
-	char buf[256]; /* Input buffer. TODO: use Str? */
+	char buf[1024]; /* Input buffer. TODO: use Str? */
 	size_t pos; /* Cursor position */
 	size_t len; /* String length - does not include the null byte */
 	size_t left; /* left-most character index showed in the input window */
