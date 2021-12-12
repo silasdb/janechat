@@ -30,6 +30,11 @@ struct buffer {
 	size_t right; /* right-most character index showed in the input window*/
 
 	/*
+	 * The index of the separator for this room. -1 if there is no separator.
+	 */
+	int separator;
+
+	/*
 	 * As messages text are rendered backwards (on the wchat_msgs window),
 	 * we need to store the index of the last line. If last_line == -1, then
 	 * the last line is the most recent message received.
@@ -344,6 +349,12 @@ void chat_msgs_fill(void) {
 	int y = maxy;
 	for (ssize_t i = last; i >= 0; i--) {
 		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
+		if (cur_buffer->separator == i) {
+			y--;
+			wattron(wchat_msgs, COLOR_PAIR(2));
+			mvwhline(wchat_msgs, y, 0, '-', maxx);
+			wattroff(wchat_msgs, COLOR_PAIR(2));
+		}
 		int height = text_height(msg->sender, msg->text, maxx);
 		y -= height;
 		if (y < 0)
@@ -425,6 +436,9 @@ void chat_input_key(void) {
 	case 13: /* CR */
 		if (streq(cur_buffer->buf, "/quit")) {
 			set_focus(FOCUS_INDEX);
+		} else if (streq(cur_buffer->buf, "/line")) {
+			cur_buffer->separator = vector_len(cur_buffer->room->msgs)-1;
+			chat_msgs_fill();
 		} else {
 			send_msg();
 		}
@@ -473,6 +487,7 @@ void ui_curses_init(void) {
 	start_color();
 	use_default_colors();
 	init_pair(1, COLOR_GREEN, -1);
+	init_pair(2, COLOR_YELLOW, -1);
 
 	signal(SIGINT, handle_sigint);
 	signal(SIGWINCH, handle_sigwinch);
