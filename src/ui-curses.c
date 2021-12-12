@@ -132,6 +132,7 @@ void set_cur_buffer(struct buffer *buffers) {
 	cur_buffer->left = 0;
 	cur_buffer->right = maxx-1;
 	cur_buffer->room->unread_msgs = 0;
+	cur_buffer->last_line = -1;
 }
 
 void set_focus(enum Focus f) {
@@ -339,8 +340,8 @@ int text_height(const Str *sender, const Str *text, int width) {
 
 void chat_msgs_fill(void) {
 	werase(wchat_msgs);
-	int last = -1;
-	if (cur_buffer->last_line == -1)
+	int last = cur_buffer->last_line;
+	if (last == -1)
 		last = vector_len(cur_buffer->room->msgs)-1;
 	if (last < 0)
 		return;
@@ -431,6 +432,32 @@ void chat_input_key(void) {
 	case CTRL('g'):
 		set_focus(FOCUS_INDEX);
 		return;
+		break;
+	case CTRL('b'):
+		{
+			if (cur_buffer->last_line == -1)
+				cur_buffer->last_line = vector_len(cur_buffer->room->msgs);
+			int maxy, maxx;
+			getmaxyx(wchat_msgs, maxy, maxx);
+			maxy /= 2;
+			cur_buffer->last_line -= maxy;
+			chat_msgs_fill();
+			return;
+		}
+		break;
+	case CTRL('f'):
+		{
+			if (cur_buffer->last_line == -1)
+				return;
+			int maxy, maxx;
+			getmaxyx(wchat_msgs, maxy, maxx);
+			maxy /= 2;
+			cur_buffer->last_line += maxy;
+			if (cur_buffer->last_line >= vector_len(cur_buffer->room->msgs))
+				cur_buffer->last_line = -1;
+			chat_msgs_fill();
+			return;
+		}
 		break;
 	case 10: /* LF */
 	case 13: /* CR */
