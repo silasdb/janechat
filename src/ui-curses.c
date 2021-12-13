@@ -358,7 +358,8 @@ void chat_msgs_fill(void) {
 	int y = maxy;
 	for (ssize_t i = last; i >= 0; i--) {
 		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
-		if (cur_buffer->read_separator == i+1) {
+		if (cur_buffer->read_separator == i+1
+		&&  cur_buffer->read_separator != vector_len(cur_buffer->room->msgs)) {
 			y--;
 			wattron(wchat_msgs, COLOR_PAIR(1));
 			mvwhline(wchat_msgs, y, 0, '-', maxx);
