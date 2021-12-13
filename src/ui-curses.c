@@ -30,9 +30,17 @@ struct buffer {
 	size_t right; /* right-most character index showed in the input window*/
 
 	/*
-	 * The index of the separator for this room. -1 if there is no separator.
+	 * Updated whenever someone leaves the chat window to the index window,
+	 * so when the user comes back, he gets a line dividing messages in
+	 * already read messages and unread messages. It is -1 if disabled.
 	 */
-	int separator;
+	int read_separator;
+
+	/*
+	 * User defined separator that is set with the /line command. -1 if
+	 * disabled.
+	 */
+	int user_separator;
 
 	/*
 	 * As messages text are rendered backwards (on the wchat_msgs window),
@@ -350,7 +358,13 @@ void chat_msgs_fill(void) {
 	int y = maxy;
 	for (ssize_t i = last; i >= 0; i--) {
 		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
-		if (cur_buffer->separator == i) {
+		if (cur_buffer->read_separator == i+1) {
+			y--;
+			wattron(wchat_msgs, COLOR_PAIR(1));
+			mvwhline(wchat_msgs, y, 0, '-', maxx);
+			wattroff(wchat_msgs, COLOR_PAIR(1));
+		}
+		if (cur_buffer->user_separator == i) {
 			y--;
 			wattron(wchat_msgs, COLOR_PAIR(2));
 			mvwhline(wchat_msgs, y, 0, '-', maxx);
@@ -430,6 +444,7 @@ void chat_input_key(void) {
 		chat_input_cursor_inc(+1);
 		break;
 	case CTRL('g'):
+		cur_buffer->read_separator = vector_len(cur_buffer->room->msgs);
 		set_focus(FOCUS_INDEX);
 		return;
 		break;
@@ -464,7 +479,7 @@ void chat_input_key(void) {
 		if (streq(cur_buffer->buf, "/quit")) {
 			set_focus(FOCUS_INDEX);
 		} else if (streq(cur_buffer->buf, "/line")) {
-			cur_buffer->separator = vector_len(cur_buffer->room->msgs)-1;
+			cur_buffer->user_separator = vector_len(cur_buffer->room->msgs)-1;
 			chat_msgs_fill();
 		} else {
 			send_msg();
