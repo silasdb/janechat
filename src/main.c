@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 	int c;
 	extern char *optarg;
 	extern int optind;
-	while ((c = getopt(argc, argv, "f:")) != -1) {
+	while ((c = getopt(argc, argv, "f:p:")) != -1) {
 		switch (c) {
 		case 'f':
 			if (streq(optarg, "cli"))
@@ -54,6 +54,13 @@ int main(int argc, char *argv[]) {
 				ui_frontend = UI_CURSES;
 			else
 				usage();
+			break;
+		case 'p':
+			/*
+			 * TODO: we need to canonize optarg to avoid path
+			 * traversal and other problems.
+			 */
+			cache_set_profile(optarg);
 			break;
 		default:
 			usage();

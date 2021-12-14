@@ -17,6 +17,8 @@
  * editing them can break janechat.
  */
 
+static const char *profile = "default";
+
 static char *cache_dir(void);
 static void mkdir_r(const char *);
 
@@ -61,7 +63,8 @@ static char *cache_dir(void) {
 	}
 
 	assert(getenv("HOME") != NULL);
-	snprintf(dir, sizeof(dir), "%s/.cache/janechat", getenv("HOME"));
+	snprintf(dir, sizeof(dir), "%s/.cache/janechat/%s",
+		getenv("HOME"), profile);
 	return dir;
 }
 
@@ -90,3 +93,6 @@ static void mkdir_r(const char *path) {
 	}
 }
 
+void cache_set_profile(const char *p) {
+	profile = p;
+}
