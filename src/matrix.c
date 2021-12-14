@@ -87,6 +87,13 @@ Str * matrix_send_sync_alloc(
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
 
+	/*
+	 * TODO: disable SSL certificate verification so it works for our
+	 * internal servers
+	 */
+	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0);
+
 	switch (method) {
 	case HTTP_POST:
 		/*
@@ -166,6 +173,13 @@ static void matrix_send_async(
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
 	curl_easy_setopt(handle, CURLOPT_PRIVATE, (void *)c);
+
+	/*
+	 * TODO: disable SSL certificate verification so it works for our
+	 * internal servers
+	 */
+	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0);
 
 	switch (method) {
 	case HTTP_POST:
