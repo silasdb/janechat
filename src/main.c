@@ -102,11 +102,8 @@ int main(int argc, char *argv[]) {
 	if (!do_matrix_send_token())
 		do_matrix_login();
 	else {
-		/*
-		 * TODO: while we don't store the servername in cache,
-		 * hardcode the server we are testing against.
-		 */
-		matrix_set_server("matrix.org");
+		char *server = cache_get_alloc("server");
+		matrix_set_server(server);
 	}
 
 	puts("Performing initial sync...");
@@ -190,6 +187,7 @@ void do_matrix_login(void) {
 		exit(1);
 	}
 	puts("Logged in.");
+	cache_set("server", server);
 	cache_set("access_token", access_token);
 	free((void *)access_token);
 
