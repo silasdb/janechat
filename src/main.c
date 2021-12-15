@@ -203,9 +203,9 @@ void process_room_create(Str *id) {
 		ui_hooks.room_new(id);
 }
 
-void process_room_info(Str *roomid, Str *name, bool direct) {
+void process_room_info(Str *roomid, Str *sender, Str *name) {
 	Room *room = room_byid(roomid);
-	room_set_info(room, name, direct);
+	room_set_info(room, sender, name);
 }
 
 void process_room_join(Str *roomid, Str *senderid, Str *sendername) {
@@ -228,7 +228,7 @@ void handle_matrix_event(MatrixEvent ev) {
 		break;
 	case EVENT_ROOM_INFO:
 		process_room_info(ev.roominfo.id,
-			ev.roominfo.name, ev.roominfo.direct);
+			ev.roominfo.sender, ev.roominfo.name);
 		break;
 	case EVENT_ROOM_NOTIFY_STATUS:
 		{

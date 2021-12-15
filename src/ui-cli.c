@@ -28,7 +28,7 @@ void ui_cli_msg_new(Room *room, Str *sender, Str *text) {
 	 * unread messages flag to zero, since we have just printed it to the
 	 * user.
 	 */
-	print_msg(room->name, user_name(sender), text);
+	print_msg(room_displayname(room), user_name(sender), text);
 	room->unread_msgs = 0;
 }
 
@@ -125,7 +125,7 @@ static void print_messages(Room *room) {
 	Msg *msg;
 	size_t i;
 	ROOM_MESSAGES_FOREACH(room, msg, i) {
-		print_msg(room->name, msg->sender, msg->text);
+		print_msg(room_displayname(room), msg->sender, msg->text);
 	}
 	room->unread_msgs = 0;
 }

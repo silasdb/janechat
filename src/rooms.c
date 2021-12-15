@@ -34,14 +34,9 @@ Room *room_new(Str *id) {
 	}
 	room = malloc(sizeof(Room));
 	room->id = str_incref(id);
+	room->name = NULL;
+	room->sender = NULL;
 	
-	/*
-	 * At the moment of creation, we don't know the room name yet, so we set
-	 * it to be temporarily the same as id and increment its reference
-	 * counter.
-	 */
-	room->name = str_incref(id);
-
 	room->users = vector_new();
 	room->msgs = vector_new();
 	room->unread_msgs = 0;
@@ -55,23 +50,15 @@ Room *room_byid(const Str *id) {
 	return hash_get(rooms_hash, str_buf(id));
 }
 
-Room *room_byname(const Str *name) {
-	Room *iter;
-	size_t i;
-	ROOMS_FOREACH(iter, i) {
-		if (streq(iter->name->buf, name->buf))
-			return iter;
-	}
-	return NULL;
-}
-
 Str *room_displayname(Room *r) {
-	if (r->direct)
-		return user_name(r->name);
-	return r->name;
+	if (r->name)
+		return r->name;
+	if (r->sender)
+		return user_name(r->sender);
+	return r->id;
 }
 
-void room_set_info(Room *r, Str *name, bool direct) {
+void room_set_info(Room *r, Str *sender, Str *name) {
 	/*
 	 * TODO: it seems client can receive m.room.name before m.room.create,
 	 * so we'll need to handle that.
@@ -79,14 +66,10 @@ void room_set_info(Room *r, Str *name, bool direct) {
 	if (!r)
 		return;
 
-	/*
-	 * We str_decref() old value because it was set to the room id at
-	 * str_new() while we don't receive the room name.
-	 */
-	str_decref(r->name);
-
-	r->name = str_incref(name);
-	r->direct = direct;
+	if (sender)
+		r->sender = str_incref(sender);
+	if (name)
+		r->name = str_incref(name);
 }
 
 void room_append_msg(Room *room, Str *sender, Str *text) {
