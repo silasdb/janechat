@@ -122,7 +122,8 @@ int buffer_comparison(const void *a, const void *b) {
 	const struct buffer **x = (const struct buffer **)a;
 	const struct buffer **y = (const struct buffer **)b;
 	int res;
-	res = strcmp(str_buf((*x)->room->name), str_buf((*y)->room->name));
+	res = strcmp(str_buf(room_displayname((*x)->room)),
+		str_buf(room_displayname((*y)->room)));
 	if (res)
 		return res;
 	/*
@@ -275,18 +276,13 @@ void index_draw(void) {
 	for (size_t i = top; i <= bottom; i++) {
 		struct buffer *tb;
 		tb = vector_at(buffers, i);
-		Str *displayname;
-
-		displayname = tb->room->name;
-		if (tb->room->direct)
-			displayname = user_name(tb->room->name);
-
 		if (index_idx == i)
 			wattron(windex, A_REVERSE); 
 		if (tb->room->unread_msgs > 0 && tb->room->notify)
 			wattron(windex, A_BOLD);
 		mvwprintw(windex, i-top, 0, "%s (%zu)",
-			displayname->buf, tb->room->unread_msgs);
+			str_buf(room_displayname(tb->room)),
+			tb->room->unread_msgs);
 		if (index_idx == i)
 			wattroff(windex, A_REVERSE); 
 		if (tb->room->unread_msgs > 0 && tb->room->notify)

@@ -50,12 +50,8 @@ void process_input(char *s) {
 		Room *room;
 		size_t i;
 		ROOMS_FOREACH(room, i) {
-			Str *displayname;
-			displayname = room->name;
-			if (room->direct)
-				displayname = user_name(room->name);
 			printf("%s [%s] (unread messages: %zu)\n",
-				str_buf(displayname),
+				str_buf(room_displayname(room)),
 				str_buf(room->id),
 				room->unread_msgs);
 		}

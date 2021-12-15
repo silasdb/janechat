@@ -65,6 +65,12 @@ Room *room_byname(const Str *name) {
 	return NULL;
 }
 
+Str *room_displayname(Room *r) {
+	if (r->direct)
+		return user_name(r->name);
+	return r->name;
+}
+
 void room_set_info(Room *r, Str *name, bool direct) {
 	/*
 	 * TODO: it seems client can receive m.room.name before m.room.create,

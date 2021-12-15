@@ -25,6 +25,7 @@ void rooms_init(void);
 Room *room_new(Str *);
 Room *room_byid(const Str *);
 Room *room_byname(const Str *);
+Str *room_displayname(Room *);
 void room_set_info(Room *, Str *, bool);
 void room_append_msg(Room *, Str *, Str *);
 void room_append_user(Room *, Str *);
