@@ -537,6 +537,10 @@ void ui_curses_init(void) {
 
 	signal(SIGINT, handle_sigint);
 	signal(SIGWINCH, handle_sigwinch);
+	/*
+	 * TODO: by having vector_sort() here, it doesn't sort new rooms that we
+	 * can join after starting janechat.
+	 */
 	vector_sort(buffers, buffer_comparison);
 	resize();
 }
