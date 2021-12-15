@@ -276,8 +276,8 @@ static void process_direct_event(const char *sender, json_t *roomid) {
 	MatrixEvent event;
 	event.type = EVENT_ROOM_INFO;
 	event.roominfo.id = str_new_cstr(json_string_value(roomid));
-	event.roominfo.name = str_new_cstr(sender);
-	event.roominfo.direct = true;
+	event.roominfo.sender = str_new_cstr(sender);
+	event.roominfo.name = NULL;
 	event_handler_callback(event);
 	str_decref(event.roominfo.id);
 	str_decref(event.roominfo.name);
@@ -294,7 +294,7 @@ static void process_room_event(json_t *item, const char *roomid) {
 		event.type = EVENT_ROOM_INFO;
 		event.roominfo.id = str_new_cstr(roomid);
 		event.roominfo.name = str_new_cstr(name);
-		event.roominfo.direct = false;
+		event.roominfo.sender = NULL;
 		event_handler_callback(event);
 		str_decref(event.roominfo.id);
 		str_decref(event.roominfo.name);

@@ -64,6 +64,8 @@ Str *str_incref(Str *ss) {
 }
 
 void str_decref(Str *ss) {
+	if (!ss)
+		return;
 	ss->rc--;
 	if (ss->rc > 0)
 		return;

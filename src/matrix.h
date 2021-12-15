@@ -29,8 +29,8 @@ struct MatrixEvent {
 		} roomcreate;
 		struct MatrixEventRoomInfo {
 			Str *id;
+			Str *sender;
 			Str *name;
-			bool direct;
 		} roominfo;
 		struct MatrixEventRoomNotifyStatus {
 			Str *roomid;
