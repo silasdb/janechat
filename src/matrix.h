@@ -27,17 +27,19 @@ struct MatrixEvent {
 		struct MatrixEventRoomCreate {
 			Str *id;
 		} roomcreate;
-		struct MatrixEventRoomName {
+		struct MatrixEventRoomInfo {
 			Str *id;
 			Str *name;
-		} roomname;
+			bool direct;
+		} roominfo;
 		struct MatrixEventRoomNotifyStatus {
 			Str *roomid;
 			bool enabled;
 		} roomnotifystatus;
 		struct MatrixEventRoomJoin {
 			Str *roomid;
-			Str *sender;
+			Str *senderid;
+			Str *sendername;
 		} roomjoin;
 		struct MatrixEventMatrixError {
 			Str *errorcode;

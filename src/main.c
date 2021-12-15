@@ -26,7 +26,7 @@ struct ui_hooks {
 	void (*setup)();
 	void (*init)();
 	void (*iter)();
-	void (*msg_new)(Room *room, Str *sender, Str *msg);
+	void (*msg_new)(Room *room, Str *, Str *);
 	void (*room_new)(Str *roomid);
 } ui_hooks;
 
@@ -203,15 +203,16 @@ void process_room_create(Str *id) {
 		ui_hooks.room_new(id);
 }
 
-void process_room_name(Str *roomid, Str *name) {
+void process_room_info(Str *roomid, Str *name, bool direct) {
 	Room *room = room_byid(roomid);
-	room_set_name(room, name);
+	room_set_info(room, name, direct);
 }
 
-void process_room_join(Str *roomid, Str *sender) {
+void process_room_join(Str *roomid, Str *senderid, Str *sendername) {
 	Room *room = room_byid(roomid);
 	assert(room);
-	room_append_user(room, sender);
+	room_append_user(room, senderid);
+	user_add(senderid, sendername);
 }
 
 void process_msg(Str *roomid, Str *sender, Str *text) {
@@ -226,7 +227,8 @@ void handle_matrix_event(MatrixEvent ev) {
 		process_room_create(ev.roomcreate.id);
 		break;
 	case EVENT_ROOM_NAME:
-		process_room_name(ev.roomname.id, ev.roomname.name);
+		process_room_info(ev.roominfo.id,
+			ev.roominfo.name, ev.roominfo.direct);
 		break;
 	case EVENT_ROOM_NOTIFY_STATUS:
 		{
@@ -239,7 +241,7 @@ void handle_matrix_event(MatrixEvent ev) {
 		break;
 	case EVENT_ROOM_JOIN:
 		process_room_join(ev.roomjoin.roomid,
-			ev.roomjoin.sender);
+			ev.roomjoin.senderid, ev.roomjoin.sendername);
 		break;
 	case EVENT_MSG:
 		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);
