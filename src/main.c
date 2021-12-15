@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 	enum Ui {
 		UI_CLI,
 		UI_CURSES,
-	} ui_frontend = UI_CLI;
+	} ui_frontend = UI_CURSES;
 
 	/* Option processing */
 	int c;
