@@ -274,7 +274,7 @@ void matrix_set_token(char *tok) {
 
 static void process_direct_event(const char *sender, json_t *roomid) {
 	MatrixEvent event;
-	event.type = EVENT_ROOM_NAME;
+	event.type = EVENT_ROOM_INFO;
 	event.roominfo.id = str_new_cstr(json_string_value(roomid));
 	event.roominfo.name = str_new_cstr(sender);
 	event.roominfo.direct = true;
@@ -291,7 +291,7 @@ static void process_room_event(json_t *item, const char *roomid) {
 		assert(nam != NULL);
 		const char *name = json_string_value(nam);
 		MatrixEvent event;
-		event.type = EVENT_ROOM_NAME;
+		event.type = EVENT_ROOM_INFO;
 		event.roominfo.id = str_new_cstr(roomid);
 		event.roominfo.name = str_new_cstr(name);
 		event.roominfo.direct = false;

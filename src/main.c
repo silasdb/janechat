@@ -226,7 +226,7 @@ void handle_matrix_event(MatrixEvent ev) {
 	case EVENT_ROOM_CREATE:
 		process_room_create(ev.roomcreate.id);
 		break;
-	case EVENT_ROOM_NAME:
+	case EVENT_ROOM_TYPE:
 		process_room_info(ev.roominfo.id,
 			ev.roominfo.name, ev.roominfo.direct);
 		break;
