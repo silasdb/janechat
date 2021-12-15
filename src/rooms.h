@@ -17,6 +17,7 @@ struct Room {
 	Vector *msgs;
 	size_t unread_msgs;	/* Should be reset by the caller */
 	bool notify;
+	bool direct;
 };
 typedef struct Room Room;
 
@@ -27,6 +28,9 @@ Room *room_byname(const Str *);
 void room_set_name(Room *, Str *);
 void room_append_msg(Room *, Str *, Str *);
 void room_append_user(Room *, Str *);
+
+void user_add(Str *, Str *);
+Str *user_name(Str *);
 
 extern Vector *rooms_vector;
 

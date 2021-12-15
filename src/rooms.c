@@ -8,10 +8,12 @@
 Hash *rooms_hash;	/* Hash<const char *id, Room> */
 Vector *rooms_vector;	/* Vector<Room> */
 size_t count;		/* Number of rooms */
+Hash *users_hash;	/* Hash<const char *id, Str *> */
 
 void rooms_init(void) {
 	rooms_hash = hash_new();
 	rooms_vector = vector_new();
+	users_hash = hash_new();
 }
 
 /*
@@ -63,7 +65,7 @@ Room *room_byname(const Str *name) {
 	return NULL;
 }
 
-void room_set_name(Room *r, Str *name) {
+void room_set_info(Room *r, Str *name, bool direct) {
 	/*
 	 * TODO: it seems client can receive m.room.name before m.room.create,
 	 * so we'll need to handle that.
@@ -78,6 +80,7 @@ void room_set_name(Room *r, Str *name) {
 	str_decref(r->name);
 
 	r->name = str_incref(name);
+	r->direct = direct;
 }
 
 void room_append_msg(Room *room, Str *sender, Str *text) {
@@ -90,4 +93,16 @@ void room_append_msg(Room *room, Str *sender, Str *text) {
 
 void room_append_user(Room *room, Str *sender) {
 	vector_append(room->users, (void *)str_buf(str_incref(sender)));
+}
+
+void user_add(Str *id, Str *name) {
+	str_incref(name);
+	hash_insert(users_hash, str_buf(id), name);
+}
+
+Str *user_name(Str *id) {
+	Str *name = hash_get(users_hash, str_buf(id));
+	if (!name)
+		return id;
+	return name;
 }

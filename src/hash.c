@@ -72,7 +72,8 @@ void hash_insert(Hash *h, const char *key, const void *val) {
 	struct hash_item *iter;
 	LIST_FOREACH(l, iter) {
 		// TODO: overwrite if it happens?
-		assert(!streq(iter->key, key));
+		if (streq(iter->key, key))
+			return;
 	}
 	struct hash_item *item = malloc(sizeof(struct hash_item));
 	item->key = key;

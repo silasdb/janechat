@@ -28,7 +28,7 @@ void ui_cli_msg_new(Room *room, Str *sender, Str *text) {
 	 * unread messages flag to zero, since we have just printed it to the
 	 * user.
 	 */
-	print_msg(room->name, sender, text);
+	print_msg(room->name, user_name(sender), text);
 	room->unread_msgs = 0;
 }
 
@@ -50,8 +50,14 @@ void process_input(char *s) {
 		Room *room;
 		size_t i;
 		ROOMS_FOREACH(room, i) {
-			printf("%s (unread messages: %zu)\n",
-				str_buf(room->name), room->unread_msgs);
+			Str *displayname;
+			displayname = room->name;
+			if (room->direct)
+				displayname = user_name(room->name);
+			printf("%s [%s] (unread messages: %zu)\n",
+				str_buf(displayname),
+				str_buf(room->id),
+				room->unread_msgs);
 		}
 		return;
 	}
@@ -72,7 +78,7 @@ void process_input(char *s) {
 	if (strncmp(s, "/join ", strlen("/join ")) == 0) {
 		s += strlen("/join ");
 		Str *ss = str_new_cstr(s);
-		Room *room = room_byname(ss);
+		Room *room = room_byid(ss);
 		str_decref(ss);
 		if (!room) {
 			printf("Room \"%s\" not found.\n", s);

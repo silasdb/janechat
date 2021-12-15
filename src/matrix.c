@@ -275,11 +275,12 @@ void matrix_set_token(char *tok) {
 static void process_direct_event(const char *sender, json_t *roomid) {
 	MatrixEvent event;
 	event.type = EVENT_ROOM_NAME;
-	event.roomname.id = str_new_cstr(json_string_value(roomid));
-	event.roomname.name = str_new_cstr(sender);
+	event.roominfo.id = str_new_cstr(json_string_value(roomid));
+	event.roominfo.name = str_new_cstr(sender);
+	event.roominfo.direct = true;
 	event_handler_callback(event);
-	str_decref(event.roomname.id);
-	str_decref(event.roomname.name);
+	str_decref(event.roominfo.id);
+	str_decref(event.roominfo.name);
 }
 
 static void process_room_event(json_t *item, const char *roomid) {
@@ -291,11 +292,12 @@ static void process_room_event(json_t *item, const char *roomid) {
 		const char *name = json_string_value(nam);
 		MatrixEvent event;
 		event.type = EVENT_ROOM_NAME;
-		event.roomname.id = str_new_cstr(roomid);
-		event.roomname.name = str_new_cstr(name);
+		event.roominfo.id = str_new_cstr(roomid);
+		event.roominfo.name = str_new_cstr(name);
+		event.roominfo.direct = false;
 		event_handler_callback(event);
-		str_decref(event.roomname.id);
-		str_decref(event.roomname.name);
+		str_decref(event.roominfo.id);
+		str_decref(event.roominfo.name);
 	} else if (streq(json_string_value(type), "m.room.create")) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_CREATE;
@@ -312,10 +314,15 @@ static void process_room_event(json_t *item, const char *roomid) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_JOIN;
 		event.roomjoin.roomid = str_new_cstr(roomid);
-		event.roomjoin.sender = str_new_cstr(json_string_value(sender));
+		event.roomjoin.senderid =
+			str_new_cstr(json_string_value(sender));
+		json_t *name = json_path(item, "content", "displayname", NULL);
+		event.roomjoin.sendername =
+			str_new_cstr(json_string_value(name));
 		event_handler_callback(event);
 		str_decref(event.roomjoin.roomid);
-		str_decref(event.roomjoin.sender);
+		str_decref(event.roomjoin.senderid);
+		str_decref(event.roomjoin.sendername);
 	}
 }
 

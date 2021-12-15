@@ -275,12 +275,18 @@ void index_draw(void) {
 	for (size_t i = top; i <= bottom; i++) {
 		struct buffer *tb;
 		tb = vector_at(buffers, i);
+		Str *displayname;
+
+		displayname = tb->room->name;
+		if (tb->room->direct)
+			displayname = user_name(tb->room->name);
+
 		if (index_idx == i)
 			wattron(windex, A_REVERSE); 
 		if (tb->room->unread_msgs > 0 && tb->room->notify)
 			wattron(windex, A_BOLD);
 		mvwprintw(windex, i-top, 0, "%s (%zu)",
-			tb->room->name->buf, tb->room->unread_msgs);
+			displayname->buf, tb->room->unread_msgs);
 		if (index_idx == i)
 			wattroff(windex, A_REVERSE); 
 		if (tb->room->unread_msgs > 0 && tb->room->notify)
@@ -377,7 +383,8 @@ void chat_msgs_fill(void) {
 			break;
 
 		wattron(wchat_msgs, COLOR_PAIR(1));
-		mvwprintw(wchat_msgs, y, 0, "%s", str_buf(msg->sender));
+		mvwprintw(wchat_msgs, y, 0, "%s",
+			str_buf(user_name(msg->sender)));
 
 		/* TODO: why does it set background to COLOR_BLACK? */
 		wattroff(wchat_msgs, COLOR_PAIR(1));
