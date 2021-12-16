@@ -17,6 +17,7 @@
 #include <curl/curl.h>
 #include <jansson.h>
 
+#include "cache.h"
 #include "list.h"
 #include "str.h"
 #include "matrix.h"
@@ -85,6 +86,13 @@ Str * matrix_send_sync_alloc(
 	curl_easy_setopt(handle, CURLOPT_URL, str_buf(url));
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
+
+	/*
+	 * TODO: disable SSL certificate verification so it works for our
+	 * internal servers
+	 */
+	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0);
 
 	switch (method) {
 	case HTTP_POST:
@@ -165,6 +173,13 @@ static void matrix_send_async(
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
 	curl_easy_setopt(handle, CURLOPT_PRIVATE, (void *)c);
+
+	/*
+	 * TODO: disable SSL certificate verification so it works for our
+	 * internal servers
+	 */
+	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0);
 
 	switch (method) {
 	case HTTP_POST:
@@ -259,12 +274,13 @@ void matrix_set_token(char *tok) {
 
 static void process_direct_event(const char *sender, json_t *roomid) {
 	MatrixEvent event;
-	event.type = EVENT_ROOM_NAME;
-	event.roomname.id = str_new_cstr(json_string_value(roomid));
-	event.roomname.name = str_new_cstr(sender);
+	event.type = EVENT_ROOM_INFO;
+	event.roominfo.id = str_new_cstr(json_string_value(roomid));
+	event.roominfo.sender = str_new_cstr(sender);
+	event.roominfo.name = NULL;
 	event_handler_callback(event);
-	str_decref(event.roomname.id);
-	str_decref(event.roomname.name);
+	str_decref(event.roominfo.id);
+	str_decref(event.roominfo.name);
 }
 
 static void process_room_event(json_t *item, const char *roomid) {
@@ -275,12 +291,13 @@ static void process_room_event(json_t *item, const char *roomid) {
 		assert(nam != NULL);
 		const char *name = json_string_value(nam);
 		MatrixEvent event;
-		event.type = EVENT_ROOM_NAME;
-		event.roomname.id = str_new_cstr(roomid);
-		event.roomname.name = str_new_cstr(name);
+		event.type = EVENT_ROOM_INFO;
+		event.roominfo.id = str_new_cstr(roomid);
+		event.roominfo.name = str_new_cstr(name);
+		event.roominfo.sender = NULL;
 		event_handler_callback(event);
-		str_decref(event.roomname.id);
-		str_decref(event.roomname.name);
+		str_decref(event.roominfo.id);
+		str_decref(event.roominfo.name);
 	} else if (streq(json_string_value(type), "m.room.create")) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_CREATE;
@@ -297,10 +314,15 @@ static void process_room_event(json_t *item, const char *roomid) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_JOIN;
 		event.roomjoin.roomid = str_new_cstr(roomid);
-		event.roomjoin.sender = str_new_cstr(json_string_value(sender));
+		event.roomjoin.senderid =
+			str_new_cstr(json_string_value(sender));
+		json_t *name = json_path(item, "content", "displayname", NULL);
+		event.roomjoin.sendername =
+			str_new_cstr(json_string_value(name));
 		event_handler_callback(event);
 		str_decref(event.roomjoin.roomid);
-		str_decref(event.roomjoin.sender);
+		str_decref(event.roomjoin.senderid);
+		str_decref(event.roomjoin.sendername);
 	}
 }
 
@@ -357,7 +379,29 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 	assert(content != NULL);
 	if (streq(json_string_value(type), "m.room.message")) {
 		json_t *msgtype = json_object_get(content, "msgtype");
-		assert(msgtype != NULL);
+
+		/*
+		 * There can be m.room.messages without a "msgtype", for
+		 * instance, a m.room.redaction event. JSON is therefore in the following form:
+		 *
+		 * {
+		 *	"content": {},
+		 *	"type": "m.room.message",
+		 *	"unsigned": {
+		 *		"redacted_by": ...
+		 *		"redacted_because": {
+		 *			...
+		 *			"type": "m.room.redaction",
+		 *			...
+		 *		}
+		 *	}
+		 * }
+		 *
+		 * If we find such events, we just ignore them.
+		 */
+		if (!msgtype)
+			return;
+
 		json_t *body = json_object_get(content, "body");
 		assert(body != NULL);
 		MatrixEvent event;
@@ -392,7 +436,7 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 
 static void process_error(json_t *root) {
 	MatrixEvent event;
-	event.type = EVENT_ERROR;
+	event.type = EVENT_MATRIX_ERROR;
 	event.error.errorcode = str_new_cstr(json_string_value(json_object_get(root, "errcode")));
 	event.error.error = str_new_cstr(json_string_value(json_object_get(root, "error")));
 	event_handler_callback(event);
@@ -400,14 +444,92 @@ static void process_error(json_t *root) {
 	str_decref(event.error.error);
 }
 
-static void process_sync_response(const char *output) {
-	insync = false;
-	if (!output) {
-		MatrixEvent event;
-		event.type = EVENT_CONN_ERROR;
-		event_handler_callback(event);
+static void process_push_rules(json_t *rule) {
+	bool enabled = json_boolean_value(json_object_get(rule, "enabled"));
+	/*
+	 * TODO: check if the usage of "enabled" -> why would the server keep
+	 * this rule if it is not enabled?
+	 */
+	if (!enabled)
 		return;
+
+	json_t *actions = json_object_get(rule, "actions");
+
+	size_t i;
+	json_t *item;
+	json_array_foreach(actions, i, item) {
+		if (!json_is_string(item))
+			continue;
+		if (streq(json_string_value(item), "dont_notify")) {
+			MatrixEvent event;
+
+			/*
+			 * In the case of room rules, rule_id == roomid.
+			 * See https://matrix.org/docs/spec/client_server/r0.6.1#predefined-rules
+			 */
+			const char *roomid =json_string_value(
+				json_object_get(rule, "rule_id"));
+
+			event.type = EVENT_ROOM_NOTIFY_STATUS;
+			event.roomnotifystatus.roomid = str_new_cstr(roomid);
+			event.roomnotifystatus.enabled = false;
+			event_handler_callback(event);
+			str_decref(event.roomnotifystatus.roomid);
+			return;
+		}
 	}
+}
+
+static void process_rooms_join(json_t *root) {
+	const char *roomid;
+	json_t *item;
+
+	/*
+	 * m.room.create events come in room state events list, which is
+	 * unsorted.  But when passing EVENT_ROOM_CREATE events to upper layers,
+	 * we have to pass it before other events that alter the room state
+	 * (because the room object need already to be created in order to
+	 * receive these other events), so we look for events of this type first.
+	 */
+	json_object_foreach(root, roomid, item) {
+		json_t *events;
+		events = json_path(item, "state", "events", NULL);
+		size_t i;
+		json_t *event;
+		json_array_foreach(events, i, event) {
+			json_t *type = json_object_get(event, "type");
+			if (streq(json_string_value(type), "m.room.create"))
+				process_room_event(event, roomid);
+		}
+	}
+
+	json_object_foreach(root, roomid, item)
+	{
+		json_t *events;
+		events = json_path(item, "state", "events", NULL);
+		assert(events != NULL);
+		size_t i;
+		json_t *event;
+		json_array_foreach(events, i, event) {
+			json_t *type = json_object_get(event, "type");
+			if (!streq(json_string_value(type), "m.room.create"))
+				process_room_event(event, roomid);
+		}
+		events = json_path(item, "timeline", "events", NULL);
+		assert(events != NULL);
+		json_array_foreach(events, i, item) {
+			assert(item != NULL);
+			process_timeline_event(item, roomid);
+		}
+	}
+
+}
+
+static void process_sync_response(const char *output) {
+	assert(output);
+
+	insync = false;
+
 	json_t *root;
 	root = str2json_alloc(output);
 	if (!root)
@@ -419,38 +541,9 @@ static void process_sync_response(const char *output) {
 		return;
 	}
 
-	json_t *rooms = json_object_get(root, "rooms");
-	if (!rooms) {
-		json_decref(root);
-		return;
-	}
-	json_t *join = json_object_get(rooms, "join");
-	if (!join) {
-		json_decref(root);
-		return;
-	}
-
-	const char *roomid;
-	json_t *item;
-
-	/*
-	 * m.room.create events come in room state events list, which is
-	 * unsorted.  But when passing EVENT_ROOM_CREATE events to upper layers,
-	 * we have to pass it before other events that alter the room state
-	 * (because the room object need already to be created in order to
-	 * receive these other events), so we look for events of this type first.
-	 */
-	json_object_foreach(join, roomid, item) {
-		json_t *events;
-		events = json_path(item, "state", "events", NULL);
-		size_t i;
-		json_t *event;
-		json_array_foreach(events, i, event) {
-			json_t *type = json_object_get(event, "type");
-			if (streq(json_string_value(type), "m.room.create"))
-				process_room_event(event, roomid);
-		}
-	}
+	json_t *rooms_join = json_path(root, "rooms", "join", NULL);
+	if (rooms_join)
+		process_rooms_join(rooms_join);
 
 	json_t *events = json_path(root, "account_data", "events", NULL);
 	if (events) {
@@ -472,48 +565,134 @@ static void process_sync_response(const char *output) {
 					json_array_foreach(roomid, i, it)
 						process_direct_event(sender, it);
 				}
+			} else if (streq(t, "m.push_rules")) {
+				size_t j;
+				json_t *rule;
+
+				json_t *room_rules = json_path(item,
+					"content", "global", "room", NULL);
+				json_array_foreach(room_rules, j, rule)
+					process_push_rules(rule);
+
+				json_t *override_rules = json_path(item,
+					"content", "global", "override", NULL);
+				json_array_foreach(override_rules, j, rule)
+					process_push_rules(rule);
 			}
 		}
 	}
 
-	json_object_foreach(join, roomid, item)
-	{
-		json_t *events;
-		events = json_path(item, "state", "events", NULL);
-		assert(events != NULL);
-		size_t i;
-		json_t *event;
-		json_array_foreach(events, i, event) {
-			json_t *type = json_object_get(event, "type");
-			if (!streq(json_string_value(type), "m.room.create"))
-				process_room_event(event, roomid);
-		}
-		events = json_path(item, "timeline", "events", NULL);
-		assert(events != NULL);
-		json_array_foreach(events, i, item) {
-			assert(item != NULL);
-			process_timeline_event(item, roomid);
-		}
-	}
 
 	free(next_batch);
 	json_t *n = json_object_get(root, "next_batch");
 	assert(n != NULL);
 	next_batch = strdup(json_string_value(n));
+	/*
+	 * TODO: it is better to store next_batch when exiting gracefully from
+	 * janechat.
+	 */
+	cache_set("next_batch", next_batch);
 	json_decref(root);
 }
 
+/*
+ * This sync filter is used in both both initial and later access to the sync
+ * endpoint. There is a very important difference between both, though: the
+ * initial sync can specify a "limit":0 parameter to the timeline object,
+ * limiting the response. We cannot have this limitation in later calls to the
+ * sync endpoint because we can lose messages. In order to avoid duplicating
+ * this string, we define it in a macro and let callers pass a random parameter
+ * to the timeline object. Note that this parameter shall be an empty string or
+ * include a trailing comma, to separate it from other parameter in the JSON
+ * string.
+ */
+#define SYNC_REQUEST_FILTER(timeline_arg) \
+	"filter={" \
+		"\"room\":{" \
+			"\"account_data\":{\"not_types\":[\"*\"]}," \
+			"\"ephemeral\":{\"not_types\":[\"*\"]}," \
+			"\"state\":{" \
+				"\"lazy_load_members\":true," \
+				"\"types\":[" \
+					"\"m.room.create\"," \
+					"\"m.room.member\"," \
+					"\"m.room.name\"" \
+				"]" \
+			"}," \
+			"\"timeline\":{" \
+				timeline_arg \
+				"\"types\":[" \
+					"\"m.room.message\"," \
+					"\"m.room.encrypted\"" \
+				"]" \
+			"}" \
+		"}," \
+		"\"account_data\":{" \
+			"\"types\":[" \
+				"\"m.direct\"," \
+				"\"m.push_rules\"" \
+			"]" \
+		"}" \
+	"}"
 
+/*
+ * Perform the initial sync, to retrieve initial state from the matrix server.
+ * No message is retrieved in this phase.
+ */
 bool matrix_initial_sync(void) {
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/r0/sync");
-	str_append_cstr(url, "?filter={\"room\":{\"timeline\":{\"limit\":1}}}");
+	str_append_cstr(url, "?");
+	str_append_cstr(url, SYNC_REQUEST_FILTER("\"limit\":0,"));
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
 	Str *res = matrix_send_sync_alloc(HTTP_GET, str_buf(url), NULL);
 	if (!res)
 		return false;
+
+	/*
+	 * next_batch is stored with cache_set() in process_sync_response(), so
+	 * we can retrieve it between different janechat executions.  Since
+	 * process_sync_response() overwrites next_batch, we retrieve next_batch
+	 * from the cache and stored it temporarely in n and, after
+	 * process_sync_response() execution, we store it in next_batch.
+	 *
+	 * So, when starting janechat, the program either:
+	 *
+	 * 1) calls matrix_initial_sync() (to fetch state information from
+	 * the server) that calls process_sync_response() and store next_batch
+	 * from the retrieved json.
+	 *
+	 * 2) calls matrix_initial_sync() (to fetch state information from
+	 * the server) that calls process_sync_response(), but retrieve
+	 * next_batch from the cache, so the next sync will fetch information
+	 * not received since last time janechat ran.
+	 *
+	 * The approach we have here fetch all information from the server,
+	 * making it unnecessary to serialize and persist information (such as
+	 * rooms, etc.) between different janechat executions. We achieve some
+	 * level of preemption without too much complication!
+	 *
+	 * TODO: This approach surely has problems: what to do with users if
+	 * lazy_load_members is enabled? Nowadays it is not a problem because we
+	 * are not keeping a data structure to translate user ids to user names,
+	 * but we'll do it soon. In case 2 above, we does not receive user
+	 * information (because we received it somewhere in the past, before the
+	 * stored next_batch), so some level of serialization might be
+	 * necessary.
+	 *
+	 * TODO: next_batch handling is still very spaghetti code using a
+	 * global variable scattered among different functions. How can we make
+	 * it less spaghetti?
+	 */
+
+	char *n = cache_get_alloc("next_batch");
+
 	process_sync_response(str_buf(res));
+
+	if (n)
+		next_batch = n;
+
 	str_decref(res);
 	return true;
 }
@@ -524,7 +703,10 @@ void matrix_sync(void) {
 	insync = true;
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/r0/sync");
-	str_append_cstr(url, "?since=");
+	str_append_cstr(url, "?");
+	str_append_cstr(url, SYNC_REQUEST_FILTER(""));
+	str_append_cstr(url, "&since=");
+	assert(next_batch);
 	str_append_cstr(url, next_batch);
 	str_append_cstr(url, "&timeout=10000");
 	str_append_cstr(url, "&access_token=");
@@ -568,15 +750,32 @@ void matrix_resume(void) {
 	curl_multi_perform(mhandle, &still_running);
 	
 	/* TODO: check return value of curl_multi_perform() for errors */
-	/*
-	TODO: also, check for errors in easy handler
-	if (res != CURLE_OK) {
-		printf("curl error: %s\n", curl_easy_strerror(res));
-	}
-	*/
 	int msgs_in_queue;
 	CURLMsg *msg;
 	msg = curl_multi_info_read(mhandle, &msgs_in_queue);
+
+	if (!msg)
+		/*
+		 * TODO: in what cases it can be NULL? Should we handle it as an
+		 * error?
+		 */
+		return;
+
+	if (msg->data.result != CURLE_OK) {
+		/*
+		 * TODO: handle possible values for curl error and send them as
+		 * an enum to upper layers, so they can show something in the UI
+		 * beautifuly.
+		 */
+		fprintf(stderr, "curl error: %d: %s\n",
+			(int)msg->data.result,
+			curl_easy_strerror(msg->data.result));
+		MatrixEvent event;
+		event.type = EVENT_CONN_ERROR;
+		event_handler_callback(event);
+		return;
+	}
+
 	if (msg && msg->msg == CURLMSG_DONE) {
 		CURL *handle;
 		handle = msg->easy_handle;

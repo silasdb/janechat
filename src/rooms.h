@@ -11,21 +11,37 @@ struct Msg {
 typedef struct Msg Msg;
 
 struct Room {
+	/* The Matrix ID of the room. It is always set */
 	Str *id;
+
+	/*
+	 * The name of the room. It is always set for normal rooms, but it can
+	 * optionally be set for direct message rooms as well. 
+	 */
 	Str *name;
+
+	/*
+	 * It is always set for direct message rooms but not for normal rooms.
+	 */
+	Str *sender;
+
 	Vector *users;		/* Vector of joined users */
 	Vector *msgs;
 	size_t unread_msgs;	/* Should be reset by the caller */
+	bool notify;
 };
 typedef struct Room Room;
 
 void rooms_init(void);
 Room *room_new(Str *);
 Room *room_byid(const Str *);
-Room *room_byname(const Str *);
-void room_set_name(Room *, Str *);
+Str *room_displayname(Room *);
+void room_set_info(Room *, Str *, Str *);
 void room_append_msg(Room *, Str *, Str *);
 void room_append_user(Room *, Str *);
+
+void user_add(Str *, Str *);
+Str *user_name(Str *);
 
 extern Vector *rooms_vector;
 
