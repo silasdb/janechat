@@ -532,8 +532,8 @@ static void process_sync_response(const char *output) {
 
 	json_t *root;
 	root = str2json_alloc(output);
-	if (!root)
-		return;
+	assert(root);
+
 	json_t *errorcode = json_object_get(root, "errcode");
 	if (errorcode) {
 		process_error(root);
