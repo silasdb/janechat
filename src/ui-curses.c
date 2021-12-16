@@ -51,6 +51,7 @@ struct buffer {
 };
 
 bool curses_init = false; /* Did we started curses? */
+bool autopilot = false;
 
 WINDOW *windex; /* The index window - that shows rooms */
 WINDOW *wchat; /* The chat window, that show room messages and the input field */
@@ -148,6 +149,18 @@ void set_focus(enum Focus f) {
 	focus = f;
 	switch (focus) {
 	case FOCUS_INDEX:
+		if (autopilot) {
+			/* Find the first buffer with unread messages */
+			struct buffer *b;
+			size_t i;
+			VECTOR_FOREACH(buffers, b, i)
+				if (b->room->notify && b->room->unread_msgs) {
+					set_cur_buffer(b);
+					set_focus(FOCUS_CHAT_INPUT);
+					return;
+				}
+
+		}
 		cur_buffer = NULL;
 		focus = FOCUS_INDEX;
 		index_draw();
@@ -302,6 +315,9 @@ void index_key(void) {
 	case KEY_UP:
 		index_cursor_inc(-1);
 		index_draw();
+		break;
+	case 'M':
+		autopilot = !autopilot;
 		break;
 	case 'j':
 	case KEY_DOWN:
@@ -485,6 +501,8 @@ void chat_input_key(void) {
 		} else if (streq(cur_buffer->buf, "/line")) {
 			cur_buffer->user_separator = vector_len(cur_buffer->room->msgs)-1;
 			chat_msgs_fill();
+		} else if (streq(cur_buffer->buf, "/disableautopilot")) {
+			autopilot = false;
 		} else {
 			send_msg();
 		}
@@ -580,7 +598,17 @@ void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
 		return;
 	if (focus == FOCUS_INDEX) {
 		index_draw(); /* Update window */
-		return;
+		if (autopilot) {
+			/* Find the buffer `b` that holds `room` */
+			struct buffer *b;
+			size_t i;
+			VECTOR_FOREACH(buffers, b, i)
+				if (b->room == room && room->notify) {
+					set_cur_buffer(b);
+					set_focus(FOCUS_CHAT_INPUT);
+					break;
+				}
+		}
 	}
 	/* TODO: what about other parameters? */
 	if (cur_buffer && cur_buffer->room == room) {
