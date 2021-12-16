@@ -26,7 +26,7 @@ struct ui_hooks {
 	void (*setup)();
 	void (*init)();
 	void (*iter)();
-	void (*msg_new)(Room *room, Str *sender, Str *msg);
+	void (*msg_new)(Room *room, Str *, Str *);
 	void (*room_new)(Str *roomid);
 } ui_hooks;
 
@@ -39,13 +39,13 @@ int main(int argc, char *argv[]) {
 	enum Ui {
 		UI_CLI,
 		UI_CURSES,
-	} ui_frontend = UI_CLI;
+	} ui_frontend = UI_CURSES;
 
 	/* Option processing */
 	int c;
 	extern char *optarg;
 	extern int optind;
-	while ((c = getopt(argc, argv, "f:")) != -1) {
+	while ((c = getopt(argc, argv, "f:p:")) != -1) {
 		switch (c) {
 		case 'f':
 			if (streq(optarg, "cli"))
@@ -54,6 +54,13 @@ int main(int argc, char *argv[]) {
 				ui_frontend = UI_CURSES;
 			else
 				usage();
+			break;
+		case 'p':
+			/*
+			 * TODO: we need to canonize optarg to avoid path
+			 * traversal and other problems.
+			 */
+			cache_set_profile(optarg);
 			break;
 		default:
 			usage();
@@ -95,11 +102,8 @@ int main(int argc, char *argv[]) {
 	if (!do_matrix_send_token())
 		do_matrix_login();
 	else {
-		/*
-		 * TODO: while we don't store the servername in cache,
-		 * hardcode the server we are testing against.
-		 */
-		matrix_set_server("matrix.org");
+		char *server = cache_get_alloc("server");
+		matrix_set_server(server);
 	}
 
 	puts("Performing initial sync...");
@@ -183,6 +187,7 @@ void do_matrix_login(void) {
 		exit(1);
 	}
 	puts("Logged in.");
+	cache_set("server", server);
 	cache_set("access_token", access_token);
 	free((void *)access_token);
 
@@ -198,15 +203,16 @@ void process_room_create(Str *id) {
 		ui_hooks.room_new(id);
 }
 
-void process_room_name(Str *roomid, Str *name) {
+void process_room_info(Str *roomid, Str *sender, Str *name) {
 	Room *room = room_byid(roomid);
-	room_set_name(room, name);
+	room_set_info(room, sender, name);
 }
 
-void process_room_join(Str *roomid, Str *sender) {
+void process_room_join(Str *roomid, Str *senderid, Str *sendername) {
 	Room *room = room_byid(roomid);
 	assert(room);
-	room_append_user(room, sender);
+	room_append_user(room, senderid);
+	user_add(senderid, sendername);
 }
 
 void process_msg(Str *roomid, Str *sender, Str *text) {
@@ -220,17 +226,27 @@ void handle_matrix_event(MatrixEvent ev) {
 	case EVENT_ROOM_CREATE:
 		process_room_create(ev.roomcreate.id);
 		break;
-	case EVENT_ROOM_NAME:
-		process_room_name(ev.roomname.id, ev.roomname.name);
+	case EVENT_ROOM_INFO:
+		process_room_info(ev.roominfo.id,
+			ev.roominfo.sender, ev.roominfo.name);
+		break;
+	case EVENT_ROOM_NOTIFY_STATUS:
+		{
+		Room *room = room_byid(ev.roomnotifystatus.roomid);
+		/* TODO: why there are room push_rules if the room is not created? */
+		if (!room)
+			return;
+		room->notify = ev.roomnotifystatus.enabled;
+		}
 		break;
 	case EVENT_ROOM_JOIN:
 		process_room_join(ev.roomjoin.roomid,
-			ev.roomjoin.sender);
+			ev.roomjoin.senderid, ev.roomjoin.sendername);
 		break;
 	case EVENT_MSG:
 		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);
 		break;
-	case EVENT_ERROR:
+	case EVENT_MATRIX_ERROR:
 		printf("%s\n", str_buf(ev.error.error));
 		exit(1);
 		break;

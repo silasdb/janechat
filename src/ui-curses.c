@@ -23,11 +23,24 @@
  */
 struct buffer {
 	Room *room;
-	char buf[256]; /* Input buffer. TODO: use Str? */
+	char buf[1024]; /* Input buffer. TODO: use Str? */
 	size_t pos; /* Cursor position */
 	size_t len; /* String length - does not include the null byte */
 	size_t left; /* left-most character index showed in the input window */
 	size_t right; /* right-most character index showed in the input window*/
+
+	/*
+	 * Updated whenever someone leaves the chat window to the index window,
+	 * so when the user comes back, he gets a line dividing messages in
+	 * already read messages and unread messages. It is -1 if disabled.
+	 */
+	int read_separator;
+
+	/*
+	 * User defined separator that is set with the /line command. -1 if
+	 * disabled.
+	 */
+	int user_separator;
 
 	/*
 	 * As messages text are rendered backwards (on the wchat_msgs window),
@@ -109,7 +122,8 @@ int buffer_comparison(const void *a, const void *b) {
 	const struct buffer **x = (const struct buffer **)a;
 	const struct buffer **y = (const struct buffer **)b;
 	int res;
-	res = strcmp(str_buf((*x)->room->name), str_buf((*y)->room->name));
+	res = strcmp(str_buf(room_displayname((*x)->room)),
+		str_buf(room_displayname((*y)->room)));
 	if (res)
 		return res;
 	/*
@@ -127,6 +141,7 @@ void set_cur_buffer(struct buffer *buffers) {
 	cur_buffer->left = 0;
 	cur_buffer->right = maxx-1;
 	cur_buffer->room->unread_msgs = 0;
+	cur_buffer->last_line = -1;
 }
 
 void set_focus(enum Focus f) {
@@ -220,7 +235,7 @@ void index_next_unread(int direction) {
 		index_cursor_inc(direction);
 		struct buffer *b;
 		b = vector_at(buffers, index_idx);
-		if (b->room->unread_msgs > 0)
+		if (b->room->unread_msgs > 0 && b->room->notify)
 			break;
 	} while (idx != index_idx);
 }
@@ -263,13 +278,14 @@ void index_draw(void) {
 		tb = vector_at(buffers, i);
 		if (index_idx == i)
 			wattron(windex, A_REVERSE); 
-		if (tb->room->unread_msgs > 0)
+		if (tb->room->unread_msgs > 0 && tb->room->notify)
 			wattron(windex, A_BOLD);
 		mvwprintw(windex, i-top, 0, "%s (%zu)",
-			tb->room->name->buf, tb->room->unread_msgs);
+			str_buf(room_displayname(tb->room)),
+			tb->room->unread_msgs);
 		if (index_idx == i)
 			wattroff(windex, A_REVERSE); 
-		if (tb->room->unread_msgs > 0)
+		if (tb->room->unread_msgs > 0 && tb->room->notify)
 			wattroff(windex, A_BOLD);
 	}
 	wrefresh(windex);
@@ -319,33 +335,57 @@ void chat_drawline(void) {
 	mvwhline(wchat, maxy-2, 0, '-', maxx);
 }
 
+int text_height(const Str *sender, const Str *text, int width) {
+	/* TODO: still need to consider UTF-8 characters */
+	int height = 1;
+	int w = str_len(sender) + 2; /* +2 because of ": " */
+	char *c;
+	for (c = str_buf(text); *c != '\0'; c++, w++)
+		if (*c == '\n' || w >= width) {
+			height++;
+			w = 0;
+		}
+	return height;
+}
+
 void chat_msgs_fill(void) {
 	werase(wchat_msgs);
-	int last = -1;
-	if (cur_buffer->last_line == -1)
+	int last = cur_buffer->last_line;
+	if (last == -1)
 		last = vector_len(cur_buffer->room->msgs)-1;
 	if (last < 0)
 		return;
 	int maxy, maxx;
 	getmaxyx(wchat_msgs, maxy, maxx);
-	/*
-	 * We make a naive calculation of line height and print them backwards.
-	 * TODO: consider that a message can have a line break.
-	 */
 	int y = maxy;
 	for (ssize_t i = last; i >= 0; i--) {
 		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
-		size_t len;
-		len = str_len(msg->sender);
-		len += 2; /* collon between sender and text */
-		len += str_len(msg->text);
-		int height = len / maxx;
-		height++;
+		if (cur_buffer->read_separator == i+1
+		&&  cur_buffer->read_separator != vector_len(cur_buffer->room->msgs)) {
+			y--;
+			wattron(wchat_msgs, COLOR_PAIR(1));
+			mvwhline(wchat_msgs, y, 0, '-', maxx);
+			wattroff(wchat_msgs, COLOR_PAIR(1));
+		}
+		if (cur_buffer->user_separator == i) {
+			y--;
+			wattron(wchat_msgs, COLOR_PAIR(2));
+			mvwhline(wchat_msgs, y, 0, '-', maxx);
+			wattroff(wchat_msgs, COLOR_PAIR(2));
+		}
+		int height = text_height(msg->sender, msg->text, maxx);
 		y -= height;
 		if (y < 0)
 			break;
-		mvwprintw(wchat_msgs, y, 0, "%s: %s\n",
-			str_buf(msg->sender), str_buf(msg->text));
+
+		wattron(wchat_msgs, COLOR_PAIR(1));
+		mvwprintw(wchat_msgs, y, 0, "%s",
+			str_buf(user_name(msg->sender)));
+
+		/* TODO: why does it set background to COLOR_BLACK? */
+		wattroff(wchat_msgs, COLOR_PAIR(1));
+
+		wprintw(wchat_msgs, ": %s", str_buf(msg->text));
 	}
 	wrefresh(wchat_msgs);
 }
@@ -408,13 +448,43 @@ void chat_input_key(void) {
 		chat_input_cursor_inc(+1);
 		break;
 	case CTRL('g'):
+		cur_buffer->read_separator = vector_len(cur_buffer->room->msgs);
 		set_focus(FOCUS_INDEX);
 		return;
+		break;
+	case CTRL('b'):
+		{
+			if (cur_buffer->last_line == -1)
+				cur_buffer->last_line = vector_len(cur_buffer->room->msgs);
+			int maxy, maxx;
+			getmaxyx(wchat_msgs, maxy, maxx);
+			maxy /= 2;
+			cur_buffer->last_line -= maxy;
+			chat_msgs_fill();
+			return;
+		}
+		break;
+	case CTRL('f'):
+		{
+			if (cur_buffer->last_line == -1)
+				return;
+			int maxy, maxx;
+			getmaxyx(wchat_msgs, maxy, maxx);
+			maxy /= 2;
+			cur_buffer->last_line += maxy;
+			if (cur_buffer->last_line >= vector_len(cur_buffer->room->msgs))
+				cur_buffer->last_line = -1;
+			chat_msgs_fill();
+			return;
+		}
 		break;
 	case 10: /* LF */
 	case 13: /* CR */
 		if (streq(cur_buffer->buf, "/quit")) {
 			set_focus(FOCUS_INDEX);
+		} else if (streq(cur_buffer->buf, "/line")) {
+			cur_buffer->user_separator = vector_len(cur_buffer->room->msgs)-1;
+			chat_msgs_fill();
 		} else {
 			send_msg();
 		}
@@ -460,8 +530,17 @@ void ui_curses_init(void) {
 	keypad(windex, TRUE);
 	keypad(wchat_input, TRUE);
 
+	start_color();
+	use_default_colors();
+	init_pair(1, COLOR_GREEN, -1);
+	init_pair(2, COLOR_YELLOW, -1);
+
 	signal(SIGINT, handle_sigint);
 	signal(SIGWINCH, handle_sigwinch);
+	/*
+	 * TODO: by having vector_sort() here, it doesn't sort new rooms that we
+	 * can join after starting janechat.
+	 */
 	vector_sort(buffers, buffer_comparison);
 	resize();
 }
