@@ -463,6 +463,15 @@ void input_cursor_show(void) {
 }
 
 bool input_key_index(int c) {
+	switch (c) {
+	case 10:
+	case 13:
+		input_clear();
+		return true;
+	case CTRL('g'):
+		input_clear();
+		focus = FOCUS_INDEX;
+	}
 	return false;
 }
 
