@@ -512,8 +512,8 @@ bool input_key_chat(int c) {
 			send_msg();
 		}
 		input_clear();
-		break;
 		return true;
+		break;
 	}
 	return false;
 }
