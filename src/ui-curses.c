@@ -635,7 +635,7 @@ int main(int argc, char *argv[]) {
 	id_s = str_new_cstr(id); \
 	name_s = str_new_cstr(name); \
 	room = room_new(id_s); \
-	room_set_name(room, name_s); \
+	room_set_info(room, str_new_cstr("@example:matrix.org"), name_s); \
 	ui_curses_room_new(id_s);
 
 	new_room("#test1:matrix.org", "Test A");
