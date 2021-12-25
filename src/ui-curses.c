@@ -57,13 +57,14 @@ WINDOW *windex; /* The index window - that shows rooms */
 WINDOW *wchat; /* The chat window, that show room messages and the input field */
 WINDOW *wchat_msgs; /* A subwindow for the chat window: show messages received */
 WINDOW *wchat_status; /* A subwindow for the chat window: show room status bar */
-WINDOW *wchat_input; /* A subwindow for the chat window: input */
+WINDOW *winput; /* A window for input common to both windex and wchat */
 
 enum Focus {
 	/* Focus is on the index window */
 	FOCUS_INDEX,
 	/* wchat window is visible and focus is on its input subwindow */
 	FOCUS_CHAT_INPUT,
+	FOCUS_INDEX_INPUT,
 } focus = FOCUS_INDEX;
 
 /* A vector of struct buffer. Used in the index window */
@@ -71,6 +72,8 @@ Vector *buffers = NULL; /* Vector<struct buffer> */
 
 /* Current buffer selected. NULL if focus is in index window */
 struct buffer *cur_buffer = NULL;
+
+struct buffer index_input_buffer;
 
 /*
  * Index for the current selected buffer. This is used not only to index buffers
@@ -138,12 +141,14 @@ int buffer_comparison(const void *a, const void *b) {
 void set_cur_buffer(struct buffer *buffers) {
 	cur_buffer = buffers;
 	int maxy, maxx;
-	getmaxyx(wchat_input, maxy, maxx);
+	getmaxyx(winput, maxy, maxx);
 	(void)maxy;
 	cur_buffer->left = 0;
 	cur_buffer->right = maxx-1;
-	cur_buffer->room->unread_msgs = 0;
-	cur_buffer->last_line = -1;
+	if (cur_buffer->room) {
+		cur_buffer->room->unread_msgs = 0;
+		cur_buffer->last_line = -1;
+	}
 }
 
 void set_focus(enum Focus f) {
@@ -168,6 +173,10 @@ void set_focus(enum Focus f) {
 		index_draw();
 		wrefresh(windex);
 		break;
+	case FOCUS_INDEX_INPUT:
+		wmove(winput, 0, 0);
+		wrefresh(winput);
+		break;
 	case FOCUS_CHAT_INPUT:
 		chat_msgs_fill();
 		chat_draw_statusbar();
@@ -184,8 +193,8 @@ void resize(void) {
 	wresize(windex, maxy, maxx);
 	wresize(wchat, maxy, maxx);
 	wresize(wchat_msgs, maxy-2, maxx);
-	wresize(wchat_input, 1, maxx);
-	mvwin(wchat_input, maxy-1, 0);
+	wresize(winput, 1, maxx);
+	mvwin(winput, maxy-1, 0);
 	switch (focus) {
 	case FOCUS_CHAT_INPUT:
 		chat_msgs_fill();
@@ -334,6 +343,10 @@ void index_key(void) {
 		index_next_unread(+1);
 		index_draw();
 		break;
+	case ':':
+		set_cur_buffer(&index_input_buffer);
+		set_focus(FOCUS_INDEX_INPUT);
+		break;
 	case 10:
 	case 13:
 		/* TODO: what if buffers is empty? */
@@ -420,12 +433,12 @@ void chat_input_clear(void) {
 }
 
 void chat_input_redraw(void) {
-	werase(wchat_input);
-	mvwprintw(wchat_input, 0, 0, "%.*s",
+	werase(winput);
+	mvwprintw(winput, 0, 0, "%.*s",
 		(int)(cur_buffer->right - cur_buffer->left + 1),
 		&cur_buffer->buf[cur_buffer->left]);
-	wmove(wchat_input, 0, cur_buffer->pos - cur_buffer->left);
-	wrefresh(wchat_input);
+	wmove(winput, 0, cur_buffer->pos - cur_buffer->left);
+	wrefresh(winput);
 }
 
 void chat_input_cursor_inc(int offset) {
@@ -449,8 +462,8 @@ void chat_input_cursor_show(void) {
 	}
 }
 
-void chat_input_key(void) {
-	int c = wgetch(wchat_input);
+void input_key(void) {
+	int c = wgetch(winput);
 	switch (c) {
 	case 127: /* TODO: why do I need this in urxvt but not in xterm? - https://bbs.archlinux.org/viewtopic.php?id=56427*/
 	case KEY_BACKSPACE:
@@ -545,13 +558,13 @@ void ui_curses_init(void) {
 	int maxy, maxx;
 	getmaxyx(stdscr, maxy, maxx);
 
-	wchat = newwin(maxy, maxx, 0, 0);
-	windex = newwin(maxy, maxx, 0, 0);
+	wchat = newwin(maxy-1, maxx, 0, 0);
+	windex = newwin(maxy-1, maxx, 0, 0);
 	wchat_msgs = subwin(wchat, maxy-2, maxx, 0, 0);
 	wchat_status = subwin(wchat, 1, maxx, maxy-2, 0);
-	wchat_input = subwin(wchat, 1, maxx, maxy-1, 0);
+	winput = newwin(1, maxx, maxy-1, 0);
 	keypad(windex, TRUE);
-	keypad(wchat_input, TRUE);
+	keypad(winput, TRUE);
 
 	start_color();
 	use_default_colors();
@@ -579,8 +592,9 @@ void ui_curses_iter(void) {
 	case FOCUS_INDEX:
 		index_key();
 		break;
+	case FOCUS_INDEX_INPUT:
 	case FOCUS_CHAT_INPUT:
-		chat_input_key();
+		input_key();
 		break;
 	}
 }
