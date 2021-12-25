@@ -51,10 +51,12 @@ struct buffer {
 };
 
 bool curses_init = false; /* Did we started curses? */
+bool autopilot = false;
 
 WINDOW *windex; /* The index window - that shows rooms */
 WINDOW *wchat; /* The chat window, that show room messages and the input field */
 WINDOW *wchat_msgs; /* A subwindow for the chat window: show messages received */
+WINDOW *wchat_status; /* A subwindow for the chat window: show room status bar */
 WINDOW *wchat_input; /* A subwindow for the chat window: input */
 
 enum Focus {
@@ -86,7 +88,7 @@ void index_draw(void);
 void resize(void);
 void index_update_top_bottom(void);
 void chat_input_clear(void);
-void chat_drawline(void);
+void chat_draw_statusbar(void);
 void chat_msgs_fill(void);
 
 /*
@@ -148,6 +150,19 @@ void set_focus(enum Focus f) {
 	focus = f;
 	switch (focus) {
 	case FOCUS_INDEX:
+		if (autopilot) {
+			/* Find the first buffer with unread messages */
+			struct buffer *b;
+			size_t i;
+			VECTOR_FOREACH(buffers, b, i)
+				if (b->room->notify && b->room->unread_msgs) {
+					index_idx = i;
+					set_cur_buffer(b);
+					set_focus(FOCUS_CHAT_INPUT);
+					return;
+				}
+
+		}
 		cur_buffer = NULL;
 		focus = FOCUS_INDEX;
 		index_draw();
@@ -155,7 +170,7 @@ void set_focus(enum Focus f) {
 		break;
 	case FOCUS_CHAT_INPUT:
 		chat_msgs_fill();
-		chat_drawline();
+		chat_draw_statusbar();
 		chat_input_redraw();
 		wrefresh(wchat);
 		break;
@@ -174,13 +189,13 @@ void resize(void) {
 	switch (focus) {
 	case FOCUS_CHAT_INPUT:
 		chat_msgs_fill();
+		chat_draw_statusbar();
 		break;
 	case FOCUS_INDEX:
 		index_update_top_bottom();
 		index_draw();
 		break;
 	}
-	chat_drawline();
 	if (cur_buffer)
 		/* We force a chat_input_redraw of the current buffer input window */
 		set_cur_buffer(cur_buffer);
@@ -303,6 +318,9 @@ void index_key(void) {
 		index_cursor_inc(-1);
 		index_draw();
 		break;
+	case 'M':
+		autopilot = !autopilot;
+		break;
 	case 'j':
 	case KEY_DOWN:
 		index_cursor_inc(+1);
@@ -329,10 +347,12 @@ void index_key(void) {
  * Private functions for wchat window behaviour.
  */
 
-void chat_drawline(void) {
+void chat_draw_statusbar(void) {
 	int maxy, maxx;
 	getmaxyx(wchat, maxy, maxx);
-	mvwhline(wchat, maxy-2, 0, '-', maxx);
+	Str *roomname = room_displayname(cur_buffer->room);
+	mvwprintw(wchat_status, 0, 0, "%s", str_buf(roomname));
+	mvwhline(wchat_status, 0, str_len(roomname), ' ', maxx);
 }
 
 int text_height(const Str *sender, const Str *text, int width) {
@@ -485,6 +505,8 @@ void chat_input_key(void) {
 		} else if (streq(cur_buffer->buf, "/line")) {
 			cur_buffer->user_separator = vector_len(cur_buffer->room->msgs)-1;
 			chat_msgs_fill();
+		} else if (streq(cur_buffer->buf, "/disableautopilot")) {
+			autopilot = false;
 		} else {
 			send_msg();
 		}
@@ -525,7 +547,8 @@ void ui_curses_init(void) {
 
 	wchat = newwin(maxy, maxx, 0, 0);
 	windex = newwin(maxy, maxx, 0, 0);
-	wchat_msgs = subwin(wchat, maxy-1, maxx, 0, 0);
+	wchat_msgs = subwin(wchat, maxy-2, maxx, 0, 0);
+	wchat_status = subwin(wchat, 1, maxx, maxy-2, 0);
 	wchat_input = subwin(wchat, 1, maxx, maxy-1, 0);
 	keypad(windex, TRUE);
 	keypad(wchat_input, TRUE);
@@ -534,6 +557,9 @@ void ui_curses_init(void) {
 	use_default_colors();
 	init_pair(1, COLOR_GREEN, -1);
 	init_pair(2, COLOR_YELLOW, -1);
+	init_pair(3, COLOR_WHITE, COLOR_BLUE);
+
+	wattron(wchat_status, COLOR_PAIR(3));
 
 	signal(SIGINT, handle_sigint);
 	signal(SIGWINCH, handle_sigwinch);
@@ -580,7 +606,18 @@ void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
 		return;
 	if (focus == FOCUS_INDEX) {
 		index_draw(); /* Update window */
-		return;
+		if (autopilot) {
+			/* Find the buffer `b` that holds `room` */
+			struct buffer *b;
+			size_t i;
+			VECTOR_FOREACH(buffers, b, i)
+				if (b->room == room && room->notify) {
+					index_idx = i;
+					set_cur_buffer(b);
+					set_focus(FOCUS_CHAT_INPUT);
+					break;
+				}
+		}
 	}
 	/* TODO: what about other parameters? */
 	if (cur_buffer && cur_buffer->room == room) {
@@ -607,7 +644,7 @@ int main(int argc, char *argv[]) {
 	id_s = str_new_cstr(id); \
 	name_s = str_new_cstr(name); \
 	room = room_new(id_s); \
-	room_set_name(room, name_s); \
+	room_set_info(room, str_new_cstr("@example:matrix.org"), name_s); \
 	ui_curses_room_new(id_s);
 
 	new_room("#test1:matrix.org", "Test A");
