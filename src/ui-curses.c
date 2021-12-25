@@ -155,6 +155,7 @@ void set_focus(enum Focus f) {
 			size_t i;
 			VECTOR_FOREACH(buffers, b, i)
 				if (b->room->notify && b->room->unread_msgs) {
+					index_idx = i;
 					set_cur_buffer(b);
 					set_focus(FOCUS_CHAT_INPUT);
 					return;
@@ -604,6 +605,7 @@ void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
 			size_t i;
 			VECTOR_FOREACH(buffers, b, i)
 				if (b->room == room && room->notify) {
+					index_idx = i;
 					set_cur_buffer(b);
 					set_focus(FOCUS_CHAT_INPUT);
 					break;
