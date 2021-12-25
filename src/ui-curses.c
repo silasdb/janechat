@@ -327,9 +327,6 @@ void index_key(void) {
 		index_cursor_inc(-1);
 		index_draw();
 		break;
-	case 'M':
-		autopilot = !autopilot;
-		break;
 	case 'j':
 	case KEY_DOWN:
 		index_cursor_inc(+1);
@@ -466,11 +463,15 @@ bool input_key_index(int c) {
 	switch (c) {
 	case 10:
 	case 13:
-		input_clear();
-		return true;
+		if (streq(cur_buffer->buf, "set autopilot"))
+			autopilot = true;
+		if (streq(cur_buffer->buf, "unset autopilot"))
+			autopilot = false;
+		/* FALLTHROUGH */
 	case CTRL('g'):
 		input_clear();
 		focus = FOCUS_INDEX;
+		return true;
 	}
 	return false;
 }
