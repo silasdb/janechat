@@ -73,7 +73,7 @@ Vector *buffers = NULL; /* Vector<struct buffer> */
 /* Current buffer selected. NULL if focus is in index window */
 struct buffer *cur_buffer = NULL;
 
-struct buffer index_input_buffer;
+struct buffer index_input_buffer = { .room = NULL };
 
 /*
  * Index for the current selected buffer. This is used not only to index buffers
@@ -85,12 +85,12 @@ size_t index_idx = 0;
 size_t top = 0;
 size_t bottom = 0;
 
-void chat_input_redraw(void);
+void input_redraw(void);
 void set_focus(enum Focus);
 void index_draw(void);
 void resize(void);
 void index_update_top_bottom(void);
-void chat_input_clear(void);
+void input_clear(void);
 void chat_draw_statusbar(void);
 void chat_msgs_fill(void);
 
@@ -100,7 +100,7 @@ void chat_msgs_fill(void);
  */
 void handle_sigint(int sig) {
 	(void)sig;
-	chat_input_clear();
+	input_clear();
 }
 
 /*
@@ -180,7 +180,7 @@ void set_focus(enum Focus f) {
 	case FOCUS_CHAT_INPUT:
 		chat_msgs_fill();
 		chat_draw_statusbar();
-		chat_input_redraw();
+		input_redraw();
 		wrefresh(wchat);
 		break;
 	}
@@ -206,7 +206,7 @@ void resize(void) {
 		break;
 	}
 	if (cur_buffer)
-		/* We force a chat_input_redraw of the current buffer input window */
+		/* We force a input_redraw of the current buffer input window */
 		set_cur_buffer(cur_buffer);
 }
 
@@ -423,16 +423,16 @@ void chat_msgs_fill(void) {
 	wrefresh(wchat_msgs);
 }
 
-void chat_input_clear(void) {
+void input_clear(void) {
 	if (!cur_buffer)
 		return;
 	cur_buffer->buf[0] = '\0';
 	cur_buffer->pos = 0;
 	cur_buffer->len = 0;
-	chat_input_redraw();
+	input_redraw();
 }
 
-void chat_input_redraw(void) {
+void input_redraw(void) {
 	werase(winput);
 	mvwprintw(winput, 0, 0, "%.*s",
 		(int)(cur_buffer->right - cur_buffer->left + 1),
@@ -441,7 +441,7 @@ void chat_input_redraw(void) {
 	wrefresh(winput);
 }
 
-void chat_input_cursor_inc(int offset) {
+void input_cursor_inc(int offset) {
 	if (cur_buffer->pos + offset < 0)
 		return;
 	if (cur_buffer->pos + offset > cur_buffer->len)
@@ -449,7 +449,7 @@ void chat_input_cursor_inc(int offset) {
 	cur_buffer->pos += offset;
 }
 
-void chat_input_cursor_show(void) {
+void input_cursor_show(void) {
 	size_t *pos = &cur_buffer->pos;
 	size_t *left = &cur_buffer->left;
 	size_t *right = &cur_buffer->right;
@@ -462,28 +462,16 @@ void chat_input_cursor_show(void) {
 	}
 }
 
-void input_key(void) {
-	int c = wgetch(winput);
+bool input_key_index(int c) {
+	return false;
+}
+
+bool input_key_chat(int c) {
 	switch (c) {
-	case 127: /* TODO: why do I need this in urxvt but not in xterm? - https://bbs.archlinux.org/viewtopic.php?id=56427*/
-	case KEY_BACKSPACE:
-		if (cur_buffer->pos == 0)
-			break;
-		for (size_t i = cur_buffer->pos-1; i < cur_buffer->len; i++)
-			cur_buffer->buf[i] = cur_buffer->buf[i+1];
-		cur_buffer->pos--;
-		cur_buffer->len--;
-		break;
-	case KEY_LEFT:
-		chat_input_cursor_inc(-1);
-		break;
-	case KEY_RIGHT:
-		chat_input_cursor_inc(+1);
-		break;
 	case CTRL('g'):
 		cur_buffer->read_separator = vector_len(cur_buffer->room->msgs);
 		set_focus(FOCUS_INDEX);
-		return;
+		return true;
 		break;
 	case CTRL('b'):
 		{
@@ -494,7 +482,7 @@ void input_key(void) {
 			maxy /= 2;
 			cur_buffer->last_line -= maxy;
 			chat_msgs_fill();
-			return;
+			return true;
 		}
 		break;
 	case CTRL('f'):
@@ -508,7 +496,7 @@ void input_key(void) {
 			if (cur_buffer->last_line >= vector_len(cur_buffer->room->msgs))
 				cur_buffer->last_line = -1;
 			chat_msgs_fill();
-			return;
+			return true;
 		}
 		break;
 	case 10: /* LF */
@@ -523,19 +511,50 @@ void input_key(void) {
 		} else {
 			send_msg();
 		}
-		chat_input_clear();
+		input_clear();
+		break;
+		return true;
+	}
+	return false;
+}
+
+void input_key_common(int c) {
+	switch (c) {
+	case 127: /* TODO: why do I need this in urxvt but not in xterm? - https://bbs.archlinux.org/viewtopic.php?id=56427*/
+	case KEY_BACKSPACE:
+		if (cur_buffer->pos == 0)
+			break;
+		for (size_t i = cur_buffer->pos-1; i < cur_buffer->len; i++)
+			cur_buffer->buf[i] = cur_buffer->buf[i+1];
+		cur_buffer->pos--;
+		cur_buffer->len--;
+		break;
+	case KEY_LEFT:
+		input_cursor_inc(-1);
+		break;
+	case KEY_RIGHT:
+		input_cursor_inc(+1);
 		break;
 	default:
 		for (size_t i = cur_buffer->len; i > cur_buffer->pos; i--)
 			cur_buffer->buf[i] = cur_buffer->buf[i-1];
 		cur_buffer->buf[cur_buffer->pos] = c;
 		cur_buffer->len++;
-		chat_input_cursor_inc(+1);
+		input_cursor_inc(+1);
 		break;
 	}
+}
+
+void input_key(void) {
+	int c = wgetch(winput);
+	if (focus == FOCUS_INDEX_INPUT && input_key_index(c))
+		return;
+	else if (focus == FOCUS_CHAT_INPUT && input_key_chat(c))
+		return;
+	input_key_common(c);
 	cur_buffer->buf[cur_buffer->len] = '\0';
-	chat_input_cursor_show();
-	chat_input_redraw();
+	input_cursor_show();
+	input_redraw();
 }
 
 /*
