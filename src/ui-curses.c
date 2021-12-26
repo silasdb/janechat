@@ -200,6 +200,7 @@ void resize(void) {
 		chat_msgs_fill();
 		chat_draw_statusbar();
 		break;
+	case FOCUS_INDEX_INPUT:
 	case FOCUS_INDEX:
 		index_update_top_bottom();
 		index_draw();
@@ -254,7 +255,7 @@ void index_cursor_inc(int offset) {
 
 /* Jump to the next room with unread message. Cursor wraps around. */
 void index_next_unread(int direction) {
-	int idx = index_idx;
+	size_t idx = index_idx;
 	do  {
 		index_cursor_inc(direction);
 		struct buffer *b;
@@ -291,8 +292,8 @@ void index_draw(void) {
 		top = index_idx;
 	}
 
-	assert(top >= 0 && top < vector_len(buffers));
-	assert(bottom >= 0 && bottom < vector_len(buffers));
+	assert(top < vector_len(buffers));
+	assert(bottom < vector_len(buffers));
 	assert(index_idx >= top && index_idx <= bottom);
 
 	/* Draw the window */
@@ -359,6 +360,7 @@ void index_key(void) {
 
 void chat_draw_statusbar(void) {
 	int maxy, maxx;
+	(void)maxy;
 	getmaxyx(wchat, maxy, maxx);
 	Str *roomname = room_displayname(cur_buffer->room);
 	mvwprintw(wchat_status, 0, 0, "%s", str_buf(roomname));
@@ -369,7 +371,7 @@ int text_height(const Str *sender, const Str *text, int width) {
 	/* TODO: still need to consider UTF-8 characters */
 	int height = 1;
 	int w = str_len(sender) + 2; /* +2 because of ": " */
-	char *c;
+	const char *c;
 	for (c = str_buf(text); *c != '\0'; c++, w++)
 		if (*c == '\n' || w >= width) {
 			height++;
@@ -391,7 +393,7 @@ void chat_msgs_fill(void) {
 	for (ssize_t i = last; i >= 0; i--) {
 		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
 		if (cur_buffer->read_separator == i+1
-		&&  cur_buffer->read_separator != vector_len(cur_buffer->room->msgs)) {
+		&&  cur_buffer->read_separator != (int)vector_len(cur_buffer->room->msgs)) {
 			y--;
 			wattron(wchat_msgs, COLOR_PAIR(1));
 			mvwhline(wchat_msgs, y, 0, '-', maxx);
@@ -439,7 +441,7 @@ void input_redraw(void) {
 }
 
 void input_cursor_inc(int offset) {
-	if (cur_buffer->pos + offset < 0)
+	if ((int)cur_buffer->pos + offset < 0)
 		return;
 	if (cur_buffer->pos + offset > cur_buffer->len)
 		return;
@@ -488,6 +490,7 @@ bool input_key_chat(int c) {
 			if (cur_buffer->last_line == -1)
 				cur_buffer->last_line = vector_len(cur_buffer->room->msgs);
 			int maxy, maxx;
+			(void)maxx;
 			getmaxyx(wchat_msgs, maxy, maxx);
 			maxy /= 2;
 			cur_buffer->last_line -= maxy;
@@ -498,12 +501,13 @@ bool input_key_chat(int c) {
 	case CTRL('f'):
 		{
 			if (cur_buffer->last_line == -1)
-				return;
+				return true;
 			int maxy, maxx;
+			(void)maxx;
 			getmaxyx(wchat_msgs, maxy, maxx);
 			maxy /= 2;
 			cur_buffer->last_line += maxy;
-			if (cur_buffer->last_line >= vector_len(cur_buffer->room->msgs))
+			if (cur_buffer->last_line >= (int)vector_len(cur_buffer->room->msgs))
 				cur_buffer->last_line = -1;
 			chat_msgs_fill();
 			return true;
@@ -645,6 +649,8 @@ void ui_curses_room_new(Str *roomid) {
 }
 
 void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
+	(void)sender; /* TODO: why is it unused? */
+	(void)msg; /* TODO: why is it unused? */
 	if (!curses_init)
 		return;
 	if (focus == FOCUS_INDEX) {
