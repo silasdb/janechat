@@ -317,6 +317,7 @@ static void process_room_event(json_t *item, const char *roomid) {
 		event.roomjoin.senderid =
 			str_new_cstr(json_string_value(sender));
 		json_t *name = json_path(item, "content", "displayname", NULL);
+		assert(name);
 		event.roomjoin.sendername =
 			str_new_cstr(json_string_value(name));
 		event_handler_callback(event);
