@@ -85,7 +85,12 @@ void room_append_user(Room *room, Str *sender) {
 }
 
 void user_add(Str *id, Str *name) {
-	str_incref(name);
+	/*
+	 * Maybe the user didn't specify its human readable name. Store NULL in
+	 * users_hash anyway.
+	 */
+	if (name)
+		str_incref(name);
 	hash_insert(users_hash, str_buf(id), name);
 }
 
