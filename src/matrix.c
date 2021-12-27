@@ -317,9 +317,12 @@ static void process_room_event(json_t *item, const char *roomid) {
 		event.roomjoin.senderid =
 			str_new_cstr(json_string_value(sender));
 		json_t *name = json_path(item, "content", "displayname", NULL);
-		assert(name);
-		event.roomjoin.sendername =
-			str_new_cstr(json_string_value(name));
+		/* TODO: See: https://spec.matrix.org/latest/client-server-api/#calculating-the-display-name-for-a-user */
+		if (name)
+			event.roomjoin.sendername =
+				str_new_cstr(json_string_value(name));
+		else
+			event.roomjoin.sendername = NULL;
 		event_handler_callback(event);
 		str_decref(event.roomjoin.roomid);
 		str_decref(event.roomjoin.senderid);
