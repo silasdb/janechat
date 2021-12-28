@@ -168,7 +168,7 @@ void set_focus(enum Focus f) {
 				}
 
 		}
-		cur_buffer = NULL;
+		cur_buffer = &index_input_buffer;
 		focus = FOCUS_INDEX;
 		index_draw();
 		wrefresh(windex);
@@ -180,25 +180,32 @@ void set_focus(enum Focus f) {
 	case FOCUS_CHAT_INPUT:
 		chat_msgs_fill();
 		chat_draw_statusbar();
-		input_redraw();
 		wrefresh(wchat);
 		break;
 	}
+	input_redraw();
 }
 
 void resize(void) {
 	int maxy, maxx;
+
 	clear();
 	getmaxyx(stdscr, maxy, maxx);
-	wresize(windex, maxy, maxx);
-	wresize(wchat, maxy, maxx);
+
+	wresize(windex, maxy-1, maxx);
+	wresize(wchat, maxy-1, maxx);
 	wresize(wchat_msgs, maxy-2, maxx);
+	mvwin(wchat_status, maxy-2, 0);
+	wresize(wchat_status, 1, maxx);
+
 	wresize(winput, 1, maxx);
 	mvwin(winput, maxy-1, 0);
+
 	switch (focus) {
 	case FOCUS_CHAT_INPUT:
 		chat_msgs_fill();
 		chat_draw_statusbar();
+		input_redraw();
 		break;
 	case FOCUS_INDEX_INPUT:
 	case FOCUS_INDEX:
@@ -319,6 +326,9 @@ void index_draw(void) {
 void index_key(void) {
 	int c = wgetch(windex);
 	switch (c) {
+	case KEY_RESIZE:
+		resize();
+		break;
 	case 'Q':
 		endwin();
 		exit(0);
@@ -365,6 +375,7 @@ void chat_draw_statusbar(void) {
 	Str *roomname = room_displayname(cur_buffer->room);
 	mvwprintw(wchat_status, 0, 0, "%s", str_buf(roomname));
 	mvwhline(wchat_status, 0, str_len(roomname), ' ', maxx);
+	wrefresh(wchat_status);
 }
 
 int text_height(const Str *sender, const Str *text, int width) {
@@ -561,6 +572,11 @@ void input_key_common(int c) {
 
 void input_key(void) {
 	int c = wgetch(winput);
+	if (c == KEY_RESIZE) {
+		resize();
+		return;
+	}
+
 	if (focus == FOCUS_INDEX_INPUT && input_key_index(c))
 		return;
 	else if (focus == FOCUS_CHAT_INPUT && input_key_chat(c))
