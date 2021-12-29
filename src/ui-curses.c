@@ -116,7 +116,7 @@ void handle_sigwinch(int sig) {
 	endwin();
 	refresh();
 	index_update_top_bottom();
-	resize();
+	ui_curses_iter(); /* To handle KEY_RESIZE */
 }
 
 /*
