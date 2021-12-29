@@ -8,6 +8,7 @@
 #include <curses.h>
 
 #include "ui.h"
+#include "ui-curses.h"
 #include "rooms.h"
 #include "str.h"
 #include "vector.h"

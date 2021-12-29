@@ -1,6 +1,8 @@
 #ifndef JANECHAT_UI_CURSES_H
 #define JANECHAT_UI_CURSES_H
 
+#include "rooms.h"
+
 void ui_curses_setup(void);
 void ui_curses_init(void);
 void ui_curses_iter(void);
