@@ -16,7 +16,7 @@ struct UiEvent {
 			Str *text;
 		} msg;
 		/*
-		 * UIEVENTTYPE_SYNC and UIEVENTTYPE_NONE have an associated
+		 * UIEVENTTYPE_SYNC has an associated
 		 * empty struct.
 		 */
 	};
