@@ -1,5 +1,5 @@
-#ifndef MATRIXEV
-#define MATRIXEV
+#ifndef JANECHAT_MATRIX_H
+#define JANECHAT_MATRIX_H
 
 #include <fcntl.h>
 
@@ -71,4 +71,4 @@ enum SelectStatus select_matrix_stdin();
 
 extern fd_set fdread;
 
-#endif
+#endif /* !JANECHAT_MATRIX_H */
