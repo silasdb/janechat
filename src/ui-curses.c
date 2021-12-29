@@ -104,22 +104,6 @@ void handle_sigint(int sig) {
 }
 
 /*
- * A SIGWINCH handler to redraw everything after terminal resize.
- */
-void handle_sigwinch(int sig) {
-	(void)sig;
-	/*
-	 * endwin(); refresh(); needs to be called in the correct order, in
-	 * order to make curses initialize its internal data structures
-	 * correctly.
-	 */
-	endwin();
-	refresh();
-	index_update_top_bottom();
-	resize();
-}
-
-/*
  * Private helper functions
  */
 
@@ -612,6 +596,8 @@ void ui_curses_init(void) {
 	wchat_msgs = subwin(wchat, maxy-2, maxx, 0, 0);
 	wchat_status = subwin(wchat, 1, maxx, maxy-2, 0);
 	winput = newwin(1, maxx, maxy-1, 0);
+	wtimeout(windex, 1000);
+	wtimeout(winput, 1000);
 	keypad(windex, TRUE);
 	keypad(winput, TRUE);
 
@@ -624,7 +610,6 @@ void ui_curses_init(void) {
 	wattron(wchat_status, COLOR_PAIR(3));
 
 	signal(SIGINT, handle_sigint);
-	signal(SIGWINCH, handle_sigwinch);
 	/*
 	 * TODO: by having vector_sort() here, it doesn't sort new rooms that we
 	 * can join after starting janechat.
