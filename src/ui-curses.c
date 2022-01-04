@@ -438,6 +438,7 @@ void input_clear(void) {
 	if (!cur_buffer)
 		return;
 	cur_buffer->buf[0] = '\0';
+	cur_buffer->left = 0;
 	cur_buffer->pos = 0;
 	cur_buffer->len = 0;
 	input_redraw();
