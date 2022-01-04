@@ -27,8 +27,16 @@ struct buffer {
 	char buf[1024]; /* Input buffer. TODO: use Str? */
 	size_t pos; /* Cursor position */
 	size_t len; /* String length - does not include the null byte */
-	size_t left; /* left-most character index showed in the input window */
-	size_t right; /* right-most character index showed in the input window*/
+
+	/* Left-most character index showed in the input window */
+	size_t left; 
+
+	/*
+	 * This is either the right-most character shown in the input window. If
+	 * the string length is smaller than screen horizontal size, it is the
+	 * screen horizontal size - 1 (maxx-1).
+	 */
+	size_t right;
 
 	/*
 	 * Updated whenever someone leaves the chat window to the index window,
