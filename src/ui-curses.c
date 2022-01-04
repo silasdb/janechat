@@ -445,8 +445,13 @@ void chat_msgs_fill(void) {
 void input_clear(void) {
 	if (!cur_buffer)
 		return;
+	int maxy, maxx;
+	getmaxyx(winput, maxy, maxx);
+	(void)maxy;
+
 	cur_buffer->buf[0] = '\0';
 	cur_buffer->left = 0;
+	cur_buffer->right = maxx-1;
 	cur_buffer->pos = 0;
 	cur_buffer->len = 0;
 	input_redraw();
