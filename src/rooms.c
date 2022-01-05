@@ -35,6 +35,7 @@ Room *room_new(Str *id) {
 	room = malloc(sizeof(Room));
 	room->id = str_incref(id);
 	room->name = NULL;
+	room->displayname = NULL;
 	room->sender = NULL;
 	
 	room->users = vector_new();
@@ -53,9 +54,22 @@ Room *room_byid(const Str *id) {
 Str *room_displayname(Room *r) {
 	if (r->name)
 		return r->name;
-	if (r->sender)
-		return user_name(r->sender);
-	return r->id;
+	if (!r->displayname) {
+		/*
+		 * TODO: very ugly workaround to calculate a room name from its
+		 * members if it doesn't already have a name. In the future we
+		 * should be more serious about that and really implement
+		 * https://spec.matrix.org/latest/client-server-api/#calculating-the-display-name-for-a-room
+		 */
+		Str *displayname = str_new();
+		for (size_t i = 0; i < vector_len(r->users) && i < 5; i++) {
+			str_append(displayname,
+			 user_name(vector_at(r->users, i)));
+			str_append_cstr(displayname, " / ");
+		}
+		r->displayname = displayname;
+	}
+	return r->displayname;
 }
 
 void room_set_info(Room *r, Str *sender, Str *name) {
@@ -81,7 +95,7 @@ void room_append_msg(Room *room, Str *sender, Str *text) {
 }
 
 void room_append_user(Room *room, Str *sender) {
-	vector_append(room->users, (void *)str_buf(str_incref(sender)));
+	vector_append(room->users, str_incref(sender));
 }
 
 void user_add(Str *id, Str *name) {
