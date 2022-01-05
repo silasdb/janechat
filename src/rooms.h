@@ -25,7 +25,10 @@ struct Room {
 	 */
 	Str *sender;
 
-	Vector *users;		/* Vector of joined users */
+	/* This is only used if name is NULL. It is calculated lazely. */
+	Str *displayname;
+
+	Vector *users;		/* Vector of joined users: Vector<Str*> */
 	Vector *msgs;
 	size_t unread_msgs;	/* Should be reset by the caller */
 	bool notify;

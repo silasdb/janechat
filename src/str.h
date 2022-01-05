@@ -25,6 +25,7 @@ inline const char *str_buf(const Str *ss) { return ss->buf; }
 Str *str_new(void);
 Str *str_new_cstr(const char *);
 Str *str_new_len(size_t);
+void str_append(Str *ss, const Str *s);
 void str_append_cstr(Str *ss, const char *s);
 void str_append_cstr_len(Str *ss, const char *s, size_t);
 size_t str_len(const Str *);

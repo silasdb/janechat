@@ -28,6 +28,10 @@ Str *str_new_len(size_t len) {
 	return ss;
 }
 
+void str_append(Str *ss, const Str *s) {
+	str_append_cstr(ss, str_buf(s));
+}
+
 void str_append_cstr(Str *ss, const char *s) {
 	/*
 	 * TODO: It is now O(2*strlen(s))) but we can make it O(strlen(s)) by
