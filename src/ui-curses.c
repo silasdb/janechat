@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <regex.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -332,6 +333,20 @@ void index_draw(void) {
 	wrefresh(windex);
 }
 
+regex_t re;
+
+void index_find_next(int direction) {
+	size_t idx = index_idx;
+	do  {
+		index_cursor_inc(direction);
+		struct buffer *b;
+		b = vector_at(buffers, index_idx);
+		const char *s = str_buf(room_displayname(b->room));
+		if (regexec(&re, s, 0, NULL, 0) == 0)
+			break;
+	} while (idx != index_idx);
+}
+
 void index_key(void) {
 	int c = wgetch(windex);
 	switch (c) {
@@ -362,6 +377,22 @@ void index_key(void) {
 		index_next_unread(+1);
 		index_draw();
 		break;
+	case 'N':
+		/* TODO: only redraw if we found a valid item */
+		index_find_next(-1);
+		index_draw();
+		break;
+	case 'n':
+		/* TODO: only redraw if we found a valid item */
+		index_find_next(+1);
+		index_draw();
+		break;;
+	case '/':
+		index_input_buffer.buf[0] = '/';
+		index_input_buffer.buf[1] = '\0';
+		index_input_buffer.pos = 1;
+		index_input_buffer.len = 1;
+		/* FALLTHROUGH */
 	case ':':
 		set_cur_buffer(&index_input_buffer);
 		set_focus(FOCUS_INDEX_INPUT);
@@ -495,8 +526,15 @@ bool input_key_index(int c) {
 	case 13:
 		if (streq(cur_buffer->buf, "set autopilot"))
 			autopilot = true;
-		if (streq(cur_buffer->buf, "unset autopilot"))
+		else if (streq(cur_buffer->buf, "unset autopilot"))
 			autopilot = false;
+		else if (cur_buffer->buf[0] == '/') {
+			regcomp(&re, &cur_buffer->buf[1],
+				REG_EXTENDED|REG_ICASE|REG_NOSUB);
+			/* TODO: only redraw if we found a valid item */
+			index_find_next(+1);
+			index_draw();
+		}
 		/* FALLTHROUGH */
 	case CTRL('g'):
 		input_clear();
