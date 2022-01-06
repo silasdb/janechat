@@ -353,10 +353,12 @@ void index_key(void) {
 		index_draw();
 		break;
 	case 'K':
+		/* TODO: only redraw if we found a valid item */
 		index_next_unread(-1);
 		index_draw();
 		break;
 	case 'J':
+		/* TODO: only redraw if we found a valid item */
 		index_next_unread(+1);
 		index_draw();
 		break;
