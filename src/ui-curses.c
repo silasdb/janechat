@@ -242,7 +242,8 @@ void send_msg(void) {
 #if UI_CURSES_TEST
 	Msg *msg = malloc(sizeof(struct Msg));
 	msg->sender = str_new_cstr("test");
-	msg->text = str_new_cstr(cur_buffer->buf);
+	msg->type = MSGTYPE_TEXT;
+	msg->text.content = str_new_cstr(cur_buffer->buf);
 	vector_append(cur_buffer->room->msgs, msg);
 	chat_msgs_fill();
 #else
@@ -458,7 +459,11 @@ void chat_msgs_fill(void) {
 			mvwhline(wchat_msgs, y, 0, '-', maxx);
 			wattroff(wchat_msgs, COLOR_PAIR(2));
 		}
-		int height = text_height(msg->sender, msg->text, maxx);
+		int height;
+		if (msg->type == MSGTYPE_TEXT)
+			height = text_height(msg->sender, msg->text.content, maxx);
+		else
+			height = 1; /* TODO */
 		y -= height;
 		if (y < 0)
 			break;
@@ -470,7 +475,11 @@ void chat_msgs_fill(void) {
 		/* TODO: why does it set background to COLOR_BLACK? */
 		wattroff(wchat_msgs, COLOR_PAIR(1));
 
-		wprintw(wchat_msgs, ": %s", str_buf(msg->text));
+		if (msg->type == MSGTYPE_TEXT)
+			wprintw(wchat_msgs, ": %s", str_buf(msg->text.content));
+		else
+			wprintw(wchat_msgs, ": %s", str_buf(msg->file.url));
+
 	}
 	wrefresh(wchat_msgs);
 }
@@ -770,9 +779,6 @@ int main(int argc, char *argv[]) {
 	new_room("#test1:matrix.org", "Test A");
 	new_room("#test2:matrix.org", "Test C");
 	new_room("#test3:matrix.org", "Test B");
-
-	/* Append a message to the last room */
-	room_append_msg(room, str_new_cstr("sender"), str_new_cstr("text"));
 
 	ui_curses_init();
 	bottom = vector_len(buffers);

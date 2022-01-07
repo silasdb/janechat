@@ -10,6 +10,7 @@
 
 #include "hash.h"
 #include "cache.h"
+#include "common.h"
 #include "matrix.h"
 #include "rooms.h"
 #include "ui.h"
@@ -215,10 +216,9 @@ void process_room_join(Str *roomid, Str *senderid, Str *sendername) {
 	user_add(senderid, sendername);
 }
 
-void process_msg(Str *roomid, Str *sender, Str *text) {
+void process_msg(Str *roomid, Msg msg) {
 	Room *room = room_byid(roomid);
-	room_append_msg(room, sender, text);
-	ui_hooks.msg_new(room, sender, text);
+	room_append_msg(room, msg);
 }
 
 void handle_matrix_event(MatrixEvent ev) {
@@ -244,7 +244,7 @@ void handle_matrix_event(MatrixEvent ev) {
 			ev.roomjoin.senderid, ev.roomjoin.sendername);
 		break;
 	case EVENT_MSG:
-		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);
+		process_msg(ev.msg.roomid, ev.msg.msg);
 		break;
 	case EVENT_MATRIX_ERROR:
 		printf("%s\n", str_buf(ev.error.error));

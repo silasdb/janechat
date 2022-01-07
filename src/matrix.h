@@ -3,6 +3,7 @@
 
 #include <fcntl.h>
 
+#include "common.h"
 #include "str.h"
 
 enum MatrixEventType {
@@ -21,8 +22,7 @@ struct MatrixEvent {
 		// TODO: why fields above are not const?
 		struct MatrixEventMsg {
 			Str *roomid;
-			Str *sender;
-			Str *text;
+			struct Msg msg;
 		} msg;
 		struct MatrixEventRoomCreate {
 			Str *id;
