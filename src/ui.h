@@ -6,6 +6,7 @@
 enum UiEventType {
 	UIEVENTTYPE_SYNC,
 	UIEVENTTYPE_SENDMSG,
+	UIEVENTTYPE_OPENATTACHMENT,
 };
 
 struct UiEvent {
@@ -15,6 +16,9 @@ struct UiEvent {
 			Str *roomid;
 			Str *text;
 		} msg;
+		struct UiEventOpenAttachment {
+			Str *url;
+		} openattachment;
 		/*
 		 * UIEVENTTYPE_SYNC has an associated
 		 * empty struct.

@@ -27,7 +27,7 @@
 #define DEBUG_RESPONSE 0
 
 struct callback_info {
-	void (*callback)(const char *);
+	void (*callback)(const char *, size_t);
 	Str *data;
 };
 
@@ -124,7 +124,7 @@ static void matrix_send_async(
 	enum HTTPMethod method,
 	const char *path,
 	const char *json,
-	void (*callback)(const char *))
+	void (*callback)(const char *, size_t))
 {
 	struct callback_info *c = malloc(sizeof(struct callback_info));
 	c->callback = callback;
@@ -261,6 +261,29 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 	const char *s = json2str_alloc(root);
 	matrix_send_async(HTTP_POST, str_buf(url), s, NULL);
 	free((void *)s);
+	str_decref(url);
+}
+
+void matrix_receive_file(const char *output, size_t sz) {
+	FILE *f = fopen("/tmp/o.png", "w"); /* TODO: don't hardcode paths */
+	fwrite(output, 1, sz, f);
+	fclose(f);
+}
+
+void matrix_request_file(const Str *uri, const char *path) {
+	(void)path; /* TODO */
+	char u[256]; /* TODO: use dynamic allocation */
+	strcpy(u, str_buf(uri));
+	char *server = u + strlen("mxc://");
+	size_t offset;
+	offset = strcspn(server, "/");
+	server[offset] = '\0';
+	char *upath = &server[offset+1];
+	Str *url = str_new_cstr("/_matrix/media/v3/download/");
+	str_append_cstr(url, server);
+	str_append_cstr(url, "/");
+	str_append_cstr(url, upath);
+	matrix_send_async(HTTP_GET, str_buf(url), NULL, matrix_receive_file);
 	str_decref(url);
 }
 
@@ -552,7 +575,8 @@ static void process_rooms_join(json_t *root) {
 
 }
 
-static void process_sync_response(const char *output) {
+static void process_sync_response(const char *output, size_t sz) {
+	(void)sz;
 	assert(output);
 
 	insync = false;
@@ -715,7 +739,7 @@ bool matrix_initial_sync(void) {
 
 	char *n = cache_get_alloc("next_batch");
 
-	process_sync_response(str_buf(res));
+	process_sync_response(str_buf(res), str_len(res));
 
 	if (n)
 		next_batch = n;
@@ -814,7 +838,7 @@ void matrix_resume(void) {
 		curl_multi_remove_handle(mhandle, handle);
 		curl_easy_cleanup(handle);
 		if (c->callback)
-			c->callback(str_buf(c->data));
+			c->callback(str_buf(c->data), str_len(c->data));
 		str_decref(c->data);
 		free(c);
 	}
