@@ -415,33 +415,49 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 
 		json_t *body = json_object_get(content, "body");
 		assert(body != NULL);
+
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.sender = str_new_cstr(json_string_value(sender));
 		event.msg.roomid = str_new_cstr(roomid);
-		if (streq(json_string_value(msgtype), "m.text"))
-			event.msg.text = str_new_cstr(json_string_value(body));
-		else {
-			event.msg.text = str_new();
-			str_append_cstr(event.msg.text, "==== ");
-			str_append_cstr(event.msg.text, "TODO: Type not supported: ");
-			str_append_cstr(event.msg.text, json_string_value(msgtype));
-			str_append_cstr(event.msg.text, " ====");
+		event.msg.msg.sender = str_new_cstr(json_string_value(sender));
+
+		if (streq(json_string_value(msgtype), "m.image")) {
+			event.msg.msg.type = MSGTYPE_FILE;
+			event.msg.msg.file.type = FILETYPE_IMAGE;
+			event.msg.msg.file.url = str_new_cstr(
+				json_string_value(json_object_get(content, "url")));
+			assert(event.msg.msg.file.url);
+			event_handler_callback(event);
+			str_decref(event.msg.roomid);
+			str_decref(event.msg.msg.sender);
+			str_decref(event.msg.msg.file.url);
+			return;
+		}
+
+		event.msg.msg.text.content = str_new();
+		event.msg.msg.type = MSGTYPE_TEXT;
+		if (streq(json_string_value(msgtype), "m.text")) {
+			event.msg.msg.text.content
+				= str_new_cstr(json_string_value(body));
+		} else {
+			str_append_cstr(event.msg.msg.text.content, "==== ");
+			str_append_cstr(event.msg.msg.text.content, json_string_value(msgtype));
+			str_append_cstr(event.msg.msg.text.content, " ====");
 		}
 		event_handler_callback(event);
-		str_decref(event.msg.sender);
 		str_decref(event.msg.roomid);
-		str_decref(event.msg.text);
+		str_decref(event.msg.msg.sender);
+		str_decref(event.msg.msg.text.content);
 	} else if (streq(json_string_value(type), "m.room.encrypted")) {
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.sender = str_new_cstr(json_string_value(sender));
 		event.msg.roomid = str_new_cstr(roomid);
-		event.msg.text = str_new_cstr("== encrypted message ==");
+		event.msg.msg.sender = str_new_cstr(json_string_value(sender));
+		event.msg.msg.text.content = str_new_cstr("== encrypted message ==");
 		event_handler_callback(event);
-		str_decref(event.msg.sender);
 		str_decref(event.msg.roomid);
-		str_decref(event.msg.text);
+		str_decref(event.msg.msg.sender);
+		str_decref(event.msg.msg.text.content);
 	}
 }
 

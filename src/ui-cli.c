@@ -125,7 +125,12 @@ static void print_messages(Room *room) {
 	Msg *msg;
 	size_t i;
 	ROOM_MESSAGES_FOREACH(room, msg, i) {
-		print_msg(room_displayname(room), msg->sender, msg->text);
+		if (msg->type == MSGTYPE_TEXT)
+			print_msg(room_displayname(room),
+				msg->sender, msg->text.content);
+		else if (msg->type == MSGTYPE_FILE)
+			print_msg(room_displayname(room),
+				msg->sender, msg->file.url);
 	}
 	room->unread_msgs = 0;
 }
