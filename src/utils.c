@@ -57,3 +57,13 @@ char *read_file_alloc(FILE *stream) {
 	}
 	return output;
 }
+
+bool str2li(const char *str, long int *i) {
+	if (*str == '\0')
+		return false;
+	char *ret;
+	*i = strtol(str, &ret, 10);
+	if (*ret != '\0')
+		return false;
+	return true;
+}

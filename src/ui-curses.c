@@ -469,7 +469,7 @@ void chat_msgs_fill(void) {
 			break;
 
 		wattron(wchat_msgs, COLOR_PAIR(1));
-		mvwprintw(wchat_msgs, y, 0, "%s",
+		mvwprintw(wchat_msgs, y, 0, "[%zu] %s", i,
 			str_buf(user_name(msg->sender)));
 
 		/* TODO: why does it set background to COLOR_BLACK? */
@@ -597,6 +597,20 @@ bool input_key_chat(int c) {
 			chat_msgs_fill();
 		} else if (streq(cur_buffer->buf, "/disableautopilot")) {
 			autopilot = false;
+		} else if (strncmp(cur_buffer->buf, "/open ", strlen("/open ")) == 0) {
+			const char *number = cur_buffer->buf + strlen("/open ");
+			long int id;
+			if (str2li(number, &id) &&
+			   id >= 0 && (size_t)id < vector_len(cur_buffer->room->msgs)) {
+				Msg *msg = vector_at(cur_buffer->room->msgs, id);
+				assert(msg);
+				if (msg->type == MSGTYPE_FILE) {
+					struct UiEvent ev;
+					ev.type = UIEVENTTYPE_OPENATTACHMENT;
+					ev.openattachment.url = msg->file.url;
+					ui_event_handler_callback(ev);
+				}
+			}
 		} else {
 			send_msg();
 		}
