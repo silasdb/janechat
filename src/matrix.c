@@ -318,10 +318,17 @@ static void process_room_event(json_t *item, const char *roomid) {
 			str_new_cstr(json_string_value(sender));
 		json_t *name = json_path(item, "content", "displayname", NULL);
 		/* TODO: See: https://spec.matrix.org/latest/client-server-api/#calculating-the-display-name-for-a-user */
-		if (name)
+		if (name) {
+			/*
+			 * TODO: case, on which name is not null but when we
+			 * convert it to a string we get a NULL pointer. Let's
+			 * try to debug it by adding an assert() and ananalyzing
+			 * the core dump file generated when it happens again.
+			 */
+			assert(json_is_string(name));
 			event.roomjoin.sendername =
 				str_new_cstr(json_string_value(name));
-		else
+		} else
 			event.roomjoin.sendername = NULL;
 		event_handler_callback(event);
 		str_decref(event.roomjoin.roomid);
