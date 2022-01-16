@@ -27,8 +27,9 @@
 #define DEBUG_RESPONSE 0
 
 struct callback_info {
-	void (*callback)(const char *, size_t);
+	void (*callback)(const char *, size_t, void *);
 	Str *data;
+	void *params;
 };
 
 enum HTTPMethod {
@@ -124,7 +125,8 @@ static void matrix_send_async(
 	enum HTTPMethod method,
 	const char *path,
 	const char *json,
-	void (*callback)(const char *, size_t))
+	void (*callback)(const char *, size_t, void *),
+	void *callback_params)
 {
 	struct callback_info *c = malloc(sizeof(struct callback_info));
 	c->callback = callback;
@@ -148,6 +150,7 @@ static void matrix_send_async(
 	Str *aux = str_new();
 
 	c->data = aux;
+	c->params = callback_params;
 	
 	Str *url = str_new();
 	
@@ -259,12 +262,13 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 	json_object_set(root, "msgtype", json_string("m.text"));
 	json_object_set(root, "body", json_string(str_buf(msg)));
 	const char *s = json2str_alloc(root);
-	matrix_send_async(HTTP_POST, str_buf(url), s, NULL);
+	matrix_send_async(HTTP_POST, str_buf(url), s, NULL, NULL);
 	free((void *)s);
 	str_decref(url);
 }
 
-void matrix_receive_file(const char *output, size_t sz) {
+void matrix_receive_file(const char *output, size_t sz, void *x) {
+	(void)x;
 	FILE *f = fopen("/tmp/o.png", "w"); /* TODO: don't hardcode paths */
 	fwrite(output, 1, sz, f);
 	fclose(f);
@@ -283,7 +287,7 @@ void matrix_request_file(const Str *uri, const char *path) {
 	str_append_cstr(url, server);
 	str_append_cstr(url, "/");
 	str_append_cstr(url, upath);
-	matrix_send_async(HTTP_GET, str_buf(url), NULL, matrix_receive_file);
+	matrix_send_async(HTTP_GET, str_buf(url), NULL, matrix_receive_file, NULL);
 	str_decref(url);
 }
 
@@ -575,8 +579,9 @@ static void process_rooms_join(json_t *root) {
 
 }
 
-static void process_sync_response(const char *output, size_t sz) {
+static void process_sync_response(const char *output, size_t sz, void *params) {
 	(void)sz;
+	(void)params;
 	assert(output);
 
 	insync = false;
@@ -739,7 +744,7 @@ bool matrix_initial_sync(void) {
 
 	char *n = cache_get_alloc("next_batch");
 
-	process_sync_response(str_buf(res), str_len(res));
+	process_sync_response(str_buf(res), str_len(res), NULL);
 
 	if (n)
 		next_batch = n;
@@ -762,7 +767,7 @@ void matrix_sync(void) {
 	str_append_cstr(url, "&timeout=10000");
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
-	matrix_send_async(HTTP_GET, str_buf(url), NULL, process_sync_response);
+	matrix_send_async(HTTP_GET, str_buf(url), NULL, process_sync_response, NULL);
 	str_decref(url);
 }
 
@@ -838,7 +843,9 @@ void matrix_resume(void) {
 		curl_multi_remove_handle(mhandle, handle);
 		curl_easy_cleanup(handle);
 		if (c->callback)
-			c->callback(str_buf(c->data), str_len(c->data));
+			c->callback(str_buf(c->data),
+				str_len(c->data),
+				c->params);
 		str_decref(c->data);
 		free(c);
 	}
