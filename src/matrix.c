@@ -267,9 +267,14 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 	str_decref(url);
 }
 
-void matrix_receive_file(const char *output, size_t sz, void *x) {
-	(void)x;
-	FILE *f = fopen("/tmp/o.png", "w"); /* TODO: don't hardcode paths */
+void matrix_receive_file(const char *output, size_t sz, void *p) {
+	Str *id = p;
+	Str *filepath = str_new_cstr("/tmp/");
+	str_append(filepath, id);
+	str_append_cstr(filepath, ".png");
+	str_decref(id);
+	FILE *f = fopen(str_buf(filepath), "w"); /* TODO: don't hardcode paths */
+	str_decref(filepath);
 	fwrite(output, 1, sz, f);
 	fclose(f);
 }
@@ -287,7 +292,8 @@ void matrix_request_file(const Str *uri, const char *path) {
 	str_append_cstr(url, server);
 	str_append_cstr(url, "/");
 	str_append_cstr(url, upath);
-	matrix_send_async(HTTP_GET, str_buf(url), NULL, matrix_receive_file, NULL);
+	Str *id = str_new_cstr(upath);
+	matrix_send_async(HTTP_GET, str_buf(url), NULL, matrix_receive_file, id);
 	str_decref(url);
 }
 
