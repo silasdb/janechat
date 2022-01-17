@@ -17,9 +17,14 @@ struct Msg {
 			Str *content;
 		} text;
 		struct {
-			enum FileType {
-				FILETYPE_IMAGE,
-			} type;
+			/*
+			 * TODO: mimetype can assume a relative small number of
+			 * possible values. Would it be better to work with an
+			 * enum or a static read-only string? (e.g. mimetype =
+			 * "image/jpeg"), saving some bytes of memory?
+			 */
+			Str *mimetype;
+
 			Str *url;
 		} file;
 	};

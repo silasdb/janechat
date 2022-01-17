@@ -459,7 +459,9 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 
 		if (streq(json_string_value(msgtype), "m.image")) {
 			event.msg.msg.type = MSGTYPE_FILE;
-			event.msg.msg.file.type = FILETYPE_IMAGE;
+			event.msg.msg.file.mimetype = str_new_cstr(
+				json_string_value(json_path(
+					content, "info", "mimetype", NULL)));
 			event.msg.msg.file.url = str_new_cstr(
 				json_string_value(json_object_get(content, "url")));
 			assert(event.msg.msg.file.url);

@@ -478,7 +478,9 @@ void chat_msgs_fill(void) {
 		if (msg->type == MSGTYPE_TEXT)
 			wprintw(wchat_msgs, ": %s", str_buf(msg->text.content));
 		else
-			wprintw(wchat_msgs, ": %s", str_buf(msg->file.url));
+			wprintw(wchat_msgs, ": %s: %s",
+				str_buf(msg->file.mimetype),
+				str_buf(msg->file.url));
 
 	}
 	wrefresh(wchat_msgs);
