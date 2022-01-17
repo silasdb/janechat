@@ -27,7 +27,7 @@ struct ui_hooks {
 	void (*setup)();
 	void (*init)();
 	void (*iter)();
-	void (*msg_new)(Room *room, Str *, Str *);
+	void (*msg_new)(Room *room, Msg msg);
 	void (*room_new)(Str *roomid);
 } ui_hooks;
 
@@ -219,6 +219,7 @@ void process_room_join(Str *roomid, Str *senderid, Str *sendername) {
 void process_msg(Str *roomid, Msg msg) {
 	Room *room = room_byid(roomid);
 	room_append_msg(room, msg);
+	ui_hooks.msg_new(room, msg);
 }
 
 void handle_matrix_event(MatrixEvent ev) {
