@@ -742,8 +742,7 @@ void ui_curses_room_new(Str *roomid) {
 	}
 }
 
-void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
-	(void)sender; /* TODO: why is it unused? */
+void ui_curses_msg_new(Room *room, Msg msg) {
 	(void)msg; /* TODO: why is it unused? */
 	if (!curses_init)
 		return;

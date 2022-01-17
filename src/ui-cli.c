@@ -19,7 +19,7 @@ void ui_cli_iter(void) {
 	free(line);
 }
 
-void ui_cli_msg_new(Room *room, Str *sender, Str *text) {
+void ui_cli_msg_new(Room *room, Msg msg) {
 	if (room != current_room)
 		return;
 
@@ -28,7 +28,7 @@ void ui_cli_msg_new(Room *room, Str *sender, Str *text) {
 	 * unread messages flag to zero, since we have just printed it to the
 	 * user.
 	 */
-	print_msg(room_displayname(room), user_name(sender), text);
+	print_msg(room_displayname(room), user_name(msg.sender), msg.text.content);
 	room->unread_msgs = 0;
 }
 
