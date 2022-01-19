@@ -543,7 +543,14 @@ static void process_sync_response(const char *output) {
 
 	json_t *root;
 	root = str2json_alloc(output);
-	assert(root);
+
+	/*
+	 * TODO: This shouldn't happen but it does happen when there are network
+	 * problems. Call abort to generate a core dump, so we can analyse it
+	 * further.
+	 */
+	if (!root)
+		abort();
 
 	json_t *errorcode = json_object_get(root, "errcode");
 	if (errorcode) {
