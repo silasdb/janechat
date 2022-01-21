@@ -282,9 +282,9 @@ void matrix_receive_file(const char *output, size_t sz, void *p) {
 	fclose(f);
 }
 
-void matrix_request_file(const Str *uri) {
+void matrix_request_file(FileInfo fileinfo) {
 	char u[256]; /* TODO: use dynamic allocation */
-	strcpy(u, str_buf(uri));
+	strcpy(u, str_buf(fileinfo.uri));
 	char *server = u + strlen("mxc://");
 	size_t offset;
 	offset = strcspn(server, "/");
@@ -458,16 +458,16 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 
 		if (streq(json_string_value(msgtype), "m.image")) {
 			event.msg.msg.type = MSGTYPE_FILE;
-			event.msg.msg.file.mimetype = str_new_cstr(
+			event.msg.msg.fileinfo.mimetype = str_new_cstr(
 				json_string_value(json_path(
 					content, "info", "mimetype", NULL)));
-			event.msg.msg.file.url = str_new_cstr(
+			event.msg.msg.fileinfo.uri = str_new_cstr(
 				json_string_value(json_object_get(content, "url")));
-			assert(event.msg.msg.file.url);
+			assert(event.msg.msg.fileinfo.uri);
 			event_handler_callback(event);
 			str_decref(event.msg.roomid);
 			str_decref(event.msg.msg.sender);
-			str_decref(event.msg.msg.file.url);
+			str_decref(event.msg.msg.fileinfo.uri);
 			return;
 		}
 

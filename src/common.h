@@ -5,6 +5,19 @@
 
 #include "str.h"
 
+struct FileInfo {
+	/*
+	 * TODO: mimetype can assume a relative small number of
+	 * possible values. Would it be better to work with an
+	 * enum or a static read-only string? (e.g. mimetype =
+	 * "image/jpeg"), saving some bytes of memory?
+	 */
+	Str *mimetype;
+
+	Str *uri;
+};
+typedef struct FileInfo FileInfo;
+
 struct Msg {
 	enum {
 		MSGTYPE_TEXT,
@@ -16,17 +29,7 @@ struct Msg {
 		struct {
 			Str *content;
 		} text;
-		struct {
-			/*
-			 * TODO: mimetype can assume a relative small number of
-			 * possible values. Would it be better to work with an
-			 * enum or a static read-only string? (e.g. mimetype =
-			 * "image/jpeg"), saving some bytes of memory?
-			 */
-			Str *mimetype;
-
-			Str *url;
-		} file;
+		FileInfo fileinfo;
 	};
 };
 
