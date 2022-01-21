@@ -268,18 +268,13 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 }
 
 void matrix_receive_file(const char *output, size_t sz, void *p) {
-	Str *id = p;
-	/*
-	 * TODO: create a temporary directory for the current janechat process.
-	 */
-	Str *filepath = str_new_cstr("/tmp/");
-	str_append(filepath, id); /* TODO: canonize? */
-	str_append_cstr(filepath, ".png");
-	str_decref(id);
-	FILE *f = fopen(str_buf(filepath), "w");
-	str_decref(filepath);
-	fwrite(output, 1, sz, f);
-	fclose(f);
+	MatrixEvent event;
+	event.type = EVENT_FILE;
+	event.file.fileinfo = *((FileInfo *)p);
+	event.file.payload = output;
+	event.file.size = sz;
+	event_handler_callback(event);
+	free(p);
 }
 
 void matrix_request_file(FileInfo fileinfo) {
@@ -294,8 +289,9 @@ void matrix_request_file(FileInfo fileinfo) {
 	str_append_cstr(url, server);
 	str_append_cstr(url, "/");
 	str_append_cstr(url, upath);
-	Str *id = str_new_cstr(upath);
-	matrix_send_async(HTTP_GET, str_buf(url), NULL, matrix_receive_file, id);
+	FileInfo *fileinfoptr = malloc(sizeof(FileInfo));
+	*fileinfoptr = fileinfo;
+	matrix_send_async(HTTP_GET, str_buf(url), NULL, matrix_receive_file, fileinfoptr);
 	str_decref(url);
 }
 

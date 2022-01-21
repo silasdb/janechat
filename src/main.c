@@ -254,6 +254,25 @@ void handle_matrix_event(MatrixEvent ev) {
 	case EVENT_CONN_ERROR:
 		//puts("Connection error.\n");
 		break;
+	case EVENT_FILE:
+		{
+		char uri[256]; /* TODO: use dynamic allocation? */
+		strcpy(uri, str_buf(ev.file.fileinfo.uri));
+		char *upath = uri + strlen("mxc://");
+		upath += strcspn(upath, "/") + 1;
+		Str *filepath = str_new_cstr("/tmp/");
+		str_append_cstr(filepath, upath);
+
+		if (streq(str_buf(ev.file.fileinfo.mimetype), "image/png"))
+			str_append_cstr(filepath, ".png");
+		else
+			str_append_cstr(filepath, ".unknown");
+
+		FILE *f = fopen(str_buf(filepath), "w");
+		fwrite(ev.file.payload, 1, ev.file.size, f);
+		fclose(f);
+		}
+		break;
 	}
 }
 

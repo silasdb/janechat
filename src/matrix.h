@@ -8,6 +8,7 @@
 
 enum MatrixEventType {
 	EVENT_MSG,
+	EVENT_FILE,
 	EVENT_ROOM_CREATE,
 	EVENT_ROOM_INFO,
 	EVENT_ROOM_JOIN,
@@ -45,6 +46,11 @@ struct MatrixEvent {
 			Str *errorcode;
 			Str *error;
 		} error;
+		struct MatrixEventFile {
+			const char *payload;
+			size_t size;
+			FileInfo fileinfo;
+		} file;
 		// MatrixEventConnError - empty struct
 	};
 };
