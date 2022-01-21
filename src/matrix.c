@@ -282,8 +282,7 @@ void matrix_receive_file(const char *output, size_t sz, void *p) {
 	fclose(f);
 }
 
-void matrix_request_file(const Str *uri, const char *path) {
-	(void)path; /* TODO */
+void matrix_request_file(const Str *uri) {
 	char u[256]; /* TODO: use dynamic allocation */
 	strcpy(u, str_buf(uri));
 	char *server = u + strlen("mxc://");
