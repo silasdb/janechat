@@ -278,17 +278,14 @@ void matrix_receive_file(const char *output, size_t sz, void *p) {
 }
 
 void matrix_request_file(FileInfo fileinfo) {
-	char u[256]; /* TODO: use dynamic allocation */
-	strcpy(u, str_buf(fileinfo.uri));
-	char *server = u + strlen("mxc://");
-	size_t offset;
-	offset = strcspn(server, "/");
-	server[offset] = '\0';
-	char *upath = &server[offset+1];
+	Str *server = mxc_uri_extract_server_alloc(fileinfo.uri);
+	Str *path = mxc_uri_extract_path_alloc(fileinfo.uri);
 	Str *url = str_new_cstr("/_matrix/media/v3/download/");
-	str_append_cstr(url, server);
+	str_append(url, server);
 	str_append_cstr(url, "/");
-	str_append_cstr(url, upath);
+	str_append(url, path);
+	str_decref(server);
+	str_decref(path);
 	FileInfo *fileinfoptr = malloc(sizeof(FileInfo));
 	*fileinfoptr = fileinfo;
 	matrix_send_async(HTTP_GET, str_buf(url), NULL, matrix_receive_file, fileinfoptr);
