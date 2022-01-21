@@ -222,6 +222,21 @@ void process_msg(Str *roomid, Msg msg) {
 	ui_hooks.msg_new(room, msg);
 }
 
+Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
+	Str *upath = mxc_uri_extract_path_alloc(fileinfo.uri);
+
+	/* TODO: use a temporary directory instead of /tmp */
+	Str *filepath = str_new_cstr("/tmp/");
+
+	str_append(filepath, upath);
+	str_decref(upath);
+	if (streq(str_buf(fileinfo.mimetype), "image/png"))
+		str_append_cstr(filepath, ".png");
+	else
+		str_append_cstr(filepath, ".unknown");
+	return filepath;
+}
+
 void handle_matrix_event(MatrixEvent ev) {
 	switch (ev.type) {
 	case EVENT_ROOM_CREATE:
@@ -256,21 +271,11 @@ void handle_matrix_event(MatrixEvent ev) {
 		break;
 	case EVENT_FILE:
 		{
-		char uri[256]; /* TODO: use dynamic allocation? */
-		strcpy(uri, str_buf(ev.file.fileinfo.uri));
-		char *upath = uri + strlen("mxc://");
-		upath += strcspn(upath, "/") + 1;
-		Str *filepath = str_new_cstr("/tmp/");
-		str_append_cstr(filepath, upath);
-
-		if (streq(str_buf(ev.file.fileinfo.mimetype), "image/png"))
-			str_append_cstr(filepath, ".png");
-		else
-			str_append_cstr(filepath, ".unknown");
-
+		Str *filepath = fileinfo_to_path_alloc(ev.file.fileinfo);
 		FILE *f = fopen(str_buf(filepath), "w");
 		fwrite(ev.file.payload, 1, ev.file.size, f);
 		fclose(f);
+		str_decref(filepath);
 		}
 		break;
 	}
@@ -285,7 +290,13 @@ void handle_ui_event(UiEvent ev) {
 		matrix_send_message(ev.msg.roomid, ev.msg.text);
 		break;
 	case UIEVENTTYPE_OPENATTACHMENT:
-		matrix_request_file(ev.openattachment.fileinfo);
+		{
+		Str *filepath = fileinfo_to_path_alloc(ev.openattachment.fileinfo);
+		/* Only request file if it doesn't exist in our local cache */
+		if (access(str_buf(filepath), F_OK) == -1)
+			matrix_request_file(ev.openattachment.fileinfo);
+		str_decref(filepath);
+		}
 		break;
 	}
 }
