@@ -130,7 +130,7 @@ static void print_messages(Room *room) {
 				msg->sender, msg->text.content);
 		else if (msg->type == MSGTYPE_FILE)
 			print_msg(room_displayname(room),
-				msg->sender, msg->file.url);
+				msg->sender, msg->fileinfo.uri);
 	}
 	room->unread_msgs = 0;
 }

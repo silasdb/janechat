@@ -479,8 +479,8 @@ void chat_msgs_fill(void) {
 			wprintw(wchat_msgs, ": %s", str_buf(msg->text.content));
 		else
 			wprintw(wchat_msgs, ": %s: %s",
-				str_buf(msg->file.mimetype),
-				str_buf(msg->file.url));
+				str_buf(msg->fileinfo.mimetype),
+				str_buf(msg->fileinfo.uri));
 
 	}
 	wrefresh(wchat_msgs);
@@ -609,7 +609,7 @@ bool input_key_chat(int c) {
 				if (msg->type == MSGTYPE_FILE) {
 					struct UiEvent ev;
 					ev.type = UIEVENTTYPE_OPENATTACHMENT;
-					ev.openattachment.url = msg->file.url;
+					ev.openattachment.fileinfo = msg->fileinfo;
 					ui_event_handler_callback(ev);
 				}
 			}

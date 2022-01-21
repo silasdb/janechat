@@ -1,6 +1,7 @@
 #ifndef JANECHAT_UI_H
 #define JANECHAT_UI_H
 
+#include "common.h"
 #include "str.h"
 
 enum UiEventType {
@@ -17,7 +18,7 @@ struct UiEvent {
 			Str *text;
 		} msg;
 		struct UiEventOpenAttachment {
-			Str *url;
+			FileInfo fileinfo;
 		} openattachment;
 		/*
 		 * UIEVENTTYPE_SYNC has an associated

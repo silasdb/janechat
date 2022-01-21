@@ -266,8 +266,7 @@ void handle_ui_event(UiEvent ev) {
 		matrix_send_message(ev.msg.roomid, ev.msg.text);
 		break;
 	case UIEVENTTYPE_OPENATTACHMENT:
-		matrix_request_file(ev.openattachment.url,
-			"/tmp/janechat-attachment.png");
+		matrix_request_file(ev.openattachment.fileinfo);
 		break;
 	}
 }
