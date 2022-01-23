@@ -232,6 +232,8 @@ Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
 	str_decref(upath);
 	if (streq(str_buf(fileinfo.mimetype), "image/png"))
 		str_append_cstr(filepath, ".png");
+	else if (streq(str_buf(fileinfo.mimetype), "image/jpeg"))
+		str_append_cstr(filepath, ".jpg");
 	else
 		str_append_cstr(filepath, ".unknown");
 	return filepath;
@@ -246,7 +248,8 @@ void open_file(FileInfo fileinfo) {
 	 * future we can allow setting them from configuration file or, better,
 	 * parse mailcap
 	 */
-	 if (streq(str_buf(fileinfo.mimetype), "image/png")) {
+	 if (streq(str_buf(fileinfo.mimetype), "image/png")
+	 || streq(str_buf(fileinfo.mimetype), "image/jpeg")) {
 		cmd = str_new();
 		str_append_cstr(cmd, "feh ");
 		str_append(cmd, filepath); /* TODO: shell quote? */
