@@ -248,8 +248,8 @@ void open_file(FileInfo fileinfo) {
 	 * future we can allow setting them from configuration file or, better,
 	 * parse mailcap
 	 */
-	 if (streq(str_buf(fileinfo.mimetype), "image/png")
-	 || streq(str_buf(fileinfo.mimetype), "image/jpeg")) {
+	if (streq(str_buf(fileinfo.mimetype), "image/png")
+	|| streq(str_buf(fileinfo.mimetype), "image/jpeg")) {
 		cmd = str_new();
 		str_append_cstr(cmd, "feh ");
 		str_append(cmd, filepath); /* TODO: shell quote? */
