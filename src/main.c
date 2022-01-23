@@ -251,7 +251,7 @@ void open_file(FileInfo fileinfo) {
 	if (streq(str_buf(fileinfo.mimetype), "image/png")
 	|| streq(str_buf(fileinfo.mimetype), "image/jpeg")) {
 		cmd = str_new();
-		str_append_cstr(cmd, "feh ");
+		str_append_cstr(cmd, "feh -. ");
 		str_append(cmd, filepath); /* TODO: shell quote? */
 	}
 
