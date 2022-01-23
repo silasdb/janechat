@@ -237,6 +237,28 @@ Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
 	return filepath;
 }
 
+void open_file(FileInfo fileinfo) {
+	Str *filepath = fileinfo_to_path_alloc(fileinfo);
+	Str *cmd = NULL;
+
+	/*
+	 * TODO: We are going to have hardcoded programs for now, butin the
+	 * future we can allow setting them from configuration file or, better,
+	 * parse mailcap
+	 */
+	 if (streq(str_buf(fileinfo.mimetype), "image/png")) {
+		cmd = str_new();
+		str_append_cstr(cmd, "feh ");
+		str_append(cmd, filepath); /* TODO: shell quote? */
+	}
+
+	if (cmd)
+		system(str_buf(cmd));
+
+	str_decref(cmd);
+	str_decref(filepath);
+}
+
 void handle_matrix_event(MatrixEvent ev) {
 	switch (ev.type) {
 	case EVENT_ROOM_CREATE:
@@ -276,6 +298,7 @@ void handle_matrix_event(MatrixEvent ev) {
 		fwrite(ev.file.payload, 1, ev.file.size, f);
 		fclose(f);
 		str_decref(filepath);
+		open_file(ev.file.fileinfo);
 		}
 		break;
 	}
@@ -295,6 +318,8 @@ void handle_ui_event(UiEvent ev) {
 		/* Only request file if it doesn't exist in our local cache */
 		if (access(str_buf(filepath), F_OK) == -1)
 			matrix_request_file(ev.openattachment.fileinfo);
+		else
+			open_file(ev.openattachment.fileinfo);
 		str_decref(filepath);
 		}
 		break;
