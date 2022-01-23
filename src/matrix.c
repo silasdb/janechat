@@ -27,8 +27,9 @@
 #define DEBUG_RESPONSE 0
 
 struct callback_info {
-	void (*callback)(const char *);
+	void (*callback)(const char *, size_t, void *);
 	Str *data;
+	void *params;
 };
 
 enum HTTPMethod {
@@ -124,7 +125,8 @@ static void matrix_send_async(
 	enum HTTPMethod method,
 	const char *path,
 	const char *json,
-	void (*callback)(const char *))
+	void (*callback)(const char *, size_t, void *),
+	void *callback_params)
 {
 	struct callback_info *c = malloc(sizeof(struct callback_info));
 	c->callback = callback;
@@ -148,6 +150,7 @@ static void matrix_send_async(
 	Str *aux = str_new();
 
 	c->data = aux;
+	c->params = callback_params;
 	
 	Str *url = str_new();
 	
@@ -259,8 +262,33 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 	json_object_set(root, "msgtype", json_string("m.text"));
 	json_object_set(root, "body", json_string(str_buf(msg)));
 	const char *s = json2str_alloc(root);
-	matrix_send_async(HTTP_POST, str_buf(url), s, NULL);
+	matrix_send_async(HTTP_POST, str_buf(url), s, NULL, NULL);
 	free((void *)s);
+	str_decref(url);
+}
+
+void matrix_receive_file(const char *output, size_t sz, void *p) {
+	MatrixEvent event;
+	event.type = EVENT_FILE;
+	event.file.fileinfo = *((FileInfo *)p);
+	event.file.payload = output;
+	event.file.size = sz;
+	event_handler_callback(event);
+	free(p);
+}
+
+void matrix_request_file(FileInfo fileinfo) {
+	Str *server = mxc_uri_extract_server_alloc(fileinfo.uri);
+	Str *path = mxc_uri_extract_path_alloc(fileinfo.uri);
+	Str *url = str_new_cstr("/_matrix/media/v3/download/");
+	str_append(url, server);
+	str_append_cstr(url, "/");
+	str_append(url, path);
+	str_decref(server);
+	str_decref(path);
+	FileInfo *fileinfoptr = malloc(sizeof(FileInfo));
+	*fileinfoptr = fileinfo;
+	matrix_send_async(HTTP_GET, str_buf(url), NULL, matrix_receive_file, fileinfoptr);
 	str_decref(url);
 }
 
@@ -415,33 +443,51 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 
 		json_t *body = json_object_get(content, "body");
 		assert(body != NULL);
+
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.sender = str_new_cstr(json_string_value(sender));
 		event.msg.roomid = str_new_cstr(roomid);
-		if (streq(json_string_value(msgtype), "m.text"))
-			event.msg.text = str_new_cstr(json_string_value(body));
-		else {
-			event.msg.text = str_new();
-			str_append_cstr(event.msg.text, "==== ");
-			str_append_cstr(event.msg.text, "TODO: Type not supported: ");
-			str_append_cstr(event.msg.text, json_string_value(msgtype));
-			str_append_cstr(event.msg.text, " ====");
+		event.msg.msg.sender = str_new_cstr(json_string_value(sender));
+
+		if (streq(json_string_value(msgtype), "m.image")) {
+			event.msg.msg.type = MSGTYPE_FILE;
+			event.msg.msg.fileinfo.mimetype = str_new_cstr(
+				json_string_value(json_path(
+					content, "info", "mimetype", NULL)));
+			event.msg.msg.fileinfo.uri = str_new_cstr(
+				json_string_value(json_object_get(content, "url")));
+			assert(event.msg.msg.fileinfo.uri);
+			event_handler_callback(event);
+			str_decref(event.msg.roomid);
+			str_decref(event.msg.msg.sender);
+			str_decref(event.msg.msg.fileinfo.uri);
+			return;
+		}
+
+		event.msg.msg.text.content = str_new();
+		event.msg.msg.type = MSGTYPE_TEXT;
+		if (streq(json_string_value(msgtype), "m.text")) {
+			event.msg.msg.text.content
+				= str_new_cstr(json_string_value(body));
+		} else {
+			str_append_cstr(event.msg.msg.text.content, "==== ");
+			str_append_cstr(event.msg.msg.text.content, json_string_value(msgtype));
+			str_append_cstr(event.msg.msg.text.content, " ====");
 		}
 		event_handler_callback(event);
-		str_decref(event.msg.sender);
 		str_decref(event.msg.roomid);
-		str_decref(event.msg.text);
+		str_decref(event.msg.msg.sender);
+		str_decref(event.msg.msg.text.content);
 	} else if (streq(json_string_value(type), "m.room.encrypted")) {
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.sender = str_new_cstr(json_string_value(sender));
 		event.msg.roomid = str_new_cstr(roomid);
-		event.msg.text = str_new_cstr("== encrypted message ==");
+		event.msg.msg.sender = str_new_cstr(json_string_value(sender));
+		event.msg.msg.text.content = str_new_cstr("== encrypted message ==");
 		event_handler_callback(event);
-		str_decref(event.msg.sender);
 		str_decref(event.msg.roomid);
-		str_decref(event.msg.text);
+		str_decref(event.msg.msg.sender);
+		str_decref(event.msg.msg.text.content);
 	}
 }
 
@@ -536,7 +582,9 @@ static void process_rooms_join(json_t *root) {
 
 }
 
-static void process_sync_response(const char *output) {
+static void process_sync_response(const char *output, size_t sz, void *params) {
+	(void)sz;
+	(void)params;
 	assert(output);
 
 	insync = false;
@@ -706,7 +754,7 @@ bool matrix_initial_sync(void) {
 
 	char *n = cache_get_alloc("next_batch");
 
-	process_sync_response(str_buf(res));
+	process_sync_response(str_buf(res), str_len(res), NULL);
 
 	if (n)
 		next_batch = n;
@@ -729,7 +777,7 @@ void matrix_sync(void) {
 	str_append_cstr(url, "&timeout=10000");
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
-	matrix_send_async(HTTP_GET, str_buf(url), NULL, process_sync_response);
+	matrix_send_async(HTTP_GET, str_buf(url), NULL, process_sync_response, NULL);
 	str_decref(url);
 }
 
@@ -805,7 +853,9 @@ void matrix_resume(void) {
 		curl_multi_remove_handle(mhandle, handle);
 		curl_easy_cleanup(handle);
 		if (c->callback)
-			c->callback(str_buf(c->data));
+			c->callback(str_buf(c->data),
+				str_len(c->data),
+				c->params);
 		str_decref(c->data);
 		free(c);
 	}

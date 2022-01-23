@@ -3,10 +3,12 @@
 
 #include <fcntl.h>
 
+#include "common.h"
 #include "str.h"
 
 enum MatrixEventType {
 	EVENT_MSG,
+	EVENT_FILE,
 	EVENT_ROOM_CREATE,
 	EVENT_ROOM_INFO,
 	EVENT_ROOM_JOIN,
@@ -21,8 +23,7 @@ struct MatrixEvent {
 		// TODO: why fields above are not const?
 		struct MatrixEventMsg {
 			Str *roomid;
-			Str *sender;
-			Str *text;
+			struct Msg msg;
 		} msg;
 		struct MatrixEventRoomCreate {
 			Str *id;
@@ -45,6 +46,11 @@ struct MatrixEvent {
 			Str *errorcode;
 			Str *error;
 		} error;
+		struct MatrixEventFile {
+			const char *payload;
+			size_t size;
+			FileInfo fileinfo;
+		} file;
 		// MatrixEventConnError - empty struct
 	};
 };
@@ -60,6 +66,7 @@ void matrix_set_event_handler(void (*callback)(MatrixEvent));
 bool matrix_initial_sync(void);
 void matrix_sync(void);
 void matrix_send_message(const Str *roomid, const Str *msg);
+void matrix_request_file(FileInfo);
 MatrixEvent * matrix_next_event();
 void matrix_set_server(char *token);
 void matrix_set_token(char *token);

@@ -19,7 +19,7 @@ void ui_cli_iter(void) {
 	free(line);
 }
 
-void ui_cli_msg_new(Room *room, Str *sender, Str *text) {
+void ui_cli_msg_new(Room *room, Msg msg) {
 	if (room != current_room)
 		return;
 
@@ -28,7 +28,7 @@ void ui_cli_msg_new(Room *room, Str *sender, Str *text) {
 	 * unread messages flag to zero, since we have just printed it to the
 	 * user.
 	 */
-	print_msg(room_displayname(room), user_name(sender), text);
+	print_msg(room_displayname(room), user_name(msg.sender), msg.text.content);
 	room->unread_msgs = 0;
 }
 
@@ -125,7 +125,12 @@ static void print_messages(Room *room) {
 	Msg *msg;
 	size_t i;
 	ROOM_MESSAGES_FOREACH(room, msg, i) {
-		print_msg(room_displayname(room), msg->sender, msg->text);
+		if (msg->type == MSGTYPE_TEXT)
+			print_msg(room_displayname(room),
+				msg->sender, msg->text.content);
+		else if (msg->type == MSGTYPE_FILE)
+			print_msg(room_displayname(room),
+				msg->sender, msg->fileinfo.uri);
 	}
 	room->unread_msgs = 0;
 }

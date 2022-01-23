@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "utils.h"
 
@@ -56,4 +57,33 @@ char *read_file_alloc(FILE *stream) {
 		output = NULL;
 	}
 	return output;
+}
+
+bool str2li(const char *str, long int *i) {
+	if (*str == '\0')
+		return false;
+	char *ret;
+	*i = strtol(str, &ret, 10);
+	if (*ret != '\0')
+		return false;
+	return true;
+}
+
+Str *mxc_uri_extract_server_alloc(Str *uri) {
+	const char *a, *b;
+	a = str_buf(uri) + strlen("mxc://");
+	b = a + strcspn(a, "/");
+	char *server = malloc(sizeof(char) * (b - a + 1));
+	strncpy(server, a, b-a);
+	server[b-a] = '\0';
+	Str *ret = str_new_cstr(server);
+	free(server);
+	return ret;
+}
+
+Str *mxc_uri_extract_path_alloc(Str *uri) {
+	const char *a;
+	a = str_buf(uri) + strlen("mxc://");
+	a += strcspn(a, "/") + 1;
+	return str_new_cstr(a);
 }

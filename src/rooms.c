@@ -86,10 +86,14 @@ void room_set_info(Room *r, Str *sender, Str *name) {
 		r->name = str_incref(name);
 }
 
-void room_append_msg(Room *room, Str *sender, Str *text) {
+void room_append_msg(Room *room, Msg m) {
 	Msg *msg = malloc(sizeof(Msg));
-	msg->sender = str_incref(sender);
-	msg->text = str_incref(text);
+	memcpy(msg, &m, sizeof(Msg));
+	str_incref(msg->sender);
+	if (msg->type == MSGTYPE_TEXT)
+		str_incref(msg->text.content);
+	else
+		str_incref(msg->file.url);
 	vector_append(room->msgs, msg);
 	room->unread_msgs++;
 }
