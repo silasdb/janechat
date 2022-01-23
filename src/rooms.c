@@ -93,7 +93,7 @@ void room_append_msg(Room *room, Msg m) {
 	if (msg->type == MSGTYPE_TEXT)
 		str_incref(msg->text.content);
 	else
-		str_incref(msg->file.url);
+		str_incref(msg->fileinfo.uri);
 	vector_append(room->msgs, msg);
 	room->unread_msgs++;
 }
