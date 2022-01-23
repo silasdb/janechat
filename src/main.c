@@ -236,6 +236,8 @@ Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
 		str_append_cstr(filepath, ".jpg");
 	else if (streq(str_buf(fileinfo.mimetype), "application/pdf"))
 		str_append_cstr(filepath, ".pdf");
+	else if (streq(str_buf(fileinfo.mimetype), "video/mp4"))
+		str_append_cstr(filepath, ".mp4");
 	else
 		str_append_cstr(filepath, ".unknown");
 	return filepath;
@@ -258,6 +260,10 @@ void open_file(FileInfo fileinfo) {
 	} else if (streq(str_buf(fileinfo.mimetype), "application/pdf")) {
 		cmd = str_new();
 		str_append_cstr(cmd, "evince ");
+		str_append(cmd, filepath); /* TODO: shell quote? */
+	} else if (streq(str_buf(fileinfo.mimetype), "video/mp4")) {
+		cmd = str_new();
+		str_append_cstr(cmd, "mplayer ");
 		str_append(cmd, filepath); /* TODO: shell quote? */
 	}
 
