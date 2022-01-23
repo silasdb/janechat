@@ -10,6 +10,7 @@
 
 #include "hash.h"
 #include "cache.h"
+#include "common.h"
 #include "matrix.h"
 #include "rooms.h"
 #include "ui.h"
@@ -26,7 +27,7 @@ struct ui_hooks {
 	void (*setup)();
 	void (*init)();
 	void (*iter)();
-	void (*msg_new)(Room *room, Str *, Str *);
+	void (*msg_new)(Room *room, Msg msg);
 	void (*room_new)(Str *roomid);
 } ui_hooks;
 
@@ -215,10 +216,47 @@ void process_room_join(Str *roomid, Str *senderid, Str *sendername) {
 	user_add(senderid, sendername);
 }
 
-void process_msg(Str *roomid, Str *sender, Str *text) {
+void process_msg(Str *roomid, Msg msg) {
 	Room *room = room_byid(roomid);
-	room_append_msg(room, sender, text);
-	ui_hooks.msg_new(room, sender, text);
+	room_append_msg(room, msg);
+	ui_hooks.msg_new(room, msg);
+}
+
+Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
+	Str *upath = mxc_uri_extract_path_alloc(fileinfo.uri);
+
+	/* TODO: use a temporary directory instead of /tmp */
+	Str *filepath = str_new_cstr("/tmp/");
+
+	str_append(filepath, upath);
+	str_decref(upath);
+	if (streq(str_buf(fileinfo.mimetype), "image/png"))
+		str_append_cstr(filepath, ".png");
+	else
+		str_append_cstr(filepath, ".unknown");
+	return filepath;
+}
+
+void open_file(FileInfo fileinfo) {
+	Str *filepath = fileinfo_to_path_alloc(fileinfo);
+	Str *cmd = NULL;
+
+	/*
+	 * TODO: We are going to have hardcoded programs for now, butin the
+	 * future we can allow setting them from configuration file or, better,
+	 * parse mailcap
+	 */
+	 if (streq(str_buf(fileinfo.mimetype), "image/png")) {
+		cmd = str_new();
+		str_append_cstr(cmd, "feh ");
+		str_append(cmd, filepath); /* TODO: shell quote? */
+	}
+
+	if (cmd)
+		system(str_buf(cmd));
+
+	str_decref(cmd);
+	str_decref(filepath);
 }
 
 void handle_matrix_event(MatrixEvent ev) {
@@ -244,7 +282,7 @@ void handle_matrix_event(MatrixEvent ev) {
 			ev.roomjoin.senderid, ev.roomjoin.sendername);
 		break;
 	case EVENT_MSG:
-		process_msg(ev.msg.roomid, ev.msg.sender, ev.msg.text);
+		process_msg(ev.msg.roomid, ev.msg.msg);
 		break;
 	case EVENT_MATRIX_ERROR:
 		printf("%s\n", str_buf(ev.error.error));
@@ -252,6 +290,16 @@ void handle_matrix_event(MatrixEvent ev) {
 		break;
 	case EVENT_CONN_ERROR:
 		//puts("Connection error.\n");
+		break;
+	case EVENT_FILE:
+		{
+		Str *filepath = fileinfo_to_path_alloc(ev.file.fileinfo);
+		FILE *f = fopen(str_buf(filepath), "w");
+		fwrite(ev.file.payload, 1, ev.file.size, f);
+		fclose(f);
+		str_decref(filepath);
+		open_file(ev.file.fileinfo);
+		}
 		break;
 	}
 }
@@ -263,6 +311,17 @@ void handle_ui_event(UiEvent ev) {
 		break;
 	case UIEVENTTYPE_SENDMSG:
 		matrix_send_message(ev.msg.roomid, ev.msg.text);
+		break;
+	case UIEVENTTYPE_OPENATTACHMENT:
+		{
+		Str *filepath = fileinfo_to_path_alloc(ev.openattachment.fileinfo);
+		/* Only request file if it doesn't exist in our local cache */
+		if (access(str_buf(filepath), F_OK) == -1)
+			matrix_request_file(ev.openattachment.fileinfo);
+		else
+			open_file(ev.openattachment.fileinfo);
+		str_decref(filepath);
+		}
 		break;
 	}
 }

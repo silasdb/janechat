@@ -1,14 +1,9 @@
 #ifndef JANECHAT_ROOMS_H
 #define JANECHAT_ROOMS_H
 
+#include "common.h"
 #include "vector.h"
 #include "str.h"
-
-struct Msg {
-	Str *sender;
-	Str *text;
-};
-typedef struct Msg Msg;
 
 struct Room {
 	/* The Matrix ID of the room. It is always set */
@@ -40,7 +35,7 @@ Room *room_new(Str *);
 Room *room_byid(const Str *);
 Str *room_displayname(Room *);
 void room_set_info(Room *, Str *, Str *);
-void room_append_msg(Room *, Str *, Str *);
+void room_append_msg(Room *, Msg msg);
 void room_append_user(Room *, Str *);
 
 void user_add(Str *, Str *);

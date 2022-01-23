@@ -242,7 +242,8 @@ void send_msg(void) {
 #if UI_CURSES_TEST
 	Msg *msg = malloc(sizeof(struct Msg));
 	msg->sender = str_new_cstr("test");
-	msg->text = str_new_cstr(cur_buffer->buf);
+	msg->type = MSGTYPE_TEXT;
+	msg->text.content = str_new_cstr(cur_buffer->buf);
 	vector_append(cur_buffer->room->msgs, msg);
 	chat_msgs_fill();
 #else
@@ -458,19 +459,29 @@ void chat_msgs_fill(void) {
 			mvwhline(wchat_msgs, y, 0, '-', maxx);
 			wattroff(wchat_msgs, COLOR_PAIR(2));
 		}
-		int height = text_height(msg->sender, msg->text, maxx);
+		int height;
+		if (msg->type == MSGTYPE_TEXT)
+			height = text_height(msg->sender, msg->text.content, maxx);
+		else
+			height = 1; /* TODO */
 		y -= height;
 		if (y < 0)
 			break;
 
 		wattron(wchat_msgs, COLOR_PAIR(1));
-		mvwprintw(wchat_msgs, y, 0, "%s",
+		mvwprintw(wchat_msgs, y, 0, "[%zu] %s", i,
 			str_buf(user_name(msg->sender)));
 
 		/* TODO: why does it set background to COLOR_BLACK? */
 		wattroff(wchat_msgs, COLOR_PAIR(1));
 
-		wprintw(wchat_msgs, ": %s", str_buf(msg->text));
+		if (msg->type == MSGTYPE_TEXT)
+			wprintw(wchat_msgs, ": %s", str_buf(msg->text.content));
+		else
+			wprintw(wchat_msgs, ": %s: %s",
+				str_buf(msg->fileinfo.mimetype),
+				str_buf(msg->fileinfo.uri));
+
 	}
 	wrefresh(wchat_msgs);
 }
@@ -588,6 +599,20 @@ bool input_key_chat(int c) {
 			chat_msgs_fill();
 		} else if (streq(cur_buffer->buf, "/disableautopilot")) {
 			autopilot = false;
+		} else if (strncmp(cur_buffer->buf, "/open ", strlen("/open ")) == 0) {
+			const char *number = cur_buffer->buf + strlen("/open ");
+			long int id;
+			if (str2li(number, &id) &&
+			   id >= 0 && (size_t)id < vector_len(cur_buffer->room->msgs)) {
+				Msg *msg = vector_at(cur_buffer->room->msgs, id);
+				assert(msg);
+				if (msg->type == MSGTYPE_FILE) {
+					struct UiEvent ev;
+					ev.type = UIEVENTTYPE_OPENATTACHMENT;
+					ev.openattachment.fileinfo = msg->fileinfo;
+					ui_event_handler_callback(ev);
+				}
+			}
 		} else {
 			send_msg();
 		}
@@ -719,8 +744,7 @@ void ui_curses_room_new(Str *roomid) {
 	}
 }
 
-void ui_curses_msg_new(Room *room, Str *sender, Str *msg) {
-	(void)sender; /* TODO: why is it unused? */
+void ui_curses_msg_new(Room *room, Msg msg) {
 	(void)msg; /* TODO: why is it unused? */
 	if (!curses_init)
 		return;
@@ -770,9 +794,6 @@ int main(int argc, char *argv[]) {
 	new_room("#test1:matrix.org", "Test A");
 	new_room("#test2:matrix.org", "Test C");
 	new_room("#test3:matrix.org", "Test B");
-
-	/* Append a message to the last room */
-	room_append_msg(room, str_new_cstr("sender"), str_new_cstr("text"));
 
 	ui_curses_init();
 	bottom = vector_len(buffers);
