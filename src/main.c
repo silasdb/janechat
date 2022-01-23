@@ -234,6 +234,8 @@ Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
 		str_append_cstr(filepath, ".png");
 	else if (streq(str_buf(fileinfo.mimetype), "image/jpeg"))
 		str_append_cstr(filepath, ".jpg");
+	else if (streq(str_buf(fileinfo.mimetype), "application/pdf"))
+		str_append_cstr(filepath, ".pdf");
 	else
 		str_append_cstr(filepath, ".unknown");
 	return filepath;
@@ -252,6 +254,10 @@ void open_file(FileInfo fileinfo) {
 	|| streq(str_buf(fileinfo.mimetype), "image/jpeg")) {
 		cmd = str_new();
 		str_append_cstr(cmd, "feh -. ");
+		str_append(cmd, filepath); /* TODO: shell quote? */
+	} else if (streq(str_buf(fileinfo.mimetype), "application/pdf")) {
+		cmd = str_new();
+		str_append_cstr(cmd, "evince ");
 		str_append(cmd, filepath); /* TODO: shell quote? */
 	}
 

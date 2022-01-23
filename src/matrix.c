@@ -449,7 +449,10 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 		event.msg.roomid = str_new_cstr(roomid);
 		event.msg.msg.sender = str_new_cstr(json_string_value(sender));
 
-		if (streq(json_string_value(msgtype), "m.image")) {
+		if (streq(json_string_value(msgtype), "m.image")
+		|| streq(json_string_value(msgtype), "m.audio")
+		|| streq(json_string_value(msgtype), "m.video")
+		|| streq(json_string_value(msgtype), "m.file")) {
 			event.msg.msg.type = MSGTYPE_FILE;
 			event.msg.msg.fileinfo.mimetype = str_new_cstr(
 				json_string_value(json_path(
