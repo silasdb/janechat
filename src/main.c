@@ -230,16 +230,6 @@ Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
 
 	str_append(filepath, upath);
 	str_decref(upath);
-	if (streq(str_buf(fileinfo.mimetype), "image/png"))
-		str_append_cstr(filepath, ".png");
-	else if (streq(str_buf(fileinfo.mimetype), "image/jpeg"))
-		str_append_cstr(filepath, ".jpg");
-	else if (streq(str_buf(fileinfo.mimetype), "application/pdf"))
-		str_append_cstr(filepath, ".pdf");
-	else if (streq(str_buf(fileinfo.mimetype), "video/mp4"))
-		str_append_cstr(filepath, ".mp4");
-	else
-		str_append_cstr(filepath, ".unknown");
 	return filepath;
 }
 
