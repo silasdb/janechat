@@ -261,8 +261,19 @@ void open_file(FileInfo fileinfo) {
 		str_append(cmd, filepath); /* TODO: shell quote? */
 	}
 
-	if (cmd)
+	if (cmd) {
+		/*
+		 * TODO: Running the program with system() in foreground freezes
+		 * janechat, making it timeout on socket connection (a problem
+		 * I'm facing with libcurl. For now, as a workaround, let's run
+		 * the program in background. This brings other problems,
+		 * because I'm unable to control the child process from the
+		 * terminal (janechat still controls the terminal). I should
+		 * rather study process groups!
+		 */
+		str_append_cstr(cmd, " &");
 		system(str_buf(cmd));
+	}
 
 	str_decref(cmd);
 	str_decref(filepath);
