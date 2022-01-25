@@ -255,6 +255,10 @@ void open_file(FileInfo fileinfo) {
 		cmd = str_new();
 		str_append_cstr(cmd, "mplayer ");
 		str_append(cmd, filepath); /* TODO: shell quote? */
+	} else if (streq(str_buf(fileinfo.mimetype), "audio/ogg; codecs=opus")) {
+		cmd = str_new();
+		str_append_cstr(cmd, "mplayer -softvol -softvol-max 2000 -volume 90 ");
+		str_append(cmd, filepath); /* TODO: shell quote? */
 	}
 
 	if (cmd)
