@@ -178,6 +178,7 @@ void set_focus(enum Focus f) {
 				}
 
 		}
+		index_update_top_bottom();
 		cur_buffer = &index_input_buffer;
 		focus = FOCUS_INDEX;
 		index_draw();
