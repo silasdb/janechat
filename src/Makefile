@@ -61,8 +61,8 @@ vector.o: vector.c vector.h
 
 # ui-curses-test
 
-ui-curses-test: hash.o list.o rooms.o str.o ui-curses-test.o utils.o vector.o
-	$(CC) ${LDFLAGS} -o $@ hash.o list.o rooms.o str.o ui-curses-test.o utils.o vector.o
+ui-curses-test: hash.o list.o rooms.o str.o ui-curses-test.o ui.o utils.o vector.o
+	$(CC) ${LDFLAGS} -o $@ hash.o list.o rooms.o str.o ui.o ui-curses-test.o utils.o vector.o
 
 ui-curses-test.o: rooms.h str.h ui-curses.c ui-curses.h ui.h vector.h
 	$(CC) -DUI_CURSES_TEST ${CFLAGS} -c -o $@ ui-curses.c
