@@ -464,7 +464,7 @@ void chat_msgs_fill(void) {
 		if (msg->type == MSGTYPE_TEXT)
 			height = text_height(msg->sender, msg->text.content, maxx);
 		else
-			height = 1; /* TODO */
+			height = 2; /* TODO */
 		y -= height;
 		if (y < 0)
 			break;
