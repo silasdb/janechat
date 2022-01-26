@@ -26,7 +26,11 @@
 #define DEBUG_REQUEST 0
 #define DEBUG_RESPONSE 0
 
-#define TIMEOUT_MS 10000
+/* Used for the /sync endpoint only. */
+#define MATRIX_SYNC_TIMEOUT_MS 10000
+
+/* Used for all opened sockets, hence for all enpoints. */
+#define SOCKET_TIMEOUT_MS 60000
 
 struct callback_info {
 	void (*callback)(const char *, size_t, void *);
@@ -172,7 +176,7 @@ static void matrix_send_async(
 	 * TODO: libcurl timeouts with SIGALRM, so we need to caught this signal
 	 * so the program doesn't abort.
 	 */
-	curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, TIMEOUT_MS);
+	curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, SOCKET_TIMEOUT_MS);
 	curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT, 60L);
 	curl_easy_setopt(handle, CURLOPT_URL, str_buf(url));
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
@@ -782,7 +786,7 @@ void matrix_sync(void) {
 	str_append_cstr(url, "&timeout=");
 #define INT2STR_(x) #x
 #define INT2STR(x) INT2STR_(x)
-	str_append_cstr(url, INT2STR(TIMEOUT_MS));
+	str_append_cstr(url, INT2STR(MATRIX_SYNC_TIMEOUT_MS));
 #undef INT2STR
 #undef INT2STR_
 	str_append_cstr(url, "&access_token=");
