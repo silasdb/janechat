@@ -32,10 +32,16 @@
 /* Used for all opened sockets, hence for all enpoints. */
 #define SOCKET_TIMEOUT_MS 60000
 
+enum callback_info_type {
+	CALLBACK_INFO_TYPE_SYNC,
+	CALLBACK_INFO_TYPE_OTHER,
+} type;
+
 struct callback_info {
 	void (*callback)(const char *, size_t, void *);
 	Str *data;
 	void *params;
+	enum callback_info_type type;
 };
 
 enum HTTPMethod {
@@ -130,12 +136,14 @@ Str * matrix_send_sync_alloc(
 static void matrix_send_async(
 	enum HTTPMethod method,
 	const char *path,
+	enum callback_info_type type,
 	const char *json,
 	void (*callback)(const char *, size_t, void *),
 	void *callback_params)
 {
 	struct callback_info *c = malloc(sizeof(struct callback_info));
 	c->callback = callback;
+	c->type = type;
 	static bool curl_initialized = false;
 	if (!curl_initialized) {
 		 /* TODO: we should enable only what we need */
@@ -189,6 +197,22 @@ static void matrix_send_async(
 	 */
 	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0);
 	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0);
+
+	/*
+	 * TODO: libcurl by default uses HTTP 2 if possible. For the multi
+	 * interface that we are using here, it tries to keep the same
+	 * connection for different requests (for different easy handlers),
+	 * which is a feature HTTP 2 support. But it fails if connection changes
+	 * (e.g. if IP and/or routing table changes), affecting every easy
+	 * handlers, even future ones, since libcurl tries to reuse connections,
+	 * which are now dead. The solution found is to force libcurl to use
+	 * HTTP 1.1 that creates a new connection for every request. It is less
+	 * efficient, but works.
+	 *
+	 * For more info, see the following thread in the curl-library
+	 * mailing list: https://curl.se/mail/lib-2022-01/0088.html
+	 */
+        curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
 	switch (method) {
 	case HTTP_POST:
@@ -268,7 +292,8 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 	json_object_set(root, "msgtype", json_string("m.text"));
 	json_object_set(root, "body", json_string(str_buf(msg)));
 	const char *s = json2str_alloc(root);
-	matrix_send_async(HTTP_POST, str_buf(url), s, NULL, NULL);
+	matrix_send_async(HTTP_POST, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
+		s, NULL, NULL);
 	free((void *)s);
 	str_decref(url);
 }
@@ -294,7 +319,8 @@ void matrix_request_file(FileInfo fileinfo) {
 	str_decref(path);
 	FileInfo *fileinfoptr = malloc(sizeof(FileInfo));
 	*fileinfoptr = fileinfo;
-	matrix_send_async(HTTP_GET, str_buf(url), NULL, matrix_receive_file, fileinfoptr);
+	matrix_send_async(HTTP_GET, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
+		NULL, matrix_receive_file, fileinfoptr);
 	str_decref(url);
 }
 
@@ -791,7 +817,8 @@ void matrix_sync(void) {
 #undef INT2STR_
 	str_append_cstr(url, "&access_token=");
 	str_append_cstr(url, token);
-	matrix_send_async(HTTP_GET, str_buf(url), NULL, process_sync_response, NULL);
+	matrix_send_async(HTTP_GET, str_buf(url), CALLBACK_INFO_TYPE_SYNC,
+		 NULL, process_sync_response, NULL);
 	str_decref(url);
 }
 
@@ -841,6 +868,11 @@ void matrix_resume(void) {
 		 */
 		return;
 
+	CURL *handle;
+	handle = msg->easy_handle;
+	struct callback_info *c;
+	curl_easy_getinfo(handle, CURLINFO_PRIVATE, &c); /* TODO: Check return code */
+
 	if (msg->data.result != CURLE_OK) {
 		/*
 		 * TODO: handle possible values for curl error and send them as
@@ -853,19 +885,24 @@ void matrix_resume(void) {
 		MatrixEvent event;
 		event.type = EVENT_CONN_ERROR;
 		event_handler_callback(event);
-		return;
+
+		switch (c->type) {
+		case CALLBACK_INFO_TYPE_SYNC:
+			insync = false;
+			break;
+		case CALLBACK_INFO_TYPE_OTHER:
+			/* TODO: requeue */
+			break;
+		}
+
+
+		goto cleanup;
 	}
 
 	if (msg && msg->msg == CURLMSG_DONE) {
-		CURL *handle;
-		handle = msg->easy_handle;
-		struct callback_info *c;
-		curl_easy_getinfo(handle, CURLINFO_PRIVATE, &c); /* TODO: Check return code */
 #if DEBUG_RESPONSE
 		printf("DEBUG_RESPONSE: output: %s\n", str_buf(c->data));
 #endif
-		curl_multi_remove_handle(mhandle, handle);
-		curl_easy_cleanup(handle);
 		if (c->callback)
 			c->callback(str_buf(c->data),
 				str_len(c->data),
@@ -873,4 +910,8 @@ void matrix_resume(void) {
 		str_decref(c->data);
 		free(c);
 	}
+
+cleanup:
+	curl_multi_remove_handle(mhandle, handle);
+	curl_easy_cleanup(handle);
 }
