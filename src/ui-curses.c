@@ -614,6 +614,13 @@ bool input_key_chat(int c) {
 					ui_event_handler_callback(ev);
 				}
 			}
+		} else if (cur_buffer->buf[0] == '/') {
+			/* TODO: show in the UI invalid command */
+			/*
+			 * TODO: still need to allow user to send messages that
+			 * start with '/'.  Maybe by double '/' like IRC clients
+			 * and Element do?
+			 */
 		} else {
 			send_msg();
 		}
