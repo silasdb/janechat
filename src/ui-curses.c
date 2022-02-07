@@ -349,6 +349,13 @@ void index_find_next(int direction) {
 	} while (idx != index_idx);
 }
 
+void set_buffer_mute(bool mute) {
+	struct buffer *b = vector_at(buffers, index_idx);
+	if (!b)
+		return;
+	b->room->notify = !mute;
+}
+
 void index_key(void) {
 	int c = wgetch(windex);
 	switch (c) {
@@ -377,6 +384,14 @@ void index_key(void) {
 	case 'J':
 		/* TODO: only redraw if we found a valid item */
 		index_next_unread(+1);
+		index_draw();
+		break;
+	case 'm':
+		set_buffer_mute(true);
+		index_draw();
+		break;
+	case 'M':
+		set_buffer_mute(false);
 		index_draw();
 		break;
 	case 'N':
@@ -540,6 +555,10 @@ bool input_key_index(int c) {
 			autopilot = true;
 		else if (streq(cur_buffer->buf, "unset autopilot"))
 			autopilot = false;
+		else if (streq(cur_buffer->buf, "set mute"))
+			set_buffer_mute(true);
+		else if (streq(cur_buffer->buf, "unset mute"))
+			set_buffer_mute(false);
 		else if (cur_buffer->buf[0] == '/') {
 			regcomp(&re, &cur_buffer->buf[1],
 				REG_EXTENDED|REG_ICASE|REG_NOSUB);
