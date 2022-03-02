@@ -87,3 +87,27 @@ Str *mxc_uri_extract_path_alloc(Str *uri) {
 	a += strcspn(a, "/") + 1;
 	return str_new_cstr(a);
 }
+
+ssize_t utf8_next_character_offset(const char *s, size_t i) {
+	ssize_t offset = 1;
+	if (s[i] == '\0')
+		return offset;
+	while (!((s[i] & 0x80) || (s[i] & 0xC0) || (s[i] & 0xE0) || (s[i] & 0xF0))) {
+		s++;
+		offset++;
+	}
+	return offset;
+}
+
+ssize_t utf8_prev_character_offset(const char *s, size_t i) {
+	ssize_t offset = -1;
+	if (s[i] == '\0') {
+		return offset;
+	}
+	while (!((s[i] & 0x80) || (s[i] & 0xC0) || (s[i] & 0xE0) || (s[i] & 0xF0))) {
+		s--;
+		offset--;
+	}
+	return offset;
+}
+
