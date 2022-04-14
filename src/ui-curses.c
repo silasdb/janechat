@@ -531,14 +531,7 @@ void input_cursor_inc(int offset) {
 		return;
 	if (cur_buffer->pos + offset > cur_buffer->len)
 		return;
-	ssize_t off;
-	if (offset > 0)
-		off = utf8_next_character_offset(
-			cur_buffer->buf, cur_buffer->pos);
-	else
-		off = utf8_prev_character_offset(
-			cur_buffer->buf, cur_buffer->pos);
-	cur_buffer->pos += off;
+	cur_buffer->pos += offset;
 }
 
 void input_cursor_show(void) {
