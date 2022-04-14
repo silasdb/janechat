@@ -12,7 +12,5 @@ char *read_file_alloc(FILE *);
 bool str2li(const char *, long int *);
 Str *mxc_uri_extract_server_alloc(Str *);
 Str *mxc_uri_extract_path_alloc(Str *);
-ssize_t utf8_next_character_offset(const char *, size_t);
-ssize_t utf8_prev_character_offset(const char *, size_t);
 
 #endif /* !JANECHAT_UTILS_H */
