@@ -26,16 +26,17 @@
 struct buffer {
 	Room *room;
 	char buf[1024]; /* Input buffer. TODO: use Str? */
-	size_t pos; /* Cursor position */
+	size_t pos; /* Cursor position - UTF-8 index. */
 	size_t len; /* String length - does not include the null byte */
+	size_t utf8len; /* UTF-8 length */
 
-	/* Left-most character index showed in the input window */
+	/* Left-most character index showed in the input window - UTF-8 index */
 	size_t left; 
 
 	/*
 	 * This is either the right-most character shown in the input window. If
 	 * the string length is smaller than screen horizontal size, it is the
-	 * screen horizontal size - 1 (maxx-1).
+	 * screen horizontal size - 1 (maxx-1). UTF-8 index.
 	 */
 	size_t right;
 
@@ -514,14 +515,22 @@ void input_clear(void) {
 	cur_buffer->right = maxx-1;
 	cur_buffer->pos = 0;
 	cur_buffer->len = 0;
+	cur_buffer->utf8len = 0;
 	input_redraw();
 }
 
 void input_redraw(void) {
 	werase(winput);
+	size_t left, right, pos;
+	left = utf8_char_pos(cur_buffer->buf, cur_buffer->left);
+	pos = utf8_char_pos(cur_buffer->buf, cur_buffer->pos);
+
+	/* TODO: this overuns cur_buffer->pos: fix this to stop at pos */
+	right = utf8_char_pos(cur_buffer->buf, cur_buffer->right);
+
 	mvwprintw(winput, 0, 0, "%.*s",
-		(int)(cur_buffer->right - cur_buffer->left + 1),
-		&cur_buffer->buf[cur_buffer->left]);
+		(int)(right - left + 1),
+		&cur_buffer->buf[left]);
 	wmove(winput, 0, cur_buffer->pos - cur_buffer->left);
 	wrefresh(winput);
 }
@@ -529,7 +538,7 @@ void input_redraw(void) {
 void input_cursor_inc(int offset) {
 	if ((int)cur_buffer->pos + offset < 0)
 		return;
-	if (cur_buffer->pos + offset > cur_buffer->len)
+	if (cur_buffer->pos + offset > cur_buffer->utf8len)
 		return;
 	cur_buffer->pos += offset;
 }
@@ -667,13 +676,37 @@ void input_key_common(int c) {
 	case KEY_RIGHT:
 		input_cursor_inc(+1);
 		break;
-	default:
-		for (size_t i = cur_buffer->len; i > cur_buffer->pos; i--)
-			cur_buffer->buf[i] = cur_buffer->buf[i-1];
-		cur_buffer->buf[cur_buffer->pos] = c;
-		cur_buffer->len++;
+	default: {
+		char utf8c[4];
+		utf8c[0] = c;
+		size_t sz = utf8_char_size(c);
+		for (size_t i = 1; i < sz; i++) {
+			c = wgetch(winput);
+			utf8c[i] = c;
+		}
+
+
+		/*
+		 * Create room in the buffer to insert bytes that represent the
+		 * current character
+		 */
+		size_t pos = utf8_char_pos(cur_buffer->buf, cur_buffer->pos);
+		for (size_t i = cur_buffer->len; i > pos; i--)
+			/*
+			 * TODO: what if there is no room in the string? We
+			 * should wrap it around with Str.
+			 */
+			cur_buffer->buf[i] = cur_buffer->buf[i-sz];
+
+		/* Finally insert bytes */
+		for (size_t i = 0; i < sz; i++)
+			cur_buffer->buf[pos+i] = utf8c[i];
+
+		cur_buffer->len += sz;
+		cur_buffer->utf8len++;
 		input_cursor_inc(+1);
 		break;
+	}
 	}
 }
 
@@ -761,6 +794,7 @@ void ui_curses_room_new(Str *roomid) {
 	b->room = room_byid(roomid);
 	b->pos = 0;
 	b->len = 0;
+	b->utf8len = 0;
 	b->left = 0;
 	b->right = 0;
 	b->last_line = -1;
