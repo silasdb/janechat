@@ -87,3 +87,28 @@ Str *mxc_uri_extract_path_alloc(Str *uri) {
 	a += strcspn(a, "/") + 1;
 	return str_new_cstr(a);
 }
+
+size_t utf8_char_size(int c) {
+	if ((c & 0x80) == 0)
+		return 1;
+	if ((c & 0xE0) == 0xC0)
+		return 2;
+	if ((c & 0xF0) == 0xE0)
+		return 3;
+	if ((c & 0xF8) == 0xF0)
+		return 4;
+	/* Invalid char. Return 1 byte. */
+	return 1;
+}
+
+size_t utf8_char_pos(const char *s, size_t i) {
+	size_t pos = 0;
+	while (i--) {
+		size_t sz;
+		sz = utf8_char_size(*s);
+		s += sz;
+		pos += sz;
+	}
+	return pos;
+}
+
