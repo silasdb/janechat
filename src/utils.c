@@ -101,7 +101,7 @@ size_t utf8_char_size(int c) {
 	return 1;
 }
 
-size_t utf8_char_pos(const char *s, size_t i) {
+size_t utf8_char_bytepos(const char *s, size_t i) {
 	size_t pos = 0;
 	while (i--) {
 		size_t sz;
