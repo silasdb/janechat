@@ -662,14 +662,20 @@ bool input_key_chat(int c) {
 void input_key_common(int c) {
 	switch (c) {
 	case 127: /* TODO: why do I need this in urxvt but not in xterm? - https://bbs.archlinux.org/viewtopic.php?id=56427*/
-	case KEY_BACKSPACE:
+	case KEY_BACKSPACE: {
 		if (cur_buffer->pos == 0)
 			break;
-		for (size_t i = cur_buffer->pos-1; i < cur_buffer->len; i++)
-			cur_buffer->buf[i] = cur_buffer->buf[i+1];
+		size_t p = utf8_char_bytepos(cur_buffer->buf, cur_buffer->pos-1);
+		size_t sz = utf8_char_size(cur_buffer->buf[p]);
+		size_t i;
+		for (i = p; i < cur_buffer->len-sz; i++)
+			cur_buffer->buf[i] = cur_buffer->buf[i+sz];
+		cur_buffer->buf[i] = '\0';
 		cur_buffer->pos--;
-		cur_buffer->len--;
+		cur_buffer->len -= sz;
+		cur_buffer->utf8len--;
 		break;
+	}
 	case KEY_LEFT:
 		input_cursor_inc(-1);
 		break;
