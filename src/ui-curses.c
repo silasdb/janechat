@@ -522,11 +522,11 @@ void input_clear(void) {
 void input_redraw(void) {
 	werase(winput);
 	size_t left, right, pos;
-	left = utf8_char_pos(cur_buffer->buf, cur_buffer->left);
-	pos = utf8_char_pos(cur_buffer->buf, cur_buffer->pos);
+	left = utf8_char_bytepos(cur_buffer->buf, cur_buffer->left);
+	pos = utf8_char_bytepos(cur_buffer->buf, cur_buffer->pos);
 
 	/* TODO: this overuns cur_buffer->pos: fix this to stop at pos */
-	right = utf8_char_pos(cur_buffer->buf, cur_buffer->right);
+	right = utf8_char_bytepos(cur_buffer->buf, cur_buffer->right);
 
 	mvwprintw(winput, 0, 0, "%.*s",
 		(int)(right - left + 1),
@@ -690,7 +690,7 @@ void input_key_common(int c) {
 		 * Create room in the buffer to insert bytes that represent the
 		 * current character
 		 */
-		size_t pos = utf8_char_pos(cur_buffer->buf, cur_buffer->pos);
+		size_t pos = utf8_char_bytepos(cur_buffer->buf, cur_buffer->pos);
 		for (size_t i = cur_buffer->len; i > pos; i--)
 			/*
 			 * TODO: what if there is no room in the string? We
