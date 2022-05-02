@@ -5,6 +5,19 @@ set rows 24
 set cols 80
 stty rows $rows cols $cols < $spawn_out(slave,name)
 
+proc foreach-row {var body} {
+	if {[llength $var] == 1} {
+		upvar 1 $var r
+	} else {
+		upvar 1 [lindex $var 0] row
+		upvar 1 [lindex $var 1] r
+	}
+	for {set row 0} {$row < $::rows} {incr row} {
+		set r $::termdata($row)
+		uplevel 1 $body
+	}
+}
+
 for {set row 0} {$row < $rows} {incr row} {
 	set termdata($row) ""
 }
@@ -36,6 +49,6 @@ while {!$got_timeout} {
 send "\r"
 send "abc"
 
-foreach k [array names termdata] {
-	puts "$k: $termdata($k)"
+foreach-row {i line} {
+	puts $i:$line
 }
