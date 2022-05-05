@@ -20,6 +20,7 @@ EOF
 if pkg-config ncurses; then
 	cat >>config.mk <<-EOF
 		LDFLAGS += $(pkg-config --libs ncurses)
+		CFLAGS += $(pkg-config --cflags ncurses)
 	EOF
 else
 	cat >>config.mk <<-EOF
