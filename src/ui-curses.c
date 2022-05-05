@@ -758,6 +758,7 @@ void ui_curses_iter(void) {
 void ui_curses_room_new(Str *roomid) {
 	struct buffer *b;
 	b = malloc(sizeof(struct buffer));
+	b->buf[0] = '\0';
 	b->room = room_byid(roomid);
 	b->pos = 0;
 	b->len = 0;
