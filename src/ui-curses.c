@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <locale.h>
 #include <regex.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -705,6 +706,12 @@ void ui_curses_setup(void) {
 
 void ui_curses_init(void) {
 	curses_init = true;
+
+	/*
+	 * TODO: it seems to solve the problem, but we should investigate why. See (https://stackoverflow.com/questions/9922528/how-to-make-ncurses-display-utf-8-chars-correctly-in-c)
+	 */
+	setlocale(LC_CTYPE, "");
+
 	initscr();
 	clear();
 	nonl();
