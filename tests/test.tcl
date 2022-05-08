@@ -18,8 +18,10 @@ set env(TERM) virtterm
 set terminfo_src "/tmp/virtterm.src"
 set file [open $terminfo_src w]
 puts $file {virtterm|virtual terminal emulator,
-	clear=\E[C,
-	# TODO
+	clear=\ECLEAR\E,
+	scroll_forward=\n,
+	carriage_return=\r,
+	cursor_address=\ECURSOR_ADDRESS;%d;%d\E,
 }
 close $file
 exec tic $terminfo_src
@@ -53,10 +55,15 @@ set timeout 1
 expect_before {
 	timeout {
 		set got_timeout 1
-	}
-	-re {.*\n} {
+	} -re "^\[^\x01-\x1f]+" {
+		puts text
+	} -re {.*\n} {
 		# Should delete control-characters before printing it to the screen
 		puts newline
+	} -re "^\x1bCURSOR_ADDRESS;.*?;.*?\x1b" {
+		puts cursor_address
+	} "^\x1bCLEAR\x1b" {
+		puts clear
 	}
 }
 
