@@ -44,26 +44,40 @@ proc foreach-row {var body} {
 	}
 }
 
-for {set row 0} {$row < $rows} {incr row} {
-	set termdata($row) ""
+proc term_clear {} {
+	for {set row 0} {$row < $::rows} {incr row} {
+		set ::termdata($row) ""
+	}
+}
+
+proc term_text_append {text} {
+	set ::termdata($::row) [string range $::termdata($::row) 0 \
+		[expr {$::column - 1}]]
+	append ::termdata($::row) $text
+}
+
+proc term_set_cursor {row column} {
+	set ::row $row
+	set ::column $column
 }
 
 log_user 0
 set row 0
+set column 0
 set timeout 1
 
 expect_background {
 	-re "^\[^\x01-\x1f]+" {
-		puts text
+		term_text_append $expect_out(0,string)
 	} -re {\n} {
 		# Should delete control-characters before printing it to the screen
 		puts newline
 	} -re "^\x1bCURSOR_ADDRESS;\[0-9\]+;\[0-9\]+\x1b" {
 		regexp "^\x1bCURSOR_ADDRESS;(\[0-9\]+);(\[0-9\]+)\x1b" \
-			$expect_out(0,string) -> y x
-		puts "cursor_address row:$y column:$x"
+			$expect_out(0,string) -> row column
+		term_set_cursor $row $column
 	} "^\x1bCLEAR\x1b" {
-		puts clear
+		term_clear
 	}
 }
 
