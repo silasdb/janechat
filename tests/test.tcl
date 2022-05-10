@@ -58,8 +58,10 @@ expect_background {
 	} -re {\n} {
 		# Should delete control-characters before printing it to the screen
 		puts newline
-	} -re "^\x1bCURSOR_ADDRESS;.*?;.*?\x1b" {
-		puts cursor_address
+	} -re "^\x1bCURSOR_ADDRESS;\[0-9\]+;\[0-9\]+\x1b" {
+		regexp "^\x1bCURSOR_ADDRESS;(\[0-9\]+);(\[0-9\]+)\x1b" \
+			$expect_out(0,string) -> y x
+		puts "cursor_address row:$y column:$x"
 	} "^\x1bCLEAR\x1b" {
 		puts clear
 	}
