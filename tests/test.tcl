@@ -52,12 +52,10 @@ log_user 0
 set row 0
 set timeout 1
 
-expect_before {
-	timeout {
-		set got_timeout 1
-	} -re "^\[^\x01-\x1f]+" {
+expect_background {
+	-re "^\[^\x01-\x1f]+" {
 		puts text
-	} -re {.*\n} {
+	} -re {\n} {
 		# Should delete control-characters before printing it to the screen
 		puts newline
 	} -re "^\x1bCURSOR_ADDRESS;.*?;.*?\x1b" {
@@ -67,18 +65,17 @@ expect_before {
 	}
 }
 
-set got_timeout 0
-
-set row 0
-while {!$got_timeout} {
-	puts expect
-	expect
-	set termdata($row) $expect_out(0,string)
-	incr row
+proc iter {} {
+	after 100 {set ::cycle 1}
+	vwait ::cycle
+	unset ::cycle
 }
+
+iter
 
 send "\r"
 send "abc"
+iter
 
 foreach-row {i line} {
 	puts $i:$line
