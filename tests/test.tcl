@@ -1,14 +1,9 @@
 package require Expect
 
-# References:
-# https://espterm.github.io/docs/VT100%20escape%20codes.html
-# https://unix.stackexchange.com/questions/288962/what-does-1049h-and-1h-ansi-escape-sequences-do
-# https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
-# https://shallowsky.com/blog/linux/noaltscreen.html
-# https://shallowsky.com/linux/noaltscreen.html
-
 # Instead of implementing sequences for modern terminals, we prefer to set a new
-# terminfo database with only control sequences that matter for us.
+# terminfo database with only control sequences that matter for us. This is
+# heavily inspired by expect's tkterm example:
+# https://core.tcl-lang.org/expect/file?name=example/tkterm&ci=tip
 #
 # TODO: ncurses can execute programs with minimal or even empty terminfo
 # definitions, but NetBSD curses refuse to start the program. Does NetBSD curses
