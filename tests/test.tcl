@@ -48,6 +48,7 @@ proc term_clear {} {
 proc term_text_append {text} {
 	set ::termdata($::row) [string range $::termdata($::row) 0 \
 		[expr {$::column - 1}]]
+	incr ::column [string length $text]
 	append ::termdata($::row) $text
 }
 
@@ -60,6 +61,9 @@ log_user 0
 set row 0
 set column 0
 set timeout 1
+
+# Initialize ::termdata array
+term_clear
 
 expect_background {
 	-re "^\[^\x01-\x1f]+" {
@@ -85,7 +89,7 @@ proc iter {} {
 iter
 
 send "\r"
-send "abc"
+send "very long line very long line very long line very long line very long line very long line very long line very long line very long line"
 iter
 
 foreach-row {i line} {
