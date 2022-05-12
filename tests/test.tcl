@@ -68,15 +68,26 @@ term_clear
 expect_background {
 	-re "^\[^\x01-\x1f]+" {
 		term_text_append $expect_out(0,string)
-	} -re {\n} {
-		# Should delete control-characters before printing it to the screen
-		puts newline
+	} "^\n" {
+		exit 1
+	} "^\r" {
+		set ::column 0
 	} -re "^\x1bCURSOR_ADDRESS;\[0-9\]+;\[0-9\]+\x1b" {
 		regexp "^\x1bCURSOR_ADDRESS;(\[0-9\]+);(\[0-9\]+)\x1b" \
 			$expect_out(0,string) -> row column
 		term_set_cursor $row $column
 	} "^\x1bCLEAR\x1b" {
 		term_clear
+	} -re ".*" {
+		# Unrecognized patters are printed char by char so we can debug
+		# special cases
+		set t $expect_out(0,string)
+		for {set i 0} {$i < [string length $t]} {incr i} {
+			set c [string range $t $i $i]
+			scan $c %c v
+			puts "$i: $c: $v"
+		}
+		exit 1
 	}
 }
 
@@ -89,7 +100,9 @@ proc iter {} {
 iter
 
 send "\r"
-send "very long line very long line very long line very long line very long line very long line very long line very long line very long line"
+send "abc"
+send "\r"
+send "a b c d e f g h i j k l m n o p q r s t u v w x y z 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M"
 iter
 
 foreach-row {i line} {
