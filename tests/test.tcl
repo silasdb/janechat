@@ -17,6 +17,9 @@ puts $file {virtterm|virtual terminal emulator,
 	scroll_forward=\n,
 	carriage_return=\r,
 	cursor_address=\ECURSOR_ADDRESS;%d;%d\E,
+	key_left=\EKEY_LEFT\E,
+	key_right=\EKEY_RIGHT\E,
+	key_backspace=^H,
 }
 close $file
 exec tic $terminfo_src
@@ -87,12 +90,18 @@ proc iter {} {
 	unset ::cycle
 }
 
+set key_left "\x1bKEY_LEFT\x1b"
+set key_right "\x1bKEY_RIGHT\x1b"
+
 iter
 
 send "\r"
 send "abc"
 send "\r"
 send "a b c d e f g h i j k l m n o p q r s t u v w x y z 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M"
+iter
+send $key_left
+send "\b"
 iter
 
 foreach-row {i line} {
