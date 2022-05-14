@@ -78,16 +78,6 @@ expect_background {
 		term_set_cursor $row $column
 	} "^\x1bCLEAR\x1b" {
 		term_clear
-	} -re ".*" {
-		# Unrecognized patters are printed char by char so we can debug
-		# special cases
-		set t $expect_out(0,string)
-		for {set i 0} {$i < [string length $t]} {incr i} {
-			set c [string range $t $i $i]
-			scan $c %c v
-			puts "$i: $c: $v"
-		}
-		exit 1
 	}
 }
 
