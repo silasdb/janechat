@@ -29,19 +29,6 @@ set rows 24
 set cols 80
 stty rows $rows cols $cols < $spawn_out(slave,name)
 
-proc foreach-row {var body} {
-	if {[llength $var] == 1} {
-		upvar 1 $var r
-	} else {
-		upvar 1 [lindex $var 0] row
-		upvar 1 [lindex $var 1] r
-	}
-	for {set row 0} {$row < $::rows} {incr row} {
-		set r $::termdata($row)
-		uplevel 1 $body
-	}
-}
-
 proc term_clear {} {
 	for {set row 0} {$row < $::rows} {incr row} {
 		set ::termdata($row) ""
@@ -63,7 +50,6 @@ proc term_set_cursor {row column} {
 log_user 0
 set row 0
 set column 0
-set timeout 1
 
 # Initialize ::termdata array
 term_clear
@@ -85,25 +71,20 @@ expect_background {
 }
 
 proc iter {} {
+	set ::cycle 1
 	after 100 {set ::cycle 1}
 	vwait ::cycle
-	unset ::cycle
+}
+
+proc printterm {title} {
+	iter
+	puts "TITLE: $title"
+	for {set row 0} {$row < 24} {incr row} {
+		puts $::termdata($row)
+	}
 }
 
 set key_left "\x1bKEY_LEFT\x1b"
 set key_right "\x1bKEY_RIGHT\x1b"
 
 iter
-
-send "\r"
-send "abc"
-send "\r"
-send "a b c d e f g h i j k l m n o p q r s t u v w x y z 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M"
-iter
-send $key_left
-send "\b"
-iter
-
-foreach-row {i line} {
-	puts $i:$line
-}
