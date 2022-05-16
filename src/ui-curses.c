@@ -456,8 +456,15 @@ void chat_msgs_fill(void) {
 	int last = cur_buffer->last_line;
 	if (last == -1)
 		last = vector_len(cur_buffer->room->msgs)-1;
-	if (last < 0)
+	if (last < 0) {
+		/*
+		 * TODO: With ncurses, we need to force a wrefresh() to erase
+		 * wchat_msgs content for this case (when there is no messages
+		 * for the room). This is not needed for NetBSD curses. Why?
+		 */
+		wrefresh(wchat_msgs);
 		return;
+	}
 	int maxy, maxx;
 	getmaxyx(wchat_msgs, maxy, maxx);
 	int y = maxy;
