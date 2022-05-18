@@ -241,7 +241,7 @@ void send_msg(void) {
 	if (*c == '\0')
 		return;
 
-#if UI_CURSES_TEST
+#if TEST_UI_CURSES
 	Msg *msg = malloc(sizeof(struct Msg));
 	msg->sender = str_new_cstr("test");
 	msg->type = MSGTYPE_TEXT;
@@ -816,9 +816,9 @@ void ui_curses_msg_new(Room *room, Msg msg) {
  * The main function is only used for testing purposes, if we want to test the
  * ui-curses frontend without having to connect to a Matrix server. It creates
  * fake rooms so we can mimic janechat behaviour. In order to enable this
- * window, macro UI_CURSES_TEST have to be defined.
+ * window, macro TEST_UI_CURSES have to be defined.
  */
-#ifdef UI_CURSES_TEST
+#ifdef TEST_UI_CURSES
 int main(int argc, char *argv[]) {
 	rooms_init();
 	ui_curses_setup();
