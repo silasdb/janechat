@@ -59,13 +59,13 @@ utils.o: utils.c utils.h
 vector.o: vector.c vector.h
 	$(CC) ${CFLAGS} -c -o $@ vector.c
 
-# ui-curses-test
+# test-ui-curses
 
-ui-curses-test: hash.o list.o rooms.o str.o ui-curses-test.o ui.o utils.o vector.o
-	$(CC) ${LDFLAGS} -o $@ hash.o list.o rooms.o str.o ui.o ui-curses-test.o utils.o vector.o
+test-ui-curses: hash.o list.o rooms.o str.o test-ui-curses.o ui.o utils.o vector.o
+	$(CC) ${LDFLAGS} -o $@ hash.o list.o rooms.o str.o ui.o test-ui-curses.o utils.o vector.o
 
-ui-curses-test.o: rooms.h str.h ui-curses.c ui-curses.h ui.h vector.h
-	$(CC) -DUI_CURSES_TEST ${CFLAGS} -c -o $@ ui-curses.c
+test-ui-curses.o: rooms.h str.h ui-curses.c ui-curses.h ui.h vector.h
+	$(CC) -DTEST_UI_CURSES ${CFLAGS} -c -o $@ ui-curses.c
 
 tags:
 	# Execute exctags, if not found, execute old ctags.
@@ -75,4 +75,4 @@ tags:
 
 .PHONY: clean
 clean:
-	rm -f janechat janechat.core *.o tags ui-curses-test
+	rm -f janechat janechat.core *.o tags test-ui-curses
