@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <locale.h>
 #include <regex.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -456,8 +457,15 @@ void chat_msgs_fill(void) {
 	int last = cur_buffer->last_line;
 	if (last == -1)
 		last = vector_len(cur_buffer->room->msgs)-1;
-	if (last < 0)
+	if (last < 0) {
+		/*
+		 * TODO: With ncurses, we need to force a wrefresh() to erase
+		 * wchat_msgs content for this case (when there is no messages
+		 * for the room). This is not needed for NetBSD curses. Why?
+		 */
+		wrefresh(wchat_msgs);
 		return;
+	}
 	int maxy, maxx;
 	getmaxyx(wchat_msgs, maxy, maxx);
 	int y = maxy;
@@ -744,6 +752,12 @@ void ui_curses_setup(void) {
 
 void ui_curses_init(void) {
 	curses_init = true;
+
+	/*
+	 * TODO: it seems to solve the problem, but we should investigate why. See (https://stackoverflow.com/questions/9922528/how-to-make-ncurses-display-utf-8-chars-correctly-in-c)
+	 */
+	setlocale(LC_CTYPE, "");
+
 	initscr();
 	clear();
 	nonl();
@@ -797,6 +811,7 @@ void ui_curses_iter(void) {
 void ui_curses_room_new(Str *roomid) {
 	struct buffer *b;
 	b = malloc(sizeof(struct buffer));
+	b->buf[0] = '\0';
 	b->room = room_byid(roomid);
 	b->pos = 0;
 	b->len = 0;

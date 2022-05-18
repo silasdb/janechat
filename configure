@@ -14,7 +14,17 @@ cat >>config.mk <<-EOF
 	CFLAGS += $(pkg-config --cflags jansson)
 EOF
 
-# TODO: use pkg-config to find ncurses?
-cat >>config.mk <<-EOF
-	LDFLAGS += -lcurses
-EOF
+# TODO: At this time, there is still some incompatibility between ncursesw and
+# NetBSD curses that we need to address later.
+# TODO: add a flag to choose a different curses lib?
+if pkg-config ncursesw; then
+	cat >>config.mk <<-EOF
+		LDFLAGS += $(pkg-config --libs ncursesw)
+		CFLAGS += $(pkg-config --cflags ncursesw)
+	EOF
+# TODO: add vanilla ncurses?
+else
+	cat >>config.mk <<-EOF
+		LDFLAGS += -lcurses
+	EOF
+fi
