@@ -24,6 +24,7 @@ puts $file {virtterm|virtual terminal emulator,
 close $file
 exec tic $terminfo_src
 
+log_user 0
 spawn ../src/ui-curses-test
 set rows 24
 set cols 80
@@ -47,7 +48,6 @@ proc term_set_cursor {row column} {
 	set ::column $column
 }
 
-log_user 0
 set row 0
 set column 0
 
