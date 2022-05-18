@@ -486,14 +486,20 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 		|| streq(json_string_value(msgtype), "m.video")
 		|| streq(json_string_value(msgtype), "m.file")) {
 			event.msg.msg.type = MSGTYPE_FILE;
-			event.msg.msg.fileinfo.mimetype = str_new_cstr(
-				json_string_value(json_path(
-					content, "info", "mimetype", NULL)));
+
+			const char *m = json_string_value(
+				json_path(content, "info", "mimetype", NULL));
+			if (!m)
+				m = "(unknown mimetype)";
+			event.msg.msg.fileinfo.mimetype = str_new_cstr(m);
+
 			/*
 			 * TODO: I once got a error about NULL pointer when
 			 * trying to get "url" string. Can it be NULL or a null
 			 * string?
 			 */
+			assert(json_object_get(content, "url"));
+			assert(json_string_value(json_object_get(content, "url")));
 			event.msg.msg.fileinfo.uri = str_new_cstr(
 				json_string_value(json_object_get(content, "url")));
 			assert(event.msg.msg.fileinfo.uri);

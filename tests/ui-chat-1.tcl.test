@@ -1,0 +1,9 @@
+#!/usr/bin/env tclsh
+source virtterm.tcl
+
+printterm "Main window"
+
+send "\r"
+send "abc"
+send "\r"
+printterm "Chat room and message"
