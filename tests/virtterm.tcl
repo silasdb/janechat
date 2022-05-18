@@ -25,7 +25,7 @@ close $file
 exec tic $terminfo_src
 
 log_user 0
-spawn ../src/ui-curses-test
+spawn ../src/test-ui-curses
 set rows 24
 set cols 80
 stty rows $rows cols $cols < $spawn_out(slave,name)
