@@ -23,6 +23,31 @@ Test C (0)
 
 
 
+TITLE: Simple input test
+          
+          
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Test A                                                                          
+a b c
 TITLE: Chat room and message
           
           
@@ -45,6 +70,6 @@ TITLE: Chat room and message
 
 
 
-[0] test: abc
+[0] test: a b c
 Test A                                                                          
-   
+     

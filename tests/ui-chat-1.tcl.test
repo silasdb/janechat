@@ -4,6 +4,8 @@ source virtterm.tcl
 printterm "Main window"
 
 send "\r"
-send "abc"
+send "a b c"
+printterm "Simple input test"
+
 send "\r"
 printterm "Chat room and message"
