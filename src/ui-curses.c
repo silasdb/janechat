@@ -536,10 +536,18 @@ void input_redraw(void) {
 	/* TODO: this overuns cur_buffer->pos: fix this to stop at pos */
 	right = utf8_char_bytepos(cur_buffer->buf, cur_buffer->right);
 
+	/*
+	 * TODO: Normally, characters are one cell wide, but others can be wider
+	 * and occupy more cells on the terminal (e.g.: chinese characters). We
+	 * need to correctly calculate that to: 1. show the string on winput
+	 * window; 2. place the cursor on the window. For this to work, we need
+	 * to use mbrtowc().
+	 */
 	mvwprintw(winput, 0, 0, "%.*s",
 		(int)(right - left + 1),
 		&cur_buffer->buf[left]);
 	wmove(winput, 0, cur_buffer->pos - cur_buffer->left);
+
 	wrefresh(winput);
 }
 
