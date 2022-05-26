@@ -529,12 +529,6 @@ void input_clear(void) {
 
 void input_redraw(void) {
 	werase(winput);
-	size_t left, right, pos;
-	left = utf8_char_bytepos(cur_buffer->buf, cur_buffer->left);
-	pos = utf8_char_bytepos(cur_buffer->buf, cur_buffer->pos);
-
-	/* TODO: this overuns cur_buffer->pos: fix this to stop at pos */
-	right = utf8_char_bytepos(cur_buffer->buf, cur_buffer->right);
 
 	/*
 	 * TODO: Normally, characters are one cell wide, but others can be wider
@@ -543,9 +537,16 @@ void input_redraw(void) {
 	 * window; 2. place the cursor on the window. For this to work, we need
 	 * to use mbrtowc().
 	 */
-	mvwprintw(winput, 0, 0, "%.*s",
-		(int)(right - left + 1),
-		&cur_buffer->buf[left]);
+	for (size_t i = cur_buffer->left;
+	 i < cur_buffer->right-cur_buffer->left+1;
+	 i++) {
+		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, i);
+		if (cur_buffer->buf[bytepos] == '\0')
+			break;
+		size_t chsize = utf8_char_size(cur_buffer->buf[bytepos]);
+		mvwprintw(winput, 0, i-cur_buffer->left,
+			"%.*s", chsize, &cur_buffer->buf[bytepos]);
+	}
 	wmove(winput, 0, cur_buffer->pos - cur_buffer->left);
 
 	wrefresh(winput);
