@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "utils.h"
+#include "wchar.h"
 
 void debug(const char *path, const char *format, ...) {
 	FILE *f = fopen(path, "a");
@@ -112,3 +113,8 @@ size_t utf8_char_bytepos(const char *s, size_t i) {
 	return pos;
 }
 
+int utf8_char_width(const char *s) {
+	wchar_t wc;
+	assert(mbtowc(&wc, s, utf8_char_size(*s)) > 0);
+	return wcwidth(wc);
+}
