@@ -537,6 +537,7 @@ void input_redraw(void) {
 	 * window; 2. place the cursor on the window. For this to work, we need
 	 * to use mbrtowc().
 	 */
+	int screenpos = 0;
 	for (size_t i = cur_buffer->left;
 	 i < cur_buffer->right-cur_buffer->left+1;
 	 i++) {
@@ -544,8 +545,9 @@ void input_redraw(void) {
 		if (cur_buffer->buf[bytepos] == '\0')
 			break;
 		size_t chsize = utf8_char_size(cur_buffer->buf[bytepos]);
-		mvwprintw(winput, 0, i-cur_buffer->left,
+		mvwprintw(winput, 0, screenpos,
 			"%.*s", chsize, &cur_buffer->buf[bytepos]);
+	 	screenpos += utf8_char_width(&cur_buffer->buf[bytepos]);
 	}
 	wmove(winput, 0, cur_buffer->pos - cur_buffer->left);
 
@@ -708,7 +710,6 @@ void input_key_common(int c) {
 			utf8c[i] = c;
 		}
 
-
 		/*
 		 * Create room in the buffer to insert bytes that represent the
 		 * current character
@@ -719,13 +720,16 @@ void input_key_common(int c) {
 			 * TODO: what if there is no room in the string? We
 			 * should wrap it around with Str.
 			 */
-			cur_buffer->buf[i] = cur_buffer->buf[i-sz];
+			/* TODO: make sure buf is at least len+sz */
+			cur_buffer->buf[i+sz-1] = cur_buffer->buf[i-1];
 
 		/* Finally insert bytes */
 		for (size_t i = 0; i < sz; i++)
 			cur_buffer->buf[pos+i] = utf8c[i];
 
+
 		cur_buffer->len += sz;
+		cur_buffer->buf[cur_buffer->len] = '\0';
 		cur_buffer->utf8len++;
 		input_cursor_inc(+1);
 		break;
