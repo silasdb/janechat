@@ -564,19 +564,6 @@ void input_cursor_inc(int offset) {
 	cur_buffer->pos += offset;
 }
 
-void input_cursor_show(void) {
-	size_t *pos = &cur_buffer->pos;
-	size_t *left = &cur_buffer->left;
-	size_t *right = &cur_buffer->right;
-	if (*pos > *right) {
-		*left += *pos - *right;
-		*right = *pos;
-	} else if (*pos < *left) {
-		*right -= *left - *pos;
-		*left = *pos;
-	}
-}
-
 bool input_key_index(int c) {
 	switch (c) {
 	case 10:
@@ -752,7 +739,18 @@ void input_key(void) {
 		return;
 	input_key_common(c);
 	cur_buffer->buf[cur_buffer->len] = '\0';
-	input_cursor_show();
+
+	size_t *pos = &cur_buffer->pos;
+	size_t *left = &cur_buffer->left;
+	size_t *right = &cur_buffer->right;
+	if (*pos > *right) {
+		*left += *pos - *right;
+		*right = *pos;
+	} else if (*pos < *left) {
+		*right -= *left - *pos;
+		*left = *pos;
+	}
+
 	input_redraw();
 }
 
