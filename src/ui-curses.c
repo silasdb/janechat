@@ -530,13 +530,7 @@ void input_clear(void) {
 void input_redraw(void) {
 	werase(winput);
 
-	/*
-	 * TODO: Normally, characters are one cell wide, but others can be wider
-	 * and occupy more cells on the terminal (e.g.: chinese characters). We
-	 * need to correctly calculate that to: 1. show the string on winput
-	 * window; 2. place the cursor on the window. For this to work, we need
-	 * to use mbrtowc().
-	 */
+	/* Draw string in input window */
 	int screenpos = 0;
 	for (size_t i = cur_buffer->left;
 	 i < cur_buffer->right-cur_buffer->left+1;
@@ -549,7 +543,17 @@ void input_redraw(void) {
 			"%.*s", chsize, &cur_buffer->buf[bytepos]);
 	 	screenpos += utf8_char_width(&cur_buffer->buf[bytepos]);
 	}
-	wmove(winput, 0, cur_buffer->pos - cur_buffer->left);
+
+	/*
+	 * Discover where to position cursor. Some characters may fullfil more
+	 * than one terminal column, (e.g. chinese characters).
+	 */
+	screenpos = 0;
+	for (size_t i = cur_buffer->left; i < cur_buffer->pos; i++) {
+		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, i);
+		screenpos += utf8_char_width(&cur_buffer->buf[bytepos]);
+	}
+	wmove(winput, 0, screenpos);
 
 	wrefresh(winput);
 }
