@@ -532,9 +532,7 @@ void input_redraw(void) {
 
 	/* Draw string in input window */
 	int screenpos = 0;
-	for (size_t i = cur_buffer->left;
-	 i < cur_buffer->right-cur_buffer->left+1;
-	 i++) {
+	for (size_t i = cur_buffer->left; i < cur_buffer->right; i++) {
 		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, i);
 		if (cur_buffer->buf[bytepos] == '\0')
 			break;
