@@ -35,13 +35,6 @@ struct buffer {
 	size_t left; 
 
 	/*
-	 * This is either the right-most character shown in the input window. If
-	 * the string length is smaller than screen horizontal size, it is the
-	 * screen horizontal size - 1 (maxx-1). UTF-8 index.
-	 */
-	size_t right;
-
-	/*
 	 * Updated whenever someone leaves the chat window to the index window,
 	 * so when the user comes back, he gets a line dividing messages in
 	 * already read messages and unread messages. It is -1 if disabled.
@@ -152,11 +145,7 @@ int buffer_comparison(const void *a, const void *b) {
 
 void set_cur_buffer(struct buffer *buffers) {
 	cur_buffer = buffers;
-	int maxy, maxx;
-	getmaxyx(winput, maxy, maxx);
-	(void)maxy;
 	cur_buffer->left = 0;
-	cur_buffer->right = maxx-1;
 	if (cur_buffer->room) {
 		cur_buffer->room->unread_msgs = 0;
 		cur_buffer->last_line = -1;
@@ -514,13 +503,9 @@ void chat_msgs_fill(void) {
 void input_clear(void) {
 	if (!cur_buffer)
 		return;
-	int maxy, maxx;
-	getmaxyx(winput, maxy, maxx);
-	(void)maxy;
 
 	cur_buffer->buf[0] = '\0';
 	cur_buffer->left = 0;
-	cur_buffer->right = maxx-1;
 	cur_buffer->pos = 0;
 	cur_buffer->len = 0;
 	cur_buffer->utf8len = 0;
@@ -528,11 +513,26 @@ void input_clear(void) {
 }
 
 void input_redraw(void) {
+	size_t maxy, right;
+	(void)maxy;
+	getmaxyx(winput, maxy, right);
+
 	werase(winput);
+
+	size_t *pos = &cur_buffer->pos;
+	size_t *left = &cur_buffer->left;
+	right += *left - 1;
+	if (*pos > right) {
+		*left += *pos - right;
+		right = *pos;
+	} else if (*pos < *left) {
+		right -= *left - *pos;
+		*left = *pos;
+	}
 
 	/* Draw string in input window */
 	int screenpos = 0;
-	for (size_t i = cur_buffer->left; i < cur_buffer->right; i++) {
+	for (size_t i = cur_buffer->left; i < right; i++) {
 		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, i);
 		if (cur_buffer->buf[bytepos] == '\0')
 			break;
@@ -740,17 +740,6 @@ void input_key(void) {
 	input_key_common(c);
 	cur_buffer->buf[cur_buffer->len] = '\0';
 
-	size_t *pos = &cur_buffer->pos;
-	size_t *left = &cur_buffer->left;
-	size_t *right = &cur_buffer->right;
-	if (*pos > *right) {
-		*left += *pos - *right;
-		*right = *pos;
-	} else if (*pos < *left) {
-		*right -= *left - *pos;
-		*left = *pos;
-	}
-
 	input_redraw();
 }
 
@@ -830,7 +819,6 @@ void ui_curses_room_new(Str *roomid) {
 	b->len = 0;
 	b->utf8len = 0;
 	b->left = 0;
-	b->right = 0;
 	b->last_line = -1;
 	vector_append(buffers, b);
 	if (curses_init) {
