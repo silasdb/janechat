@@ -513,21 +513,49 @@ void input_clear(void) {
 }
 
 void input_redraw(void) {
-	size_t maxy, right;
+	size_t maxy, maxx, right;
 	(void)maxy;
-	getmaxyx(winput, maxy, right);
+	getmaxyx(winput, maxy, maxx);
 
 	werase(winput);
 
 	size_t *pos = &cur_buffer->pos;
 	size_t *left = &cur_buffer->left;
-	right += *left - 1;
-	if (*pos > right) {
-		*left += *pos - right;
-		right = *pos;
-	} else if (*pos < *left) {
-		right -= *left - *pos;
+
+	if (*pos < *left)
 		*left = *pos;
+
+	/* Now discover largest possible right */
+	size_t screenwidth = 0;
+	right = *left;
+	while (right < cur_buffer->utf8len) {
+		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, right);
+		screenwidth += utf8_char_width(&cur_buffer->buf[bytepos]);
+		if (screenwidth >= maxx)
+			break;
+		right++;
+	}
+
+	if (*pos > right) {
+		right = *pos;
+
+		assert(right <= cur_buffer->utf8len);
+
+		/*
+		 * Discover new left: we need to walk backwards from `right`, to
+		 * discover the right left position from where we should start
+		 * printing our string.
+		 */
+		*left = right;
+		if (*left == cur_buffer->utf8len)
+			(*left)--;
+		screenwidth = 0;
+		for (; *left > 0; (*left)--) {
+			size_t bytepos = utf8_char_bytepos(cur_buffer->buf, *left);
+			screenwidth += utf8_char_width(&cur_buffer->buf[bytepos]);
+			if (screenwidth >= maxx)
+				break;
+		}
 	}
 
 	/* Draw string in input window */
