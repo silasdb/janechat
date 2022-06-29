@@ -556,6 +556,7 @@ void input_redraw(void) {
 			if (screenwidth >= maxx)
 				break;
 		}
+		*left += 1;
 	}
 
 	/* Draw string in input window */
