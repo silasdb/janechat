@@ -400,6 +400,7 @@ void index_key(void) {
 		index_input_buffer.buf[1] = '\0';
 		index_input_buffer.pos = 1;
 		index_input_buffer.len = 1;
+		index_input_buffer.utf8len = 1;
 		/* FALLTHROUGH */
 	case ':':
 		set_cur_buffer(&index_input_buffer);
