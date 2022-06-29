@@ -27,18 +27,12 @@
 struct buffer {
 	Room *room;
 	char buf[1024]; /* Input buffer. TODO: use Str? */
-	size_t pos; /* Cursor position */
+	size_t pos; /* Cursor position - UTF-8 index. */
 	size_t len; /* String length - does not include the null byte */
+	size_t utf8len; /* UTF-8 length */
 
-	/* Left-most character index showed in the input window */
+	/* Left-most character index showed in the input window - UTF-8 index */
 	size_t left; 
-
-	/*
-	 * This is either the right-most character shown in the input window. If
-	 * the string length is smaller than screen horizontal size, it is the
-	 * screen horizontal size - 1 (maxx-1).
-	 */
-	size_t right;
 
 	/*
 	 * Updated whenever someone leaves the chat window to the index window,
@@ -151,11 +145,7 @@ int buffer_comparison(const void *a, const void *b) {
 
 void set_cur_buffer(struct buffer *buffers) {
 	cur_buffer = buffers;
-	int maxy, maxx;
-	getmaxyx(winput, maxy, maxx);
-	(void)maxy;
 	cur_buffer->left = 0;
-	cur_buffer->right = maxx-1;
 	if (cur_buffer->room) {
 		cur_buffer->room->unread_msgs = 0;
 		cur_buffer->last_line = -1;
@@ -513,46 +503,94 @@ void chat_msgs_fill(void) {
 void input_clear(void) {
 	if (!cur_buffer)
 		return;
-	int maxy, maxx;
-	getmaxyx(winput, maxy, maxx);
-	(void)maxy;
 
 	cur_buffer->buf[0] = '\0';
 	cur_buffer->left = 0;
-	cur_buffer->right = maxx-1;
 	cur_buffer->pos = 0;
 	cur_buffer->len = 0;
+	cur_buffer->utf8len = 0;
 	input_redraw();
 }
 
 void input_redraw(void) {
+	size_t maxy, maxx, right;
+	(void)maxy;
+	getmaxyx(winput, maxy, maxx);
+
 	werase(winput);
-	mvwprintw(winput, 0, 0, "%.*s",
-		(int)(cur_buffer->right - cur_buffer->left + 1),
-		&cur_buffer->buf[cur_buffer->left]);
-	wmove(winput, 0, cur_buffer->pos - cur_buffer->left);
+
+	size_t *pos = &cur_buffer->pos;
+	size_t *left = &cur_buffer->left;
+
+	if (*pos < *left)
+		*left = *pos;
+
+	/* Now discover largest possible right */
+	size_t screenwidth = 0;
+	right = *left;
+	while (right < cur_buffer->utf8len) {
+		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, right);
+		screenwidth += utf8_char_width(&cur_buffer->buf[bytepos]);
+		if (screenwidth >= maxx)
+			break;
+		right++;
+	}
+
+	if (*pos > right) {
+		right = *pos;
+
+		assert(right <= cur_buffer->utf8len);
+
+		/*
+		 * Discover new left: we need to walk backwards from `right`, to
+		 * discover the right left position from where we should start
+		 * printing our string.
+		 */
+		*left = right;
+		if (*left == cur_buffer->utf8len)
+			(*left)--;
+		screenwidth = 0;
+		for (; *left > 0; (*left)--) {
+			size_t bytepos = utf8_char_bytepos(cur_buffer->buf, *left);
+			screenwidth += utf8_char_width(&cur_buffer->buf[bytepos]);
+			if (screenwidth >= maxx)
+				break;
+		}
+		*left += 1;
+	}
+
+	/* Draw string in input window */
+	int screenpos = 0;
+	for (size_t i = cur_buffer->left; i < right; i++) {
+		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, i);
+		if (cur_buffer->buf[bytepos] == '\0')
+			break;
+		size_t chsize = utf8_char_size(cur_buffer->buf[bytepos]);
+		mvwprintw(winput, 0, screenpos,
+			"%.*s", chsize, &cur_buffer->buf[bytepos]);
+	 	screenpos += utf8_char_width(&cur_buffer->buf[bytepos]);
+	}
+
+	/*
+	 * Discover where to position cursor. Some characters may fullfil more
+	 * than one terminal column, (e.g. chinese characters).
+	 */
+	screenpos = 0;
+	for (size_t i = cur_buffer->left; i < cur_buffer->pos; i++) {
+		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, i);
+		screenpos += utf8_char_width(&cur_buffer->buf[bytepos]);
+	}
+	wmove(winput, 0, screenpos);
+
 	wrefresh(winput);
 }
 
 void input_cursor_inc(int offset) {
 	if ((int)cur_buffer->pos + offset < 0)
 		return;
-	if (cur_buffer->pos + offset > cur_buffer->len)
+	if (cur_buffer->pos + offset > cur_buffer->utf8len)
 		return;
 	cur_buffer->pos += offset;
-}
-
-void input_cursor_show(void) {
-	size_t *pos = &cur_buffer->pos;
-	size_t *left = &cur_buffer->left;
-	size_t *right = &cur_buffer->right;
-	if (*pos > *right) {
-		*left += *pos - *right;
-		*right = *pos;
-	} else if (*pos < *left) {
-		*right -= *left - *pos;
-		*left = *pos;
-	}
 }
 
 bool input_key_index(int c) {
@@ -661,27 +699,59 @@ bool input_key_chat(int c) {
 void input_key_common(int c) {
 	switch (c) {
 	case 127: /* TODO: why do I need this in urxvt but not in xterm? - https://bbs.archlinux.org/viewtopic.php?id=56427*/
-	case KEY_BACKSPACE:
+	case KEY_BACKSPACE: {
 		if (cur_buffer->pos == 0)
 			break;
-		for (size_t i = cur_buffer->pos-1; i < cur_buffer->len; i++)
-			cur_buffer->buf[i] = cur_buffer->buf[i+1];
+		size_t p = utf8_char_bytepos(cur_buffer->buf, cur_buffer->pos-1);
+		size_t sz = utf8_char_size(cur_buffer->buf[p]);
+		size_t i;
+		for (i = p; i < cur_buffer->len-sz; i++)
+			cur_buffer->buf[i] = cur_buffer->buf[i+sz];
+		cur_buffer->buf[i] = '\0';
 		cur_buffer->pos--;
-		cur_buffer->len--;
+		cur_buffer->len -= sz;
+		cur_buffer->utf8len--;
 		break;
+	}
 	case KEY_LEFT:
 		input_cursor_inc(-1);
 		break;
 	case KEY_RIGHT:
 		input_cursor_inc(+1);
 		break;
-	default:
-		for (size_t i = cur_buffer->len; i > cur_buffer->pos; i--)
-			cur_buffer->buf[i] = cur_buffer->buf[i-1];
-		cur_buffer->buf[cur_buffer->pos] = c;
-		cur_buffer->len++;
+	default: {
+		char utf8c[4];
+		utf8c[0] = c;
+		size_t sz = utf8_char_size(c);
+		for (size_t i = 1; i < sz; i++) {
+			c = wgetch(winput);
+			utf8c[i] = c;
+		}
+
+		/*
+		 * Create room in the buffer to insert bytes that represent the
+		 * current character
+		 */
+		size_t pos = utf8_char_bytepos(cur_buffer->buf, cur_buffer->pos);
+		for (size_t i = cur_buffer->len; i > pos; i--)
+			/*
+			 * TODO: what if there is no room in the string? We
+			 * should wrap it around with Str.
+			 */
+			/* TODO: make sure buf is at least len+sz */
+			cur_buffer->buf[i+sz-1] = cur_buffer->buf[i-1];
+
+		/* Finally insert bytes */
+		for (size_t i = 0; i < sz; i++)
+			cur_buffer->buf[pos+i] = utf8c[i];
+
+
+		cur_buffer->len += sz;
+		cur_buffer->buf[cur_buffer->len] = '\0';
+		cur_buffer->utf8len++;
 		input_cursor_inc(+1);
 		break;
+	}
 	}
 }
 
@@ -698,7 +768,7 @@ void input_key(void) {
 		return;
 	input_key_common(c);
 	cur_buffer->buf[cur_buffer->len] = '\0';
-	input_cursor_show();
+
 	input_redraw();
 }
 
@@ -776,8 +846,8 @@ void ui_curses_room_new(Str *roomid) {
 	b->room = room_byid(roomid);
 	b->pos = 0;
 	b->len = 0;
+	b->utf8len = 0;
 	b->left = 0;
-	b->right = 0;
 	b->last_line = -1;
 	vector_append(buffers, b);
 	if (curses_init) {

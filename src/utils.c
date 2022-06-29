@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "utils.h"
+#include "wchar.h"
 
 void debug(const char *path, const char *format, ...) {
 	FILE *f = fopen(path, "a");
@@ -86,4 +87,34 @@ Str *mxc_uri_extract_path_alloc(Str *uri) {
 	a = str_buf(uri) + strlen("mxc://");
 	a += strcspn(a, "/") + 1;
 	return str_new_cstr(a);
+}
+
+size_t utf8_char_size(int c) {
+	if ((c & 0x80) == 0)
+		return 1;
+	if ((c & 0xE0) == 0xC0)
+		return 2;
+	if ((c & 0xF0) == 0xE0)
+		return 3;
+	if ((c & 0xF8) == 0xF0)
+		return 4;
+	/* Invalid char. Return 1 byte. */
+	return 1;
+}
+
+size_t utf8_char_bytepos(const char *s, size_t i) {
+	size_t pos = 0;
+	while (i--) {
+		size_t sz;
+		sz = utf8_char_size(*s);
+		s += sz;
+		pos += sz;
+	}
+	return pos;
+}
+
+int utf8_char_width(const char *s) {
+	wchar_t wc;
+	assert(mbtowc(&wc, s, utf8_char_size(*s)) > 0);
+	return wcwidth(wc);
 }

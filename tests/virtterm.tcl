@@ -17,6 +17,7 @@ puts $file {virtterm|virtual terminal emulator,
 	scroll_forward=\n,
 	carriage_return=\r,
 	cursor_address=\ECURSOR_ADDRESS;%d;%d\E,
+	cursor_right=\ECURSOR_RIGHT\E,
 	key_left=\EKEY_LEFT\E,
 	key_right=\EKEY_RIGHT\E,
 	key_backspace=^H,
@@ -65,6 +66,8 @@ expect_background {
 		regexp "^\x1bCURSOR_ADDRESS;(\[0-9\]+);(\[0-9\]+)\x1b" \
 			$expect_out(0,string) -> row column
 		term_set_cursor $row $column
+	} "^\x1bCURSOR_RIGHT\x1b" {
+		term_text_append " "
 	} "^\x1bCLEAR\x1b" {
 		term_clear
 	}
@@ -80,7 +83,9 @@ proc printterm {title} {
 	iter
 	puts "TITLE: $title"
 	for {set row 0} {$row < 24} {incr row} {
-		puts $::termdata($row)
+		# ncurses likes to insert spaces to clear older data. In order
+		# not to have trailing spaces everywhere, we trim them off.
+		puts [string trimright $::termdata($row)]
 	}
 }
 
