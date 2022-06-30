@@ -72,58 +72,75 @@ proc foreach_char {var str body} {
 	}
 }
 
+proc ch_i {str start} {
+	set i 0
+	set si 0
+	foreach_char ch $str {
+		incr si [wcwidth $ch]
+		if {$si > $start} {
+			break
+		}
+		incr i
+	}
+	return $i
+}
+assert {[ch_i "中文" 0] eq 0}
+assert {[ch_i "中文" 1] eq 0}
+assert {[ch_i "中文" 2] eq 1}
+assert {[ch_i "中文" 3] eq 1}
+assert {[ch_i "a中b文c" 0] eq 0}
+assert {[ch_i "a中b文c" 1] eq 1}
+assert {[ch_i "a中b文c" 2] eq 1}
+assert {[ch_i "a中b文c" 3] eq 2}
+assert {[ch_i "a中b文c" 4] eq 3}
+assert {[ch_i "a中b文c" 5] eq 3}
+
+proc ch_j {str end} {
+	set j -1
+	set sj 0
+	foreach_char ch $str {
+		incr sj [wcwidth $ch]
+		if {$sj > $end} {
+			break
+		}
+		incr j
+	}
+	return $j
+}
+assert {[ch_j "中文" 0] eq -1}
+assert {[ch_j "中文" 1] eq -1}
+assert {[ch_j "中文" 2] eq 0}
+assert {[ch_j "中文" 3] eq 0}
+assert {[ch_j "中文" 4] eq 1}
+assert {[ch_j "a中b文c" 0] eq -1}
+assert {[ch_j "a中b文c" 1] eq 0}
+assert {[ch_j "a中b文c" 2] eq 0}
+assert {[ch_j "a中b文c" 3] eq 1}
+assert {[ch_j "a中b文c" 4] eq 2}
+assert {[ch_j "a中b文c" 5] eq 2}
+
 proc string_column_range {str start end} {
 	if {$end < $start} {
 		return {}
 	}
-	set i 0
-	set si 0
-	foreach_char ch $str {
-		if {$si == $start} {
-			break
-		}
-		if {$si > $end} {
-			incr i -1
-			break
-		}
-		incr i
-		incr si [wcwidth $ch]
-	}
-	set j 0
-	set sj 0
-	foreach_char ch $str {
-		if {$sj == $end}  {
-			break
-		}
-		if {$sj > $end} {
-			incr j -1
-			break
-		}
-		incr j
-		incr sj [wcwidth $ch]
+	set i [ch_i $str $start]
+	set j [ch_j $str $end]
+	if {$i > $j} {
+		return {}
 	}
 	return [string range $str $i $j]
 }
-
-set test "a中b文睡觉abc"
-assert {[string_column_range $test 0 0] eq "a"}
-assert {[string_column_range $test 0 1] eq "a中"}
-assert {[string_column_range $test 0 2] eq "a中"}
-assert {[string_column_range $test 0 3] eq "a中b"}
-assert {[string_column_range $test 1 1] eq "中"}
-assert {[string_column_range $test 2 2] eq "中"}
-assert {[string_column_range $test 3 4] eq "b文"}
-#assert {[string_column_range $test 0 0] eq "a"}
-#assert {[string_column_range $test 0 1] eq "a"}
-#assert {[string_column_range $test 0 2] eq "a中"}
-#assert {[string_column_range $test 0 3] eq "a中b"}
-#assert {[string_column_range $test 1 1] eq ""}
-#assert {[string_column_range $test 2 2] eq ""}
-#assert {[string_column_range $test 3 4] eq "b"}
+assert {[string_column_range "中文" 0 0] eq ""}
+assert {[string_column_range "中文" 0 2] eq "中"}
+assert {[string_column_range "a中b文睡觉abc" 0 1] eq "a"}
+assert {[string_column_range "a中b文睡觉abc" 0 3] eq "a中"}
+assert {[string_column_range "a中b文睡觉abc" 0 4] eq "a中b"}
+assert {[string_column_range "a中b文睡觉abc" 1 1] eq ""}
+assert {[string_column_range "a中b文睡觉abc" 2 2] eq ""}
+assert {[string_column_range "a中b文睡觉abc" 3 4] eq "b"}
 
 proc term_text_append {text} {
-	set ::termdata($::row) [string_column_range $::termdata($::row) 0 \
-		[expr {$::column - 1}]]
+	set ::termdata($::row) [string_column_range $::termdata($::row) 0 $::column]
 	incr ::column [string length $text]
 	append ::termdata($::row) $text
 }
