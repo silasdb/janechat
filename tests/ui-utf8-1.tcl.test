@@ -13,3 +13,4 @@ for {set i 0} {$i < 30} {incr i} {
 }
 
 send &
+printterm "Placing a character in between chinese characters."
