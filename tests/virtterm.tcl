@@ -31,14 +31,98 @@ set rows 24
 set cols 80
 stty rows $rows cols $cols < $spawn_out(slave,name)
 
+proc debug {args} {
+	set o {}
+	for {set i 0} {$i < [llength $args]} {incr i} {
+		set a [lindex $args $i]
+		upvar $a v
+		append o "[lindex $args $i]: $v"
+		if {$i < [llength $args]-1} {
+			append o ", "
+		}
+	}
+	puts $o
+}
+
+proc assert {cond} {
+	if {![uplevel 1 [list expr $cond]]} {
+		return -code error -errorinfo {assertion $cond failed}
+	}
+}
+
 proc term_clear {} {
 	for {set row 0} {$row < $::rows} {incr row} {
 		set ::termdata($row) ""
 	}
 }
 
+proc wcwidth {ch} {
+	if {$ch in [list 中 文 平 果 睡 觉 。]} {
+		return 2
+	}
+	return 1
+}
+
+
+proc foreach_char {var str body} {
+	for {set i 0} {$i < [string length $str]} {incr i} {
+		upvar $var v
+		set v [string range $str $i $i]
+		uplevel 1 $body
+	}
+}
+
+proc string_column_range {str start end} {
+	if {$end < $start} {
+		return {}
+	}
+	set i 0
+	set si 0
+	foreach_char ch $str {
+		if {$si == $start} {
+			break
+		}
+		if {$si > $end} {
+			incr i -1
+			break
+		}
+		incr i
+		incr si [wcwidth $ch]
+	}
+	set j 0
+	set sj 0
+	foreach_char ch $str {
+		if {$sj == $end}  {
+			break
+		}
+		if {$sj > $end} {
+			incr j -1
+			break
+		}
+		incr j
+		incr sj [wcwidth $ch]
+	}
+	return [string range $str $i $j]
+}
+
+set test "a中b文睡觉abc"
+assert {[string_column_range $test 0 0] eq "a"}
+assert {[string_column_range $test 0 1] eq "a中"}
+assert {[string_column_range $test 0 2] eq "a中"}
+assert {[string_column_range $test 0 3] eq "a中b"}
+assert {[string_column_range $test 1 1] eq "中"}
+assert {[string_column_range $test 2 2] eq "中"}
+assert {[string_column_range $test 3 4] eq "b文"}
+#assert {[string_column_range $test 0 0] eq "a"}
+#assert {[string_column_range $test 0 1] eq "a"}
+#assert {[string_column_range $test 0 2] eq "a中"}
+#assert {[string_column_range $test 0 3] eq "a中b"}
+#assert {[string_column_range $test 1 1] eq ""}
+#assert {[string_column_range $test 2 2] eq ""}
+#assert {[string_column_range $test 3 4] eq "b"}
+
 proc term_text_append {text} {
-	set ::termdata($::row) [string range $::termdata($::row) 0 \
+	set ::termdata($::row) [string_column_range $::termdata($::row) 0 \
 		[expr {$::column - 1}]]
 	incr ::column [string length $text]
 	append ::termdata($::row) $text
