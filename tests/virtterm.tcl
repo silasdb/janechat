@@ -57,7 +57,7 @@ proc term_clear {} {
 }
 
 proc wcwidth {ch} {
-	if {$ch in [list 中 文 平 果 睡 觉 。]} {
+	if {$ch in [list 中 文 苹 果 睡 觉 。]} {
 		return 2
 	}
 	return 1
