@@ -1,35 +1,8 @@
-package require Expect
+# virtterm terminal emulator.
 
-# Instead of implementing sequences for modern terminals, we prefer to set a new
-# terminfo database with only control sequences that matter for us. This is
-# heavily inspired by expect's tkterm example:
-# https://core.tcl-lang.org/expect/file?name=example/tkterm&ci=tip
 #
-# TODO: ncurses can execute programs with minimal or even empty terminfo
-# definitions, but NetBSD curses refuse to start the program. Does NetBSD curses
-# require a minimal set of definitions?
-set env(TERMINFO) /tmp
-set env(TERM) virtterm
-set terminfo_src "/tmp/virtterm.src"
-set file [open $terminfo_src w]
-puts $file {virtterm|virtual terminal emulator,
-	clear=\ECLEAR\E,
-	scroll_forward=\n,
-	carriage_return=\r,
-	cursor_address=\ECURSOR_ADDRESS;%d;%d\E,
-	cursor_right=\ECURSOR_RIGHT\E,
-	key_left=\EKEY_LEFT\E,
-	key_right=\EKEY_RIGHT\E,
-	key_backspace=^H,
-}
-close $file
-exec tic $terminfo_src
-
-log_user 0
-spawn ../src/test-ui-curses
-set rows 24
-set cols 80
-stty rows $rows cols $cols < $spawn_out(slave,name)
+# Helper procs
+#
 
 proc debug {args} {
 	set o {}
@@ -47,12 +20,6 @@ proc debug {args} {
 proc assert {cond} {
 	if {![uplevel 1 [list expr $cond]]} {
 		return -code error -errorinfo {assertion $cond failed}
-	}
-}
-
-proc term_clear {} {
-	for {set row 0} {$row < $::rows} {incr row} {
-		set ::termdata($row) ""
 	}
 }
 
@@ -133,6 +100,50 @@ assert {[string_column_range "a中b文睡觉abc" 0 4] eq "a中b"}
 assert {[string_column_range "a中b文睡觉abc" 1 1] eq ""}
 assert {[string_column_range "a中b文睡觉abc" 2 2] eq ""}
 assert {[string_column_range "a中b文睡觉abc" 3 4] eq "b"}
+
+#
+# The virtterm terminal emulator
+#
+
+package require Expect
+
+# Instead of implementing sequences for modern terminals, we prefer to set a new
+# terminfo database with only control sequences that matter for us. This is
+# heavily inspired by expect's tkterm example:
+# https://core.tcl-lang.org/expect/file?name=example/tkterm&ci=tip
+#
+# TODO: ncurses can execute programs with minimal or even empty terminfo
+# definitions, but NetBSD curses refuse to start the program. Does NetBSD curses
+# require a minimal set of definitions?
+set env(TERMINFO) /tmp
+set env(TERM) virtterm
+set terminfo_src "/tmp/virtterm.src"
+set file [open $terminfo_src w]
+puts $file {virtterm|virtual terminal emulator,
+	clear=\ECLEAR\E,
+	scroll_forward=\n,
+	carriage_return=\r,
+	cursor_address=\ECURSOR_ADDRESS;%d;%d\E,
+	cursor_right=\ECURSOR_RIGHT\E,
+	key_left=\EKEY_LEFT\E,
+	key_right=\EKEY_RIGHT\E,
+	key_backspace=^H,
+}
+close $file
+exec tic $terminfo_src
+
+log_user 0
+spawn ../src/test-ui-curses
+set rows 24
+set cols 80
+stty rows $rows cols $cols < $spawn_out(slave,name)
+
+
+proc term_clear {} {
+	for {set row 0} {$row < $::rows} {incr row} {
+		set ::termdata($row) ""
+	}
+}
 
 proc term_text_append {text} {
 	set ::termdata($::row) [string_column_range $::termdata($::row) 0 $::column]
