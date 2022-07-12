@@ -30,14 +30,6 @@ proc wcwidth {ch} {
 	return 1
 }
 
-proc foreach_char {var str body} {
-	for {set i 0} {$i < [string length $str]} {incr i} {
-		upvar $var v
-		set v [string range $str $i $i]
-		uplevel 1 $body
-	}
-}
-
 # Given a string and a screen column, returns the character index that is
 # rendered on that screen column.
 #
@@ -50,13 +42,17 @@ proc foreach_char {var str body} {
 proc screen_column_to_char_index {str column complete?} {
 	set si 0
 	if {${complete?} eq {complete}} { set i -1 } else { set i 0 }
-	foreach_char ch $str {
+
+	# foreach char in $str
+	for {set ci 0} {$ci < [string length $str]} {incr ci} {
+		set ch [string range $str $ci $ci]
 		incr si [wcwidth $ch]
 		if {$si > $column} {
 			break
 		}
 		incr i
 	}
+
 	return $i
 }
 assert {[screen_column_to_char_index "中文" 0 incomplete] eq 0}
