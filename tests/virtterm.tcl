@@ -63,7 +63,6 @@ proc wcwidth {ch} {
 	return 1
 }
 
-
 proc foreach_char {var str body} {
 	for {set i 0} {$i < [string length $str]} {incr i} {
 		upvar $var v
@@ -72,59 +71,55 @@ proc foreach_char {var str body} {
 	}
 }
 
-proc ch_i {str start} {
-	set i 0
+# Given a string and a screen column, returns the character index that is
+# rendered on that screen column.
+#
+# For multi column characters (like chinese characters), the `complete?` flag
+# might be useful. If a screen column only partially renders a character, the
+# character index is returned if `complete?` is set to `incomplete`. If
+# `complete?` is set to `complete`, it only returns the index if the character
+# can be rendered up to that column, else it returns the previous character
+# index.
+proc screen_column_to_char_index {str column complete?} {
 	set si 0
+	if {${complete?} eq {complete}} { set i -1 } else { set i 0 }
 	foreach_char ch $str {
 		incr si [wcwidth $ch]
-		if {$si > $start} {
+		if {$si > $column} {
 			break
 		}
 		incr i
 	}
 	return $i
 }
-assert {[ch_i "中文" 0] eq 0}
-assert {[ch_i "中文" 1] eq 0}
-assert {[ch_i "中文" 2] eq 1}
-assert {[ch_i "中文" 3] eq 1}
-assert {[ch_i "a中b文c" 0] eq 0}
-assert {[ch_i "a中b文c" 1] eq 1}
-assert {[ch_i "a中b文c" 2] eq 1}
-assert {[ch_i "a中b文c" 3] eq 2}
-assert {[ch_i "a中b文c" 4] eq 3}
-assert {[ch_i "a中b文c" 5] eq 3}
-
-proc ch_j {str end} {
-	set j -1
-	set sj 0
-	foreach_char ch $str {
-		incr sj [wcwidth $ch]
-		if {$sj > $end} {
-			break
-		}
-		incr j
-	}
-	return $j
-}
-assert {[ch_j "中文" 0] eq -1}
-assert {[ch_j "中文" 1] eq -1}
-assert {[ch_j "中文" 2] eq 0}
-assert {[ch_j "中文" 3] eq 0}
-assert {[ch_j "中文" 4] eq 1}
-assert {[ch_j "a中b文c" 0] eq -1}
-assert {[ch_j "a中b文c" 1] eq 0}
-assert {[ch_j "a中b文c" 2] eq 0}
-assert {[ch_j "a中b文c" 3] eq 1}
-assert {[ch_j "a中b文c" 4] eq 2}
-assert {[ch_j "a中b文c" 5] eq 2}
+assert {[screen_column_to_char_index "中文" 0 incomplete] eq 0}
+assert {[screen_column_to_char_index "中文" 1 incomplete] eq 0}
+assert {[screen_column_to_char_index "中文" 2 incomplete] eq 1}
+assert {[screen_column_to_char_index "中文" 3 incomplete] eq 1}
+assert {[screen_column_to_char_index "a中b文c" 0 incomplete] eq 0}
+assert {[screen_column_to_char_index "a中b文c" 1 incomplete] eq 1}
+assert {[screen_column_to_char_index "a中b文c" 2 incomplete] eq 1}
+assert {[screen_column_to_char_index "a中b文c" 3 incomplete] eq 2}
+assert {[screen_column_to_char_index "a中b文c" 4 incomplete] eq 3}
+assert {[screen_column_to_char_index "a中b文c" 5 incomplete] eq 3}
+assert {[screen_column_to_char_index "中文" 0 complete] eq -1}
+assert {[screen_column_to_char_index "中文" 1 complete] eq -1}
+assert {[screen_column_to_char_index "中文" 2 complete] eq 0}
+assert {[screen_column_to_char_index "中文" 3 complete] eq 0}
+assert {[screen_column_to_char_index "中文" 4 complete] eq 1}
+assert {[screen_column_to_char_index "a中b文c" 0 complete] eq -1}
+assert {[screen_column_to_char_index "a中b文c" 1 complete] eq 0}
+assert {[screen_column_to_char_index "a中b文c" 2 complete] eq 0}
+assert {[screen_column_to_char_index "a中b文c" 3 complete] eq 1}
+assert {[screen_column_to_char_index "a中b文c" 4 complete] eq 2}
+assert {[screen_column_to_char_index "a中b文c" 5 complete] eq 2}
 
 proc string_column_range {str start end} {
 	if {$end < $start} {
 		return {}
 	}
-	set i [ch_i $str $start]
-	set j [ch_j $str $end]
+	set i [screen_column_to_char_index $str $start incomplete]
+	set j [screen_column_to_char_index $str $end complete]
 	if {$i > $j} {
 		return {}
 	}
