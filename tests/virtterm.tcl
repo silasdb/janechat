@@ -143,7 +143,7 @@ close $file
 exec tic $terminfo_src
 
 log_user 0
-spawn ../src/test-ui-curses
+spawn ./ui-curses-fake
 set rows 24
 set cols 80
 stty rows $rows cols $cols < $spawn_out(slave,name)
