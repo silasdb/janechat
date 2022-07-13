@@ -22,7 +22,7 @@ for f in $@; do
 		passed=$((passed+1))
 		echo ":-) $f passed"
 	else
-		passed=$((passed+1))
+		failed=$((failed+1))
 		echo ":-( $f failed"
 	fi
 done
