@@ -850,6 +850,8 @@ void ui_curses_room_new(Str *roomid) {
 	b->utf8len = 0;
 	b->left = 0;
 	b->last_line = -1;
+	b->read_separator = -1;
+	b->user_separator = -1;
 	vector_append(buffers, b);
 	if (curses_init) {
 		vector_sort(buffers, buffer_comparison);
