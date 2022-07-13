@@ -1,10 +1,18 @@
-# virtterm terminal emulator.
+# virtterm terminal emulator. This is the implementation of a terminal emulator
+# that stores screen state to the ::termdata variable to be assert'ed later.
+# More information below.
+#
+# This program should be [source]d into other tcl program that will send
+# keystrokes to using Expect's [send] proc. It then can call [printterm] to
+# print terminal contents.
 
 #
 # Helper procs
 #
 
-proc debug {args} {
+# A helper proc to debug variable values. Used by developers to show variable
+# values to the standard output in an easy way. Example: `debugvar var1 var2`
+proc debugvar {args} {
 	set o {}
 	for {set i 0} {$i < [llength $args]} {incr i} {
 		set a [lindex $args $i]
@@ -17,12 +25,15 @@ proc debug {args} {
 	puts $o
 }
 
+# Assert a condition.
 proc assert {cond} {
 	if {![uplevel 1 [list expr $cond]]} {
 		return -code error -errorinfo {assertion $cond failed}
 	}
 }
 
+# mimics POSIX wcwidth() function for some predefined characters we use in the
+# tests.
 proc wcwidth {ch} {
 	if {$ch in [list 中 文 苹 果 睡 觉 。]} {
 		return 2
@@ -113,7 +124,10 @@ package require Expect
 # require a minimal set of definitions?
 set env(TERMINFO) /tmp
 set env(TERM) virtterm
+
+# TODO: change virtterm.src location
 set terminfo_src "/tmp/virtterm.src"
+
 set file [open $terminfo_src w]
 puts $file {virtterm|virtual terminal emulator,
 	clear=\ECLEAR\E,
@@ -133,7 +147,6 @@ spawn ../src/test-ui-curses
 set rows 24
 set cols 80
 stty rows $rows cols $cols < $spawn_out(slave,name)
-
 
 proc term_clear {} {
 	for {set row 0} {$row < $::rows} {incr row} {
@@ -182,6 +195,7 @@ proc iter {} {
 	vwait ::cycle
 }
 
+# Print a title and the terminal content to the standard output:
 proc printterm {title} {
 	iter
 	puts "TITLE: $title"
