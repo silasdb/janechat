@@ -73,10 +73,6 @@ tags:
 		ctags -dt *.h *.c;	\
 	fi
 
-# str-test
-str-test: str-test.c
-	cc ${CFLAGS} ${LDFLAGS} -o $@ str-test.c
-
 .PHONY: clean
 clean:
 	rm -f janechat janechat.core *.o tags
