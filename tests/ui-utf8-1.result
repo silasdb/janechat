@@ -1,0 +1,50 @@
+TITLE: Chat room and message
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Test A
+ is a UTF-8 string. Café. 中文。苹果。Maçã. 睡觉。This is a UTF-8 string. CafXé
+TITLE: Placing a character in between chinese characters.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Test A
+ is a UTF-8 string. Café. 中文。苹果。Maçã. 睡&觉。This is a UTF-8 string. CafX
