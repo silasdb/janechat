@@ -14,6 +14,12 @@ cat >>config.mk <<-EOF
 	CFLAGS += $(pkg-config --cflags jansson)
 EOF
 
+# TODO: make it optional -- for testing purposes only
+cat >>config.mk <<-EOF
+	LDFLAGS += $(pkg-config --libs cmocka)
+	CFLAGS += $(pkg-config --cflags cmocka)
+EOF
+
 # TODO: At this time, there is still some incompatibility between ncursesw and
 # NetBSD curses that we need to address later.
 # TODO: add a flag to choose a different curses lib?
