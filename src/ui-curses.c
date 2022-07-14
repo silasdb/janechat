@@ -231,14 +231,6 @@ void send_msg(void) {
 	if (*c == '\0')
 		return;
 
-#if TEST_UI_CURSES
-	Msg *msg = malloc(sizeof(struct Msg));
-	msg->sender = str_new_cstr("test");
-	msg->type = MSGTYPE_TEXT;
-	msg->text.content = str_new_cstr(cur_buffer->buf);
-	vector_append(cur_buffer->room->msgs, msg);
-	chat_msgs_fill();
-#else
 	struct UiEvent ev;
 	ev.type = UIEVENTTYPE_SENDMSG,
 	ev.msg.roomid = str_incref(cur_buffer->room->id);
@@ -246,7 +238,6 @@ void send_msg(void) {
 	ui_event_handler_callback(ev);
 	str_decref(ev.msg.roomid);
 	str_decref(ev.msg.text);
-#endif
 }
 
 /*
@@ -884,41 +875,3 @@ void ui_curses_msg_new(Room *room, Msg msg) {
 		chat_msgs_fill();
 	}
 }
-
-/*
- * The main function is only used for testing purposes, if we want to test the
- * ui-curses frontend without having to connect to a Matrix server. It creates
- * fake rooms so we can mimic janechat behaviour. In order to enable this
- * window, macro TEST_UI_CURSES have to be defined.
- */
-#ifdef TEST_UI_CURSES
-int main(int argc, char *argv[]) {
-	rooms_init();
-	ui_curses_setup();
-
-	Room *room;
-	Str *name_s;
-	Str *id_s;
-#define new_room(id, name) \
-	id_s = str_new_cstr(id); \
-	name_s = str_new_cstr(name); \
-	room = room_new(id_s); \
-	room_set_info(room, str_new_cstr("@example:matrix.org"), name_s); \
-	ui_curses_room_new(id_s);
-
-	new_room("#test1:matrix.org", "Test A");
-	new_room("#test2:matrix.org", "Test C");
-	new_room("#test3:matrix.org", "Test B");
-
-	ui_curses_init();
-	bottom = vector_len(buffers);
-
-	resize();
-
-	for (;;)
-		ui_curses_iter();
-
-	return 0;
-}
-#endif
-
