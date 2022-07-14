@@ -26,7 +26,7 @@
  */
 struct buffer {
 	Room *room;
-	char buf[1024]; /* Input buffer. TODO: use Str? */
+	Str *buf; /* Input buffer. TODO: use Str? */
 	size_t pos; /* Cursor position - UTF-8 index. */
 	size_t len; /* String length - does not include the null byte */
 	size_t utf8len; /* UTF-8 length */
@@ -225,7 +225,7 @@ void send_msg(void) {
 	 * If buf is an empty string or only if it is only consisted of spaces,
 	 * don't send anything.
 	 */
-	char *c = &cur_buffer->buf[0];
+	const char *c = str_buf(cur_buffer->buf);
 	while (isspace(*c))
 		c++;
 	if (*c == '\0')
@@ -234,7 +234,7 @@ void send_msg(void) {
 	struct UiEvent ev;
 	ev.type = UIEVENTTYPE_SENDMSG,
 	ev.msg.roomid = str_incref(cur_buffer->room->id);
-	ev.msg.text = str_new_cstr(cur_buffer->buf);
+	ev.msg.text = str_incref(cur_buffer->buf);
 	ui_event_handler_callback(ev);
 	str_decref(ev.msg.roomid);
 	str_decref(ev.msg.text);
@@ -387,11 +387,8 @@ void index_key(void) {
 		index_draw();
 		break;;
 	case '/':
-		index_input_buffer.buf[0] = '/';
-		index_input_buffer.buf[1] = '\0';
-		index_input_buffer.pos = 1;
-		index_input_buffer.len = 1;
-		index_input_buffer.utf8len = 1;
+		str_reset(index_input_buffer.buf);
+		str_append_str(index_input_buffer.buf, "/");
 		/* FALLTHROUGH */
 	case ':':
 		set_cur_buffer(&index_input_buffer);
@@ -494,13 +491,9 @@ void chat_msgs_fill(void) {
 
 void input_clear(void) {
 	if (!cur_buffer)
-		return;
+		return
 
-	cur_buffer->buf[0] = '\0';
-	cur_buffer->left = 0;
-	cur_buffer->pos = 0;
-	cur_buffer->len = 0;
-	cur_buffer->utf8len = 0;
+	str_reset(cur_buffer->buf);
 	input_redraw();
 }
 
@@ -514,6 +507,9 @@ void input_redraw(void) {
 	size_t *pos = &cur_buffer->pos;
 	size_t *left = &cur_buffer->left;
 
+	/* TODO: work with Str type instead of the inner buffer */
+	const char *buf = str_buf(cur_buffer->buf);
+
 	if (*pos < *left)
 		*left = *pos;
 
@@ -521,8 +517,8 @@ void input_redraw(void) {
 	size_t screenwidth = 0;
 	right = *left;
 	while (right < cur_buffer->utf8len) {
-		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, right);
-		screenwidth += utf8_char_width(&cur_buffer->buf[bytepos]);
+		size_t bytepos = utf8_char_bytepos(buf, right);
+		screenwidth += utf8_char_width(&buf[bytepos]);
 		if (screenwidth >= maxx)
 			break;
 		right++;
@@ -543,8 +539,8 @@ void input_redraw(void) {
 			(*left)--;
 		screenwidth = 0;
 		for (; *left > 0; (*left)--) {
-			size_t bytepos = utf8_char_bytepos(cur_buffer->buf, *left);
-			screenwidth += utf8_char_width(&cur_buffer->buf[bytepos]);
+			size_t bytepos = utf8_char_bytepos(buf, *left);
+			screenwidth += utf8_char_width(&buf[bytepos]);
 			if (screenwidth >= maxx)
 				break;
 		}
@@ -554,13 +550,13 @@ void input_redraw(void) {
 	/* Draw string in input window */
 	int screenpos = 0;
 	for (size_t i = cur_buffer->left; i < right; i++) {
-		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, i);
+		size_t bytepos = utf8_char_bytepos(buf, i);
 		if (cur_buffer->buf[bytepos] == '\0')
 			break;
-		size_t chsize = utf8_char_size(cur_buffer->buf[bytepos]);
+		size_t chsize = utf8_char_size(buf[bytepos]);
 		mvwprintw(winput, 0, screenpos,
-			"%.*s", chsize, &cur_buffer->buf[bytepos]);
-	 	screenpos += utf8_char_width(&cur_buffer->buf[bytepos]);
+			"%.*s", chsize, &buf[bytepos]);
+	 	screenpos += utf8_char_width(&buf[bytepos]);
 	}
 
 	/*
@@ -569,8 +565,8 @@ void input_redraw(void) {
 	 */
 	screenpos = 0;
 	for (size_t i = cur_buffer->left; i < cur_buffer->pos; i++) {
-		size_t bytepos = utf8_char_bytepos(cur_buffer->buf, i);
-		screenpos += utf8_char_width(&cur_buffer->buf[bytepos]);
+		size_t bytepos = utf8_char_bytepos(buf, i);
+		screenpos += utf8_char_width(&buf[bytepos]);
 	}
 	wmove(winput, 0, screenpos);
 
@@ -591,14 +587,14 @@ bool input_key_index(int c) {
 	case 13:
 		if (streq(cur_buffer->buf, "set autopilot"))
 			autopilot = true;
-		else if (streq(cur_buffer->buf, "unset autopilot"))
+		else if (str_sc_eq(cur_buffer->buf, "unset autopilot"))
 			autopilot = false;
-		else if (streq(cur_buffer->buf, "set mute"))
+		else if (str_sc_eq(cur_buffer->buf, "set mute"))
 			set_buffer_mute(true);
-		else if (streq(cur_buffer->buf, "unset mute"))
+		else if (str_sc_eq(cur_buffer->buf, "unset mute"))
 			set_buffer_mute(false);
-		else if (cur_buffer->buf[0] == '/') {
-			regcomp(&re, &cur_buffer->buf[1],
+		else if (str_char_at(cur_buffer->buf, 0) == '/') {
+			regcomp(&re, &(str_buf(cur_buffer->buf)[1]),
 				REG_EXTENDED|REG_ICASE|REG_NOSUB);
 			/* TODO: only redraw if we found a valid item */
 			index_find_next(+1);
@@ -650,12 +646,12 @@ bool input_key_chat(int c) {
 		break;
 	case 10: /* LF */
 	case 13: /* CR */
-		if (streq(cur_buffer->buf, "/quit")) {
+		if (str_sc_eq(cur_buffer->buf, "/quit")) {
 			set_focus(FOCUS_INDEX);
-		} else if (streq(cur_buffer->buf, "/line")) {
+		} else if (str_sc_eq(cur_buffer->buf, "/line")) {
 			cur_buffer->user_separator = vector_len(cur_buffer->room->msgs)-1;
 			chat_msgs_fill();
-		} else if (streq(cur_buffer->buf, "/disableautopilot")) {
+		} else if (str_sc_eq(cur_buffer->buf, "/disableautopilot")) {
 			autopilot = false;
 		} else if (strncmp(cur_buffer->buf, "/open ", strlen("/open ")) == 0) {
 			const char *number = cur_buffer->buf + strlen("/open ");
@@ -671,7 +667,7 @@ bool input_key_chat(int c) {
 					ui_event_handler_callback(ev);
 				}
 			}
-		} else if (cur_buffer->buf[0] == '/') {
+		} else if (str_char_at(cur_buffer->buf, 0) == '/') {
 			/* TODO: show in the UI invalid command */
 			/*
 			 * TODO: still need to allow user to send messages that
@@ -694,15 +690,8 @@ void input_key_common(int c) {
 	case KEY_BACKSPACE: {
 		if (cur_buffer->pos == 0)
 			break;
-		size_t p = utf8_char_bytepos(cur_buffer->buf, cur_buffer->pos-1);
-		size_t sz = utf8_char_size(cur_buffer->buf[p]);
-		size_t i;
-		for (i = p; i < cur_buffer->len-sz; i++)
-			cur_buffer->buf[i] = cur_buffer->buf[i+sz];
-		cur_buffer->buf[i] = '\0';
+		str_remove_char_at(cur_buffer->buf, cur_buffer->pos);
 		cur_buffer->pos--;
-		cur_buffer->len -= sz;
-		cur_buffer->utf8len--;
 		break;
 	}
 	case KEY_LEFT:
@@ -720,27 +709,7 @@ void input_key_common(int c) {
 			utf8c[i] = c;
 		}
 
-		/*
-		 * Create room in the buffer to insert bytes that represent the
-		 * current character
-		 */
-		size_t pos = utf8_char_bytepos(cur_buffer->buf, cur_buffer->pos);
-		for (size_t i = cur_buffer->len; i > pos; i--)
-			/*
-			 * TODO: what if there is no room in the string? We
-			 * should wrap it around with Str.
-			 */
-			/* TODO: make sure buf is at least len+sz */
-			cur_buffer->buf[i+sz-1] = cur_buffer->buf[i-1];
-
-		/* Finally insert bytes */
-		for (size_t i = 0; i < sz; i++)
-			cur_buffer->buf[pos+i] = utf8c[i];
-
-
-		cur_buffer->len += sz;
-		cur_buffer->buf[cur_buffer->len] = '\0';
-		cur_buffer->utf8len++;
+		str_insert_cstr_len(cur_buffer->buf, utf8c, sz, cur_buffer->pos);
 		input_cursor_inc(+1);
 		break;
 	}
@@ -759,7 +728,7 @@ void input_key(void) {
 	else if (focus == FOCUS_CHAT_INPUT && input_key_chat(c))
 		return;
 	input_key_common(c);
-	cur_buffer->buf[cur_buffer->len] = '\0';
+	str_reset(cur_buffer->buf);
 
 	input_redraw();
 }
@@ -833,12 +802,9 @@ void ui_curses_iter(void) {
 
 void ui_curses_room_new(Str *roomid) {
 	struct buffer *b;
-	b = malloc(sizeof(struct buffer));
-	b->buf[0] = '\0';
+	b->buf = str_new();
 	b->room = room_byid(roomid);
 	b->pos = 0;
-	b->len = 0;
-	b->utf8len = 0;
 	b->left = 0;
 	b->last_line = -1;
 	b->read_separator = -1;
