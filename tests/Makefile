@@ -3,7 +3,7 @@ TARGETS = str.test ui-curses-fake
 .PHONY: test check
 check: test
 test: ${TARGETS}
-	sh run.sh *.test.*
+	sh run.sh *.test.c *.test.tcl
 
 -include ../config.mk
 
