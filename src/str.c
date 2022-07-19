@@ -7,7 +7,7 @@
 
 #define INITSIZE 256
 
-Str *str_new(void) {
+Str *str_new_(struct str_new_params p) {
 	Str *ss;
 	ss = malloc(sizeof(struct Str));
 	ss->buf = malloc(sizeof(char) * INITSIZE + 1); /* +1 for null byte */
@@ -15,12 +15,10 @@ Str *str_new(void) {
 	ss->bytelen = 0;
 	ss->max = INITSIZE;
 	ss->rc = 1;
-	return ss;
-}
 
-Str *str_new_cstr(const char *s) {
-	Str *ss = str_new();
-	str_append_cstr(ss, s);
+	if (p.cstr)
+		str_append_cstr(ss, p.cstr);
+
 	return ss;
 }
 

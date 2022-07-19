@@ -77,7 +77,7 @@ Str *mxc_uri_extract_server_alloc(Str *uri) {
 	char *server = malloc(sizeof(char) * (b - a + 1));
 	strncpy(server, a, b-a);
 	server[b-a] = '\0';
-	Str *ret = str_new_cstr(server);
+	Str *ret = str_new(.cstr = server);
 	free(server);
 	return ret;
 }
@@ -86,7 +86,7 @@ Str *mxc_uri_extract_path_alloc(Str *uri) {
 	const char *a;
 	a = str_buf(uri) + strlen("mxc://");
 	a += strcspn(a, "/") + 1;
-	return str_new_cstr(a);
+	return str_new(.cstr = a);
 }
 
 size_t utf8_char_size(int c) {
