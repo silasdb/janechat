@@ -8,23 +8,19 @@
 #define INITSIZE 256
 
 Str *str_new(void) {
-	return str_new_bytelen(INITSIZE);
+	Str *ss;
+	ss = malloc(sizeof(struct Str));
+	ss->buf = malloc(sizeof(char) * INITSIZE + 1); /* +1 for null byte */
+	ss->buf[0] = '\0';
+	ss->bytelen = 0;
+	ss->max = INITSIZE;
+	ss->rc = 1;
+	return ss;
 }
 
 Str *str_new_cstr(const char *s) {
 	Str *ss = str_new();
 	str_append_cstr(ss, s);
-	return ss;
-}
-
-Str *str_new_bytelen(size_t len) {
-	Str *ss;
-	ss = malloc(sizeof(struct Str));
-	ss->buf = malloc(sizeof(char) * len + 1); /* +1 for null byte */
-	ss->buf[0] = '\0';
-	ss->bytelen = 0;
-	ss->max = len;
-	ss->rc = 1;
 	return ss;
 }
 
