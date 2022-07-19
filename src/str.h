@@ -19,11 +19,27 @@ struct Str {
 	int rc;		/* Reference count */
 };
 
+struct str_new_params {
+	/*
+	 * TODO: Necessary parameter so struct initialization don't
+	 * expand to {}, which is forbidden by ISO C. We also don't want to turn
+	 * off gcc's -Woverride-init, although having a "dummy" parameter to
+	 * satisfy compiler is also not very beautiful! We should study how
+	 * https://facil.io/ solves this.
+	 */
+	int dummy;
+
+	const char *cstr;
+};
+
 inline const char *str_buf(const Str *ss) { return ss->buf; }
 
 #define streq(x, y) (strcmp(x, y) == 0)
-Str *str_new(void);
-Str *str_new_cstr(const char *);
+
+#define str_new(...) \
+	str_new_((struct str_new_params){.dummy = 0, __VA_ARGS__})
+Str *str_new_(struct str_new_params);
+
 void str_append(Str *ss, const Str *s);
 void str_append_cstr(Str *ss, const char *s);
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t);

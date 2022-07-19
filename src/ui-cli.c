@@ -73,7 +73,7 @@ void process_input(char *s) {
 
 	if (strncmp(s, "/join ", strlen("/join ")) == 0) {
 		s += strlen("/join ");
-		Str *ss = str_new_cstr(s);
+		Str *ss = str_new(.cstr = s);
 		Room *room = room_byid(ss);
 		str_decref(ss);
 		if (!room) {
@@ -115,7 +115,7 @@ void process_input(char *s) {
 
 	ev.type = UIEVENTTYPE_SENDMSG;
 	ev.msg.roomid = str_incref(current_room->id);
-	ev.msg.text = str_new_cstr(s);
+	ev.msg.text = str_new(.cstr = s);
 	ui_event_handler_callback(ev);
 	str_decref(ev.msg.roomid);
 	str_decref(ev.msg.text);
