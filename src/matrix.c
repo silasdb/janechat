@@ -77,7 +77,7 @@ static size_t
 send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 {
 	Str *s = (Str *)userp;
-	str_append_cstr_len(s, contents, size*nmemb);
+	str_append_cstr_bytelen(s, contents, size*nmemb);
 	return size * nmemb;
 }
 
@@ -800,7 +800,7 @@ bool matrix_initial_sync(void) {
 
 	char *n = cache_get_alloc("next_batch");
 
-	process_sync_response(str_buf(res), str_len(res), NULL);
+	process_sync_response(str_buf(res), str_bytelen(res), NULL);
 
 	if (n)
 		next_batch = n;
@@ -916,7 +916,7 @@ void matrix_resume(void) {
 #endif
 		if (c->callback)
 			c->callback(str_buf(c->data),
-				str_len(c->data),
+				str_bytelen(c->data),
 				c->params);
 		str_decref(c->data);
 		free(c);
