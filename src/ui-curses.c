@@ -413,14 +413,14 @@ void chat_draw_statusbar(void) {
 	getmaxyx(wchat, maxy, maxx);
 	Str *roomname = room_displayname(cur_buffer->room);
 	mvwprintw(wchat_status, 0, 0, "%s", str_buf(roomname));
-	mvwhline(wchat_status, 0, str_len(roomname), ' ', maxx);
+	mvwhline(wchat_status, 0, str_bytelen(roomname), ' ', maxx);
 	wrefresh(wchat_status);
 }
 
 int text_height(const Str *sender, const Str *text, int width) {
 	/* TODO: still need to consider UTF-8 characters */
 	int height = 1;
-	int w = str_len(sender) + 2; /* +2 because of ": " */
+	int w = str_bytelen(sender) + 2; /* +2 because of ": " */
 	const char *c;
 	for (c = str_buf(text); *c != '\0'; c++, w++)
 		if (*c == '\n' || w >= width) {
