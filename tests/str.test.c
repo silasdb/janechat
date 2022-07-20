@@ -4,7 +4,7 @@
 #include "../src/str.c"
 
 static void str_append_test() {
-	Str *s = str_new(.cstr = "abc");
+	Str *s = str_new_cstr("abc");
 
 	assert(str_bytelen(s) == 3);
 	assert(str_buf(s)[3] == '\0');
