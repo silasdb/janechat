@@ -12,9 +12,9 @@ void fake_event_handler(UiEvent ev) {
 	switch (ev.type) {
 	case UIEVENTTYPE_SENDMSG: {
 		Msg *msg = malloc(sizeof(struct Msg));
-		msg->sender = str_new(.cstr = "test");
+		msg->sender = str_new_cstr("test");
 		msg->type = MSGTYPE_TEXT;
-		msg->text.content = str_new(.cstr = cur_buffer->buf);
+		msg->text.content = str_new_cstr(cur_buffer->buf);
 		vector_append(cur_buffer->room->msgs, msg);
 		chat_msgs_fill();
 		}
@@ -34,10 +34,10 @@ int main(int argc, char *argv[]) {
 	Str *name_s;
 	Str *id_s;
 #define new_room(id, name) \
-	id_s = str_new(.cstr = id); \
-	name_s = str_new(.cstr = name); \
+	id_s = str_new_cstr(id); \
+	name_s = str_new_cstr(name); \
 	room = room_new(id_s); \
-	room_set_info(room, str_new(.cstr = "@example:matrix.org"), name_s); \
+	room_set_info(room, str_new_cstr("@example:matrix.org"), name_s); \
 	ui_curses_room_new(id_s);
 
 	new_room("#test1:matrix.org", "Test A");

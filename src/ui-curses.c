@@ -234,7 +234,7 @@ void send_msg(void) {
 	struct UiEvent ev;
 	ev.type = UIEVENTTYPE_SENDMSG,
 	ev.msg.roomid = str_incref(cur_buffer->room->id);
-	ev.msg.text = str_new(.cstr = cur_buffer->buf);
+	ev.msg.text = str_new_cstr(cur_buffer->buf);
 	ui_event_handler_callback(ev);
 	str_decref(ev.msg.roomid);
 	str_decref(ev.msg.text);

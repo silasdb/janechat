@@ -226,7 +226,7 @@ Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
 	Str *upath = mxc_uri_extract_path_alloc(fileinfo.uri);
 
 	/* TODO: use a temporary directory instead of /tmp */
-	Str *filepath = str_new(.cstr = "/tmp/");
+	Str *filepath = str_new_cstr("/tmp/");
 
 	str_append(filepath, upath);
 	str_decref(upath);
