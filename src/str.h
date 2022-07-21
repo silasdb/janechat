@@ -26,6 +26,7 @@ inline const char *str_buf(const Str *ss) { return ss->buf; }
 #define str_sc_eq(x, y) (strcmp(str_buf(x), y) == 0)
 Str *str_new(void);
 Str *str_new_cstr(const char *);
+Str *str_new_bytelen(size_t);
 void str_append(Str *ss, const Str *s);
 void str_append_cstr(Str *ss, const char *s);
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t);
