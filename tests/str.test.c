@@ -16,6 +16,20 @@ static void str_append_test() {
 	assert(str_buf(s)[6] == '\0');
 }
 
+static void str_grow_test() {
+	Str *s = str_new_bytelen(3);
+	assert(s->max == 3);
+	str_append_cstr(s, "1234567");
+	assert(s->max == 12);
+	str_append_cstr(s, "");
+	str_append_cstr(s, "89012");
+	assert(s->max == 12);
+	str_append_cstr(s, "");
+	assert(s->max == 12);
+	str_append_cstr(s, "3");
+	assert(s->max == 24);
+}
+
 int main(int argc, char *argv[]) {
 	str_append_test();
 	return 0;

@@ -7,6 +7,15 @@
 
 #define INITSIZE 256
 
+/* Grow a Str internal buffer object at least `delta` bytes. */
+static void grow(Str *s, size_t delta) {
+	size_t min = s->bytelen + delta;
+	while (s->max < min)
+		s->max *= 2;
+	/* +1 for null byte */
+	s->buf = realloc(s->buf, (sizeof(char) * s->max) + 1);
+}
+
 Str *str_new(void) {
 	Str *ss;
 	ss = malloc(sizeof(struct Str));
@@ -39,16 +48,10 @@ void str_append_cstr(Str *ss, const char *s) {
 }
 
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t len) {
+	grow(ss, len);
 	char *sb;
 	sb = &ss->buf[ss->bytelen];
 	while (len > 0) {
-		assert(ss->bytelen <= ss->max);
-		if (ss->bytelen == ss->max) {
-			ss->max *= 2;
-			ss->buf = realloc(ss->buf,
-			 (sizeof(char) * ss->max) + 1); /* +1 for null byte */
-			sb = &ss->buf[ss->bytelen]; // because the pointer may have changed
-		}
 		*sb = *s;
 		ss->bytelen++;
 		sb++;
