@@ -2,6 +2,7 @@
 #include <assert.h>
 
 #include "../src/str.c"
+#include "../src/utils.c" /* TODO: recursive include! */
 
 static void str_append_test() {
 	Str *s = str_new_cstr("abc");
@@ -26,11 +27,27 @@ static void str_grow_test() {
 	assert(s->max == 12);
 	str_append_cstr(s, "");
 	assert(s->max == 12);
-	str_append_cstr(s, "3");
+}
+
+static void str_insert_test() {
+	Str *s = str_new_bytelen(3);
+	str_append_cstr(s, "abc");
+	assert(s->max == 3);
+	assert(str_sc_eq(s, "abc"));
+	str_insert_cstr_bytelen(s, "x", 1, 1);
+	assert(s->max == 6);
+	assert(str_sc_eq(s, "axbc"));
+	str_insert_cstr_bytelen(s, "yz", 3, 2);
+	assert(s->max == 6);
+	assert(str_sc_eq(s, "axbyzc"));
+	str_insert_cstr_bytelen(s, "-bananas-", 3, strlen("-bananas-"));
 	assert(s->max == 24);
+	assert(str_sc_eq(s, "axb-bananas-yzc"));
 }
 
 int main(int argc, char *argv[]) {
 	str_append_test();
+	str_grow_test();
+	str_insert_test();
 	return 0;
 }
