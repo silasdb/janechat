@@ -19,9 +19,14 @@ static void str_append_test() {
 static void str_grow_test() {
 	Str *s = str_new_bytelen(3);
 	assert(s->max == 3);
-	str_append_cstr(s, "foo bar more");
+	str_append_cstr(s, "1234567");
 	assert(s->max == 12);
-	str_append_cstr(s, "even more");
+	str_append_cstr(s, "");
+	str_append_cstr(s, "89012");
+	assert(s->max == 12);
+	str_append_cstr(s, "");
+	assert(s->max == 12);
+	str_append_cstr(s, "3");
 	assert(s->max == 24);
 }
 
