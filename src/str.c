@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "str.h"
+#include "utils.h" /* TODO: recursive include! */
 
 #define INITSIZE 256
 
@@ -88,3 +89,16 @@ void str_reset(Str *ss) {
 	ss->bytelen = 0;
 	ss->buf[0] = '\0';
 }
+
+void str_insert_cstr_bytelen(Str *s, const char *cstr, size_t offset, size_t sz) {
+	grow(s, sz);
+	size_t pos = utf8_char_bytepos(s->buf, offset);
+	/* Make room for cstr */
+	for (size_t i = s->bytelen+1; i > offset; i--)
+		s->buf[i+sz-1] = s->buf[i-1];
+	/* Insert cstr bytes */
+	for (size_t i = 0; i < sz; i++)
+		s->buf[pos+i] = cstr[i];
+	s->bytelen += sz;
+}
+
