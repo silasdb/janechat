@@ -34,13 +34,13 @@ static void str_insert_test() {
 	str_append_cstr(s, "abc");
 	assert(s->max == 3);
 	assert(str_sc_eq(s, "abc"));
-	str_insert_cstr_bytelen(s, "x", 1, 1);
+	str_insert_cstr(s, "x", 1);
 	assert(s->max == 6);
 	assert(str_sc_eq(s, "axbc"));
-	str_insert_cstr_bytelen(s, "yz", 3, 2);
+	str_insert_cstr(s, "yz", 3);
 	assert(s->max == 6);
 	assert(str_sc_eq(s, "axbyzc"));
-	str_insert_cstr_bytelen(s, "-bananas-", 3, strlen("-bananas-"));
+	str_insert_cstr(s, "-bananas-", 3);
 	assert(s->max == 24);
 	assert(str_sc_eq(s, "axb-bananas-yzc"));
 }

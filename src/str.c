@@ -90,7 +90,8 @@ void str_reset(Str *ss) {
 	ss->buf[0] = '\0';
 }
 
-void str_insert_cstr_bytelen(Str *s, const char *cstr, size_t offset, size_t sz) {
+void str_insert_cstr(Str *s, const char *cstr, size_t offset) {
+	size_t sz = strlen(cstr);
 	grow(s, sz);
 	size_t pos = utf8_char_bytepos(s->buf, offset);
 	/* Make room for cstr */

@@ -701,7 +701,7 @@ void input_key_common(int c) {
 		input_cursor_inc(+1);
 		break;
 	default: {
-		char utf8c[4];
+		char utf8c[5] = { '\0' };
 		utf8c[0] = c;
 		size_t sz = utf8_char_size(c);
 		for (size_t i = 1; i < sz; i++) {
@@ -709,7 +709,7 @@ void input_key_common(int c) {
 			utf8c[i] = c;
 		}
 
-		str_insert_cstr_len(cur_buffer->buf, utf8c, sz, cur_buffer->pos);
+		str_insert_cstr(cur_buffer->buf, utf8c, cur_buffer->pos);
 		input_cursor_inc(+1);
 		break;
 	}
