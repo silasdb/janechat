@@ -17,6 +17,17 @@ static void grow(Str *s, size_t delta) {
 	s->buf = realloc(s->buf, (sizeof(char) * s->max) + 1);
 }
 
+static int utf8len(const char *s) {
+	int len = 0;
+	size_t sz;
+	while (*s != '\0') {
+		sz = utf8_char_size(*s);
+		len += 1;
+		s += sz;
+	}
+	return len;
+}
+
 Str *str_new(void) {
 	return str_new_bytelen(INITSIZE);
 }
@@ -35,7 +46,25 @@ Str *str_new_bytelen(size_t len) {
 	ss->bytelen = 0;
 	ss->max = len;
 	ss->rc = 1;
+	ss->len = -1;
+	ss->utf8 = false;
 	return ss;
+}
+
+void str_set_utf8(Str *s, bool utf8) {
+	if (utf8) {
+		s->len = utf8len(s->buf);
+		s->utf8 = true;
+	} else {
+		s->len = -1;
+		s->utf8 = false;
+	}
+
+}
+
+int str_len(const Str *s) {
+	assert(s->len > -1);
+	return s->len;
 }
 
 void str_append(Str *ss, const Str *s) {
@@ -54,6 +83,8 @@ void str_append_cstr(Str *ss, const char *s) {
 
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t len) {
 	grow(ss, len);
+	if (ss->utf8)
+		ss->len += utf8len(s);
 	char *sb;
 	sb = &ss->buf[ss->bytelen];
 	while (len > 0) {
@@ -97,6 +128,8 @@ void str_insert_cstr(Str *s, const char *cstr, size_t offset) {
 	for (size_t i = 0; i < sz; i++)
 		s->buf[pos+i] = cstr[i];
 	s->bytelen += sz;
+	if (s->utf8)
+		s->len += utf8len(cstr);
 }
 
 void str_remove_char_at(Str *s, size_t pos) {
@@ -107,5 +140,6 @@ void str_remove_char_at(Str *s, size_t pos) {
 		s->buf[i] = s->buf[i+sz];
 	s->buf[i] = '\0';
 	s->bytelen -= sz;
-	s->len--;
+	if (s->utf8)
+		s->len -= 1;
 }
