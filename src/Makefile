@@ -14,11 +14,16 @@ OBJS = cache.o \
 
 -include ../config.mk
 
+SANITIZER_FLAGS  = -fsanitize=address
+SANITIZER_FLAGS += -fsanitize=undefined
+SANITIZER_FLAGS += -fsanitize=signed-integer-overflow
+SANITIZER_FLAGS += -fno-sanitize-recover=all
+
 # TODO: split debug / release build rules
 CC ?= gcc
 CFLAGS += -g -std=c11 -Wall -Wextra -Wpedantic -fno-omit-frame-pointer
-CFLAGS += -fsanitize=address -fsanitize=undefined -fsanitize=signed-integer-overflow
-LDFLAGS += -lasan -lubsan
+CFLAGS += ${SANITIZER_FLAGS}
+LDFLAGS += ${SANITIZER_FLAGS}
 
 janechat: ${OBJS}
 	$(CC) ${LDFLAGS} -o $@ ${OBJS}
