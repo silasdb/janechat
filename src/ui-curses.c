@@ -690,7 +690,7 @@ void input_key_common(int c) {
 	case KEY_BACKSPACE: {
 		if (cur_buffer->pos == 0)
 			break;
-		str_remove_char_at(cur_buffer->buf, cur_buffer->pos);
+		str_remove_char_at(cur_buffer->buf, cur_buffer->pos-1);
 		cur_buffer->pos--;
 		break;
 	}

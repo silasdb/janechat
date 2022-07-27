@@ -81,10 +81,6 @@ void str_decref(Str *ss) {
 	free(ss);
 }
 
-size_t str_bytelen(const Str *ss) {
-	return ss->bytelen;
-}
-
 void str_reset(Str *ss) {
 	ss->bytelen = 0;
 	ss->buf[0] = '\0';
@@ -103,3 +99,13 @@ void str_insert_cstr(Str *s, const char *cstr, size_t offset) {
 	s->bytelen += sz;
 }
 
+void str_remove_char_at(Str *s, size_t pos) {
+	size_t p = utf8_char_bytepos(s->buf, pos);
+	size_t sz = utf8_char_size(s->buf[p]);
+	size_t i;
+	for (i = p; i < s->bytelen-sz; i++)
+		s->buf[i] = s->buf[i+sz];
+	s->buf[i] = '\0';
+	s->bytelen -= sz;
+	s->len--;
+}

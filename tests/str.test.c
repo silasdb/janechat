@@ -45,9 +45,20 @@ static void test_str_insert_cstr() {
 	assert(str_sc_eq(s, "axb-bananas-yzc"));
 }
 
+static void test_str_remove_char_at() {
+	Str *s = str_new_cstr("I am 老师。 I love café.");
+	str_remove_char_at(s, 0); /* Remove I */
+	str_remove_char_at(s, 0); /* Remove space */ /* Remove space */
+	assert(str_sc_eq(s, "am 老师。 I love café."));
+	str_remove_char_at(s, 5); /* Remove 。*/
+	str_remove_char_at(s, 3); /* Remove 老 */
+	assert(str_sc_eq(s, "am 师 I love café."));
+}
+
 int main(int argc, char *argv[]) {
 	test_str_append_cstr();
 	test_grow();
 	test_str_insert_cstr();
+	test_str_remove_char_at();
 	return 0;
 }

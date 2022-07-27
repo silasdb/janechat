@@ -21,6 +21,7 @@ struct Str {
 };
 
 inline const char *str_buf(const Str *ss) { return ss->buf; }
+inline size_t str_bytelen(const Str *ss) { return ss->bytelen; }
 
 #define streq(x, y) (strcmp(x, y) == 0)
 #define str_sc_eq(x, y) (strcmp(str_buf(x), y) == 0)
