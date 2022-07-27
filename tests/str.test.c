@@ -4,7 +4,7 @@
 #include "../src/str.c"
 #include "../src/utils.c" /* TODO: recursive include! */
 
-static void str_append_test() {
+static void test_str_append_cstr() {
 	Str *s = str_new_cstr("abc");
 
 	assert(str_bytelen(s) == 3);
@@ -17,7 +17,7 @@ static void str_append_test() {
 	assert(str_buf(s)[6] == '\0');
 }
 
-static void str_grow_test() {
+static void test_grow() {
 	Str *s = str_new_bytelen(3);
 	assert(s->max == 3);
 	str_append_cstr(s, "1234567");
@@ -29,7 +29,7 @@ static void str_grow_test() {
 	assert(s->max == 12);
 }
 
-static void str_insert_test() {
+static void test_str_insert_cstr() {
 	Str *s = str_new_bytelen(3);
 	str_append_cstr(s, "abc");
 	assert(s->max == 3);
@@ -46,8 +46,8 @@ static void str_insert_test() {
 }
 
 int main(int argc, char *argv[]) {
-	str_append_test();
-	str_grow_test();
-	str_insert_test();
+	test_str_append_cstr();
+	test_grow();
+	test_str_insert_cstr();
 	return 0;
 }
