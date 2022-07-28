@@ -388,7 +388,7 @@ void index_key(void) {
 		break;;
 	case '/':
 		str_reset(index_input_buffer.buf);
-		str_append_str(index_input_buffer.buf, "/");
+		str_append(index_input_buffer.buf, "/");
 		/* FALLTHROUGH */
 	case ':':
 		set_cur_buffer(&index_input_buffer);
@@ -551,7 +551,7 @@ void input_redraw(void) {
 	int screenpos = 0;
 	for (size_t i = cur_buffer->left; i < right; i++) {
 		size_t bytepos = utf8_char_bytepos(buf, i);
-		if (cur_buffer->buf[bytepos] == '\0')
+		if (buf[bytepos] == '\0')
 			break;
 		size_t chsize = utf8_char_size(buf[bytepos]);
 		mvwprintw(winput, 0, screenpos,
