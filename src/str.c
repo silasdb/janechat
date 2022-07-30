@@ -132,6 +132,14 @@ void str_insert_cstr(Str *s, const char *cstr, size_t offset) {
 		s->len += utf8len(cstr);
 }
 
+void str_utf8char_at(const Str *s, size_t pos, char uc[5]) {
+	uc[0] = uc[1] = uc[2] = uc[3] = uc[4] = '\0';
+	size_t p = utf8_char_bytepos(s->buf, pos);
+	size_t sz = utf8_char_size(s->buf[p]);
+	for (size_t i = 0; i < sz; i++)
+		uc[i] = s->buf[p+i];
+}
+
 void str_remove_char_at(Str *s, size_t pos) {
 	size_t p = utf8_char_bytepos(s->buf, pos);
 	size_t sz = utf8_char_size(s->buf[p]);

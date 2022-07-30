@@ -593,12 +593,16 @@ bool input_key_index(int c) {
 			set_buffer_mute(true);
 		else if (str_sc_eq(cur_buffer->buf, "unset mute"))
 			set_buffer_mute(false);
-		else if (str_char_at(cur_buffer->buf, 0) == '/') {
-			regcomp(&re, &(str_buf(cur_buffer->buf)[1]),
-				REG_EXTENDED|REG_ICASE|REG_NOSUB);
-			/* TODO: only redraw if we found a valid item */
-			index_find_next(+1);
-			index_draw();
+		else {
+			char uc[5]; /* An UTF-8 char */
+			str_utf8char_at(cur_buffer->buf, 0, uc);
+			if (uc[0] == '/') {
+				regcomp(&re, &(str_buf(cur_buffer->buf)[1]),
+					REG_EXTENDED|REG_ICASE|REG_NOSUB);
+				/* TODO: only redraw if we found a valid item */
+				index_find_next(+1);
+				index_draw();
+			}
 		}
 		/* FALLTHROUGH */
 	case CTRL('g'):
@@ -667,15 +671,19 @@ bool input_key_chat(int c) {
 					ui_event_handler_callback(ev);
 				}
 			}
-		} else if (str_char_at(cur_buffer->buf, 0) == '/') {
-			/* TODO: show in the UI invalid command */
-			/*
-			 * TODO: still need to allow user to send messages that
-			 * start with '/'.  Maybe by double '/' like IRC clients
-			 * and Element do?
-			 */
 		} else {
-			send_msg();
+			char uc[5];
+			str_utf8char_at(cur_buffer->buf, 0, uc);
+			if (uc[0] == '/') {
+				/* TODO: show in the UI invalid command */
+				/*
+				 * TODO: still need to allow user to send messages that
+				 * start with '/'.  Maybe by double '/' like IRC clients
+				 * and Element do?
+				 */
+			} else {
+				send_msg();
+			}
 		}
 		input_clear();
 		return true;

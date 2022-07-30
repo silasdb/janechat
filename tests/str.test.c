@@ -70,10 +70,25 @@ static void test_str_remove_char_at() {
 	assert(str_len(s) == 17);
 }
 
+static void test_str_utf8char_at() {
+	Str *s = str_new_cstr("I am 老师。 I love café.");
+	char uc[5];
+
+	str_utf8char_at(s, 0, uc);
+	assert(streq(uc, "I"));
+	str_utf8char_at(s, 5, uc);
+	assert(streq(uc, "老"));
+	str_utf8char_at(s, 19, uc);
+	assert(streq(uc, "é"));
+	str_utf8char_at(s, 20, uc);
+	assert(streq(uc, "."));
+}
+
 int main(int argc, char *argv[]) {
 	test_str_append_cstr();
 	test_grow();
 	test_str_insert_cstr();
 	test_str_remove_char_at();
+	test_str_utf8char_at();
 	return 0;
 }
