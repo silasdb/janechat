@@ -78,7 +78,7 @@ Vector *buffers = NULL; /* Vector<struct buffer> */
 /* Current buffer selected. NULL if focus is in index window */
 struct buffer *cur_buffer = NULL;
 
-struct buffer index_input_buffer = { .room = NULL };
+struct buffer index_input_buffer;
 
 /*
  * Index for the current selected buffer. This is used not only to index buffers
@@ -748,6 +748,11 @@ void input_key(void) {
 void ui_curses_setup(void) {
 	if (!buffers)
 		buffers = vector_new();
+
+ 	index_input_buffer = (struct buffer){
+ 		.buf = str_new(),
+ 		.room = NULL,
+ 	};
 }
 
 void ui_curses_init(void) {
