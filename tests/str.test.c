@@ -84,11 +84,20 @@ static void test_str_copy_utf8char_at() {
 	assert(streq(uc, "."));
 }
 
+static void test_str_starts_with_cstr() {
+	Str *s = str_new_cstr("I am 老师。 I love café.");
+
+	assert(str_starts_with_cstr(s, "I am"));
+	assert(str_starts_with_cstr(s, "I am 老师。"));
+	assert(!str_starts_with_cstr(s, "am 老师。"));
+}
+
 int main(int argc, char *argv[]) {
 	test_str_append_cstr();
 	test_grow();
 	test_str_insert_cstr();
 	test_str_remove_char_at();
 	test_str_copy_utf8char_at();
+	test_str_starts_with_cstr();
 	return 0;
 }

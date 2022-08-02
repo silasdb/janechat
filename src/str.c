@@ -151,3 +151,7 @@ void str_remove_char_at(Str *s, size_t pos) {
 	if (s->utf8)
 		s->len -= 1;
 }
+
+bool str_starts_with_cstr(Str *ss, char *s) {
+	return (strncmp(ss->buf, s, strlen(s)) == 0);
+}
