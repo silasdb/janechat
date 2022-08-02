@@ -132,6 +132,17 @@ void str_insert_cstr(Str *s, const char *cstr, size_t offset) {
 		s->len += utf8len(cstr);
 }
 
+Str *str_dup(const Str *s) {
+	Str *dup = str_new_bytelen(s->bytelen);
+	strcpy(dup->buf, s->buf);
+	dup->buf[dup->bytelen] = '\0';
+	dup->utf8 = s->utf8;
+	dup->len = s->len;
+	dup->utf8 = s->utf8;
+	dup->rc = 1;
+	return dup;
+}
+
 void str_copy_utf8char_at(const Str *s, size_t pos, char uc[5]) {
 	uc[0] = uc[1] = uc[2] = uc[3] = uc[4] = '\0';
 	size_t p = utf8_char_bytepos(s->buf, pos);

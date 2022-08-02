@@ -35,6 +35,7 @@ void str_append(Str *ss, const Str *s);
 void str_append_cstr(Str *ss, const char *s);
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t);
 void str_insert_cstr(Str *, const char *s, size_t);
+Str *str_dup(const Str *);
 int str_cmp(const Str *, const Str *);
 void str_reset(Str *);
 Str *str_incref(Str *);
