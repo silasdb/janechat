@@ -388,7 +388,7 @@ void index_key(void) {
 		break;;
 	case '/':
 		str_reset(index_input_buffer.buf);
-		str_append(index_input_buffer.buf, "/");
+		str_append_cstr(index_input_buffer.buf, "/");
 		/* FALLTHROUGH */
 	case ':':
 		set_cur_buffer(&index_input_buffer);
@@ -491,7 +491,7 @@ void chat_msgs_fill(void) {
 
 void input_clear(void) {
 	if (!cur_buffer)
-		return
+		return;
 
 	str_reset(cur_buffer->buf);
 	input_redraw();
@@ -585,7 +585,7 @@ bool input_key_index(int c) {
 	switch (c) {
 	case 10:
 	case 13:
-		if (streq(cur_buffer->buf, "set autopilot"))
+		if (str_sc_eq(cur_buffer->buf, "set autopilot"))
 			autopilot = true;
 		else if (str_sc_eq(cur_buffer->buf, "unset autopilot"))
 			autopilot = false;
@@ -595,7 +595,7 @@ bool input_key_index(int c) {
 			set_buffer_mute(false);
 		else {
 			char uc[5]; /* An UTF-8 char */
-			str_utf8char_at(cur_buffer->buf, 0, uc);
+			str_copy_utf8char_at(cur_buffer->buf, 0, uc);
 			if (uc[0] == '/') {
 				regcomp(&re, &(str_buf(cur_buffer->buf)[1]),
 					REG_EXTENDED|REG_ICASE|REG_NOSUB);
@@ -657,8 +657,8 @@ bool input_key_chat(int c) {
 			chat_msgs_fill();
 		} else if (str_sc_eq(cur_buffer->buf, "/disableautopilot")) {
 			autopilot = false;
-		} else if (strncmp(cur_buffer->buf, "/open ", strlen("/open ")) == 0) {
-			const char *number = cur_buffer->buf + strlen("/open ");
+		} else if (str_starts_with_cstr(cur_buffer->buf, "/open ")) {
+			const char *number = str_buf(cur_buffer->buf) + strlen("/open ");
 			long int id;
 			if (str2li(number, &id) &&
 			   id >= 0 && (size_t)id < vector_len(cur_buffer->room->msgs)) {
@@ -673,7 +673,7 @@ bool input_key_chat(int c) {
 			}
 		} else {
 			char uc[5];
-			str_utf8char_at(cur_buffer->buf, 0, uc);
+			str_copy_utf8char_at(cur_buffer->buf, 0, uc);
 			if (uc[0] == '/') {
 				/* TODO: show in the UI invalid command */
 				/*
@@ -810,6 +810,7 @@ void ui_curses_iter(void) {
 
 void ui_curses_room_new(Str *roomid) {
 	struct buffer *b;
+	b = malloc(sizeof(struct buffer));
 	b->buf = str_new();
 	b->room = room_byid(roomid);
 	b->pos = 0;
