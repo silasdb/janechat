@@ -39,7 +39,7 @@ int str_cmp(const Str *, const Str *);
 void str_reset(Str *);
 Str *str_incref(Str *);
 void str_decref(Str *);
-void str_utf8char_at(const Str *, size_t, char [5]);
+void str_copy_utf8char_at(const Str *, size_t, char [5]);
 void str_remove_char_at(Str *, size_t);
 
 #endif /* !JANECHAT_STR_H */
