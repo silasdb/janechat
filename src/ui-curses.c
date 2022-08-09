@@ -28,8 +28,6 @@ struct buffer {
 	Room *room;
 	Str *buf; /* Input buffer. TODO: use Str? */
 	size_t pos; /* Cursor position - UTF-8 index. */
-	size_t len; /* String length - does not include the null byte */
-	size_t utf8len; /* UTF-8 length */
 
 	/* Left-most character index showed in the input window - UTF-8 index */
 	size_t left; 
@@ -516,7 +514,7 @@ void input_redraw(void) {
 	/* Now discover largest possible right */
 	size_t screenwidth = 0;
 	right = *left;
-	while (right < cur_buffer->utf8len) {
+	while (right < str_len(cur_buffer->buf)) {
 		size_t bytepos = utf8_char_bytepos(buf, right);
 		screenwidth += utf8_char_width(&buf[bytepos]);
 		if (screenwidth >= maxx)
@@ -527,7 +525,7 @@ void input_redraw(void) {
 	if (*pos > right) {
 		right = *pos;
 
-		assert(right <= cur_buffer->utf8len);
+		assert(right <= str_len(cur_buffer->buf));
 
 		/*
 		 * Discover new left: we need to walk backwards from `right`, to
@@ -535,7 +533,7 @@ void input_redraw(void) {
 		 * printing our string.
 		 */
 		*left = right;
-		if (*left == cur_buffer->utf8len)
+		if (*left == str_len(cur_buffer->buf))
 			(*left)--;
 		screenwidth = 0;
 		for (; *left > 0; (*left)--) {
@@ -576,7 +574,7 @@ void input_redraw(void) {
 void input_cursor_inc(int offset) {
 	if ((int)cur_buffer->pos + offset < 0)
 		return;
-	if (cur_buffer->pos + offset > cur_buffer->utf8len)
+	if (cur_buffer->pos + offset > str_len(cur_buffer->buf))
 		return;
 	cur_buffer->pos += offset;
 }
@@ -736,7 +734,6 @@ void input_key(void) {
 	else if (focus == FOCUS_CHAT_INPUT && input_key_chat(c))
 		return;
 	input_key_common(c);
-	str_reset(cur_buffer->buf);
 
 	input_redraw();
 }
@@ -817,6 +814,7 @@ void ui_curses_room_new(Str *roomid) {
 	struct buffer *b;
 	b = malloc(sizeof(struct buffer));
 	b->buf = str_new();
+	str_set_utf8(b->buf, true);
 	b->room = room_byid(roomid);
 	b->pos = 0;
 	b->left = 0;
