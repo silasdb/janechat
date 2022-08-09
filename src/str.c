@@ -114,6 +114,7 @@ void str_decref(Str *ss) {
 
 void str_reset(Str *ss) {
 	ss->bytelen = 0;
+	ss->len = ss->utf8 ? 0 : -1;
 	ss->buf[0] = '\0';
 }
 

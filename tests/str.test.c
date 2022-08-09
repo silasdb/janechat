@@ -92,6 +92,19 @@ static void test_str_starts_with_cstr() {
 	assert(!str_starts_with_cstr(s, "am 老师。"));
 }
 
+void test_str_reset(void) {
+	Str *s = str_new_cstr("I am 老师。 I love café.");
+
+	str_reset(s);
+	assert(s->len == -1);
+	assert(s->bytelen == 0);
+
+	str_set_utf8(s, true);
+	str_reset(s);
+	assert(s->len == 0);
+	assert(s->bytelen == 0);
+}
+
 int main(int argc, char *argv[]) {
 	test_str_append_cstr();
 	test_grow();
@@ -99,5 +112,6 @@ int main(int argc, char *argv[]) {
 	test_str_remove_char_at();
 	test_str_copy_utf8char_at();
 	test_str_starts_with_cstr();
+	test_str_reset();
 	return 0;
 }
