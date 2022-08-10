@@ -136,6 +136,7 @@ void str_insert_cstr(Str *s, const char *cstr, size_t offset) {
 Str *str_dup(const Str *s) {
 	Str *dup = str_new_bytelen(s->bytelen);
 	strcpy(dup->buf, s->buf);
+	dup->bytelen = s->bytelen;
 	dup->buf[dup->bytelen] = '\0';
 	dup->utf8 = s->utf8;
 	dup->len = s->len;

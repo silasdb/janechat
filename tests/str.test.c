@@ -110,6 +110,13 @@ void test_str_reset(void) {
 	assert(s->bytelen == 0);
 }
 
+void test_str_dup(void) {
+	Str *s = str_new_cstr("abc");
+	Str *t = str_dup(s);
+	assert(streq(str_buf(s), str_buf(t)));
+	assert(str_buf(s) != str_buf(t));
+}
+
 int main(int argc, char *argv[]) {
 	test_str_append_cstr();
 	test_grow();
@@ -118,5 +125,6 @@ int main(int argc, char *argv[]) {
 	test_str_copy_utf8char_at();
 	test_str_starts_with_cstr();
 	test_str_reset();
+	test_str_dup();
 	return 0;
 }
