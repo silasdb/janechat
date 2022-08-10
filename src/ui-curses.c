@@ -491,6 +491,8 @@ void input_clear(void) {
 	if (!cur_buffer)
 		return;
 
+	cur_buffer->pos = 0;
+	cur_buffer->left = 0;
 	str_reset(cur_buffer->buf);
 	input_redraw();
 }
