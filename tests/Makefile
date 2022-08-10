@@ -24,4 +24,4 @@ ui-curses-fake: ui-curses-fake.c
 
 .PHONY: clean
 clean:
-	rm -f ${TARGETS}
+	rm -f ${TARGETS} *.core
