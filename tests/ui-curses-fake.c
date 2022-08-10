@@ -14,7 +14,7 @@ void fake_event_handler(UiEvent ev) {
 		Msg *msg = malloc(sizeof(struct Msg));
 		msg->sender = str_new_cstr("test");
 		msg->type = MSGTYPE_TEXT;
-		msg->text.content = str_new_cstr(cur_buffer->buf);
+		msg->text.content = str_dup(cur_buffer->buf);
 		vector_append(cur_buffer->room->msgs, msg);
 		chat_msgs_fill();
 		}
