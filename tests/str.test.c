@@ -53,6 +53,11 @@ static void test_str_insert_cstr() {
 	assert(s->max == 24);
 	assert(str_sc_eq(s, "axb-老师café-yzc"));
 	assert(str_len(s) == 14);
+
+	str_reset(s);
+	str_append_cstr(s, "çaç");
+	str_insert_cstr(s, "a", 3);
+	assert(str_sc_eq(s, "çaça"));
 }
 
 static void test_str_remove_char_at() {

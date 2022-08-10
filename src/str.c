@@ -123,7 +123,7 @@ void str_insert_cstr(Str *s, const char *cstr, size_t offset) {
 	grow(s, sz);
 	size_t pos = utf8_char_bytepos(s->buf, offset);
 	/* Make room for cstr */
-	for (size_t i = s->bytelen+1; i > offset; i--)
+	for (size_t i = s->bytelen+1; i > pos; i--)
 		s->buf[i+sz-1] = s->buf[i-1];
 	/* Insert cstr bytes */
 	for (size_t i = 0; i < sz; i++)
