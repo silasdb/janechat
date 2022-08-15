@@ -3,6 +3,7 @@
 #ifndef JANECHAT_COMMON_H
 #define JANECHAT_COMMON_H
 
+#include "buffer.h"
 #include "str.h"
 
 struct FileInfo {
@@ -12,9 +13,9 @@ struct FileInfo {
 	 * enum or a static read-only string? (e.g. mimetype =
 	 * "image/jpeg"), saving some bytes of memory?
 	 */
-	Str *mimetype;
+	Buffer *mimetype;
 
-	Str *uri;
+	Buffer *uri;
 };
 typedef struct FileInfo FileInfo;
 
@@ -24,7 +25,7 @@ struct Msg {
 		MSGTYPE_FILE,
 		MSGTYPE_UNSUPPORTED,
 	} type;
-	Str *sender;
+	Buffer *sender;
 	union {
 		struct {
 			Str *content;

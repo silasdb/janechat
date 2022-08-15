@@ -27,6 +27,19 @@ Str *str_new(void) {
 	return ss;
 }
 
+Str *str_new_cstr(const char *s) {
+	Buffer *b = buffer_new_cstr(s);
+	return str_new_attach_buffer(b);
+}
+
+Str *str_new_attach_buffer(Buffer *b) {
+	Str *ss;
+	ss = malloc(sizeof(struct Str));
+	ss->buf = b;
+	ss->utf8len = utf8len(buffer_data(b));
+	return ss;
+}
+
 void str_append(Str *ss, const Str *s) {
 	buffer_append(ss, str_data(s));
 	ss->utf8len += utf8len(str_data(s));

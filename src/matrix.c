@@ -17,9 +17,9 @@
 #include <curl/curl.h>
 #include <jansson.h>
 
+#include "buffer.h"
 #include "cache.h"
 #include "list.h"
-#include "str.h"
 #include "matrix.h"
 #include "utils.h"
 
@@ -39,7 +39,7 @@ enum callback_info_type {
 
 struct callback_info {
 	void (*callback)(const char *, size_t, void *);
-	Str *data;
+	Buffer *data;
 	void *params;
 	enum callback_info_type type;
 };
@@ -76,27 +76,27 @@ void matrix_set_event_handler(void (*callback)(MatrixEvent)) {
 static size_t
 send_callback(void *contents, size_t size, size_t nmemb, void *userp)
 {
-	Str *s = (Str *)userp;
-	str_append_cstr_bytelen(s, contents, size*nmemb);
+	Buffer *s = (Buffer *)userp;
+	buffer_append_cbuffer_bytelen(s, contents, size*nmemb);
 	return size * nmemb;
 }
 
-Str * matrix_send_sync_alloc(
+Buffer * matrix_send_sync_alloc(
 	enum HTTPMethod method,
 	const char *path,
 	const char *json)
 {
-	Str *url = str_new();
-	str_append_cstr(url, "https://");
+	Buffer *url = buffer_new();
+	buffer_append_cstr(url, "https://");
 	assert(matrix_server != NULL);
-	str_append_cstr(url, matrix_server);
-	str_append_cstr(url, ":443");
-	str_append_cstr(url, path);
+	buffer_append_cstr(url, matrix_server);
+	buffer_append_cstr(url, ":443");
+	buffer_append_cstr(url, path);
 	CURL *handle = curl_easy_init();
 	assert(handle);
 	CURLcode res;
-	Str *aux = str_new();
-	curl_easy_setopt(handle, CURLOPT_URL, str_buf(url));
+	Buffer *aux = buffer_new();
+	curl_easy_setopt(handle, CURLOPT_URL, buffer_buf(url));
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
 
@@ -129,7 +129,7 @@ Str * matrix_send_sync_alloc(
 		return NULL;
 	}
 	curl_easy_cleanup(handle);
-	str_decref(url);
+	buffer_decref(url);
 	return aux;
 }
 
@@ -161,21 +161,21 @@ static void matrix_send_async(
 		mhandle = curl_multi_init();
 
 	handle = curl_easy_init();
-	Str *aux = str_new();
+	Buffer *aux = buffer_new();
 
 	c->data = aux;
 	c->params = callback_params;
 	
-	Str *url = str_new();
+	Buffer *url = buffer_new();
 	
-	str_append_cstr(url, "https://");
+	buffer_append_cstr(url, "https://");
 	assert(matrix_server != NULL);
-	str_append_cstr(url, matrix_server);
-	str_append_cstr(url, ":443");
-	str_append_cstr(url, path);
+	buffer_append_cstr(url, matrix_server);
+	buffer_append_cstr(url, ":443");
+	buffer_append_cstr(url, path);
 
 #if DEBUG_REQUEST
-	printf("DEBUG_REQUEST: url: %s\n", str_buf(url));
+	printf("DEBUG_REQUEST: url: %s\n", buffer_buf(url));
 	if (json)
 		printf("DEBUG_REQUEST: json: %s\n", json);
 #endif
@@ -186,7 +186,7 @@ static void matrix_send_async(
 	 */
 	curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, SOCKET_TIMEOUT_MS);
 	curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT, 60L);
-	curl_easy_setopt(handle, CURLOPT_URL, str_buf(url));
+	curl_easy_setopt(handle, CURLOPT_URL, buffer_buf(url));
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, send_callback);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)aux);
 	curl_easy_setopt(handle, CURLOPT_PRIVATE, (void *)c);
@@ -231,7 +231,7 @@ static void matrix_send_async(
 	}
 
 	curl_multi_add_handle(mhandle, handle);
-	str_decref(url);
+	buffer_decref(url);
 	curl_multi_perform(mhandle, &still_running);
 }
 
@@ -263,7 +263,7 @@ static json_t *json_path(json_t *root, const char *path, ...) {
 	return root;
 }
 
-static const char *json2str_alloc(json_t *j) {
+static const char *json2buffer_alloc(json_t *j) {
 	return json_dumps(j, 0);
 }
 
@@ -282,20 +282,20 @@ static json_t *str2json_alloc(const char *s) {
 	return j;
 }
 
-void matrix_send_message(const Str *roomid, const Str *msg) {
-	Str *url = str_new();
-	str_append_cstr(url, "/_matrix/client/r0/rooms/");
-	str_append_cstr(url, str_buf(roomid));
-	str_append_cstr(url, "/send/m.room.message?access_token=");
-	str_append_cstr(url, token);
+void matrix_send_message(const Buffer *roomid, const Buffer *msg) {
+	Buffer *url = buffer_new();
+	buffer_append_cstr(url, "/_matrix/client/r0/rooms/");
+	buffer_append_cstr(url, buffer_buf(roomid));
+	buffer_append_cstr(url, "/send/m.room.message?access_token=");
+	buffer_append_cstr(url, token);
 	json_t *root = json_object();
 	json_object_set(root, "msgtype", json_string("m.text"));
-	json_object_set(root, "body", json_string(str_buf(msg)));
-	const char *s = json2str_alloc(root);
-	matrix_send_async(HTTP_POST, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
+	json_object_set(root, "body", json_string(buffer_buf(msg)));
+	const char *s = json2buffer_alloc(root);
+	matrix_send_async(HTTP_POST, buffer_buf(url), CALLBACK_INFO_TYPE_OTHER,
 		s, NULL, NULL);
 	free((void *)s);
-	str_decref(url);
+	buffer_decref(url);
 }
 
 void matrix_receive_file(const char *output, size_t sz, void *p) {
@@ -309,19 +309,19 @@ void matrix_receive_file(const char *output, size_t sz, void *p) {
 }
 
 void matrix_request_file(FileInfo fileinfo) {
-	Str *server = mxc_uri_extract_server_alloc(fileinfo.uri);
-	Str *path = mxc_uri_extract_path_alloc(fileinfo.uri);
-	Str *url = str_new_cstr("/_matrix/media/v3/download/");
-	str_append(url, server);
-	str_append_cstr(url, "/");
-	str_append(url, path);
-	str_decref(server);
-	str_decref(path);
+	Buffer *server = mxc_uri_extract_server_alloc(fileinfo.uri);
+	Buffer *path = mxc_uri_extract_path_alloc(fileinfo.uri);
+	Buffer *url = buffer_new_cstr("/_matrix/media/v3/download/");
+	buffer_append(url, server);
+	buffer_append_cstr(url, "/");
+	buffer_append(url, path);
+	buffer_decref(server);
+	buffer_decref(path);
 	FileInfo *fileinfoptr = malloc(sizeof(FileInfo));
 	*fileinfoptr = fileinfo;
-	matrix_send_async(HTTP_GET, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
+	matrix_send_async(HTTP_GET, buffer_buf(url), CALLBACK_INFO_TYPE_OTHER,
 		NULL, matrix_receive_file, fileinfoptr);
-	str_decref(url);
+	buffer_decref(url);
 }
 
 void matrix_set_server(char *s) {
@@ -335,12 +335,12 @@ void matrix_set_token(char *tok) {
 static void process_direct_event(const char *sender, json_t *roomid) {
 	MatrixEvent event;
 	event.type = EVENT_ROOM_INFO;
-	event.roominfo.id = str_new_cstr(json_string_value(roomid));
-	event.roominfo.sender = str_new_cstr(sender);
+	event.roominfo.id = buffer_new_cstr(json_string_value(roomid));
+	event.roominfo.sender = buffer_new_cstr(sender);
 	event.roominfo.name = NULL;
 	event_handler_callback(event);
-	str_decref(event.roominfo.id);
-	str_decref(event.roominfo.name);
+	buffer_decref(event.roominfo.id);
+	buffer_decref(event.roominfo.name);
 }
 
 static void process_room_event(json_t *item, const char *roomid) {
@@ -352,18 +352,18 @@ static void process_room_event(json_t *item, const char *roomid) {
 		const char *name = json_string_value(nam);
 		MatrixEvent event;
 		event.type = EVENT_ROOM_INFO;
-		event.roominfo.id = str_new_cstr(roomid);
-		event.roominfo.name = str_new_cstr(name);
+		event.roominfo.id = buffer_new_cstr(roomid);
+		event.roominfo.name = buffer_new_cstr(name);
 		event.roominfo.sender = NULL;
 		event_handler_callback(event);
-		str_decref(event.roominfo.id);
-		str_decref(event.roominfo.name);
+		buffer_decref(event.roominfo.id);
+		buffer_decref(event.roominfo.name);
 	} else if (streq(json_string_value(type), "m.room.create")) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_CREATE;
-		event.roomcreate.id = str_new_cstr(roomid);
+		event.roomcreate.id = buffer_new_cstr(roomid);
 		event_handler_callback(event);
-		str_decref(event.roomcreate.id);
+		buffer_decref(event.roomcreate.id);
 	} else if (streq(json_string_value(type), "m.room.member")) {
 		json_t *membership = json_path(item, "content", "membership", NULL);
 		assert(membership != NULL);
@@ -373,9 +373,9 @@ static void process_room_event(json_t *item, const char *roomid) {
 		assert(sender != NULL);
 		MatrixEvent event;
 		event.type = EVENT_ROOM_JOIN;
-		event.roomjoin.roomid = str_new_cstr(roomid);
+		event.roomjoin.roomid = buffer_new_cstr(roomid);
 		event.roomjoin.senderid =
-			str_new_cstr(json_string_value(sender));
+			buffer_new_cstr(json_string_value(sender));
 		json_t *name = json_path(item, "content", "displayname", NULL);
 		/* TODO: See: https://spec.matrix.org/latest/client-server-api/#calculating-the-display-name-for-a-user */
 		if (name) {
@@ -387,13 +387,13 @@ static void process_room_event(json_t *item, const char *roomid) {
 			 */
 			assert(json_is_string(name));
 			event.roomjoin.sendername =
-				str_new_cstr(json_string_value(name));
+				buffer_new_cstr(json_string_value(name));
 		} else
 			event.roomjoin.sendername = NULL;
 		event_handler_callback(event);
-		str_decref(event.roomjoin.roomid);
-		str_decref(event.roomjoin.senderid);
-		str_decref(event.roomjoin.sendername);
+		buffer_decref(event.roomjoin.roomid);
+		buffer_decref(event.roomjoin.senderid);
+		buffer_decref(event.roomjoin.sendername);
 	}
 }
 
@@ -478,8 +478,8 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.roomid = str_new_cstr(roomid);
-		event.msg.msg.sender = str_new_cstr(json_string_value(sender));
+		event.msg.roomid = buffer_new_cstr(roomid);
+		event.msg.msg.sender = buffer_new_cstr(json_string_value(sender));
 
 		if (streq(json_string_value(msgtype), "m.image")
 		|| streq(json_string_value(msgtype), "m.audio")
@@ -491,7 +491,7 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 				json_path(content, "info", "mimetype", NULL));
 			if (!m)
 				m = "(unknown mimetype)";
-			event.msg.msg.fileinfo.mimetype = str_new_cstr(m);
+			event.msg.msg.fileinfo.mimetype = buffer_new_cstr(m);
 
 			/*
 			 * TODO: I once got a error about NULL pointer when
@@ -500,51 +500,51 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 			 */
 			assert(json_object_get(content, "url"));
 			assert(json_string_value(json_object_get(content, "url")));
-			event.msg.msg.fileinfo.uri = str_new_cstr(
+			event.msg.msg.fileinfo.uri = buffer_new_cstr(
 				json_string_value(json_object_get(content, "url")));
 			assert(event.msg.msg.fileinfo.uri);
 			event_handler_callback(event);
-			str_decref(event.msg.roomid);
-			str_decref(event.msg.msg.sender);
-			str_decref(event.msg.msg.fileinfo.uri);
+			buffer_decref(event.msg.roomid);
+			buffer_decref(event.msg.msg.sender);
+			buffer_decref(event.msg.msg.fileinfo.uri);
 			return;
 		}
 
-		event.msg.msg.text.content = str_new();
+		event.msg.msg.text.content = buffer_new();
 		event.msg.msg.type = MSGTYPE_TEXT;
 		if (streq(json_string_value(msgtype), "m.text")) {
 			event.msg.msg.text.content
 				= str_new_cstr(json_string_value(body));
 		} else {
-			str_append_cstr(event.msg.msg.text.content, "==== ");
-			str_append_cstr(event.msg.msg.text.content, json_string_value(msgtype));
-			str_append_cstr(event.msg.msg.text.content, " ====");
+			buffer_append_cstr(event.msg.msg.text.content, "==== ");
+			buffer_append_cstr(event.msg.msg.text.content, json_string_value(msgtype));
+			buffer_append_cstr(event.msg.msg.text.content, " ====");
 		}
 		event_handler_callback(event);
-		str_decref(event.msg.roomid);
-		str_decref(event.msg.msg.sender);
-		str_decref(event.msg.msg.text.content);
+		buffer_decref(event.msg.roomid);
+		buffer_decref(event.msg.msg.sender);
+		buffer_decref(event.msg.msg.text.content);
 	} else if (streq(json_string_value(type), "m.room.encrypted")) {
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.roomid = str_new_cstr(roomid);
-		event.msg.msg.sender = str_new_cstr(json_string_value(sender));
-		event.msg.msg.text.content = str_new_cstr("== encrypted message ==");
+		event.msg.roomid = buffer_new_cstr(roomid);
+		event.msg.msg.sender = buffer_new_cstr(json_string_value(sender));
+		event.msg.msg.text.content = buffer_new_cstr("== encrypted message ==");
 		event_handler_callback(event);
-		str_decref(event.msg.roomid);
-		str_decref(event.msg.msg.sender);
-		str_decref(event.msg.msg.text.content);
+		buffer_decref(event.msg.roomid);
+		buffer_decref(event.msg.msg.sender);
+		buffer_decref(event.msg.msg.text.content);
 	}
 }
 
 static void process_error(json_t *root) {
 	MatrixEvent event;
 	event.type = EVENT_MATRIX_ERROR;
-	event.error.errorcode = str_new_cstr(json_string_value(json_object_get(root, "errcode")));
-	event.error.error = str_new_cstr(json_string_value(json_object_get(root, "error")));
+	event.error.errorcode = buffer_new_cstr(json_string_value(json_object_get(root, "errcode")));
+	event.error.error = buffer_new_cstr(json_string_value(json_object_get(root, "error")));
 	event_handler_callback(event);
-	str_decref(event.error.errorcode);
-	str_decref(event.error.error);
+	buffer_decref(event.error.errorcode);
+	buffer_decref(event.error.error);
 }
 
 static void process_push_rules(json_t *rule) {
@@ -574,10 +574,10 @@ static void process_push_rules(json_t *rule) {
 				json_object_get(rule, "rule_id"));
 
 			event.type = EVENT_ROOM_NOTIFY_STATUS;
-			event.roomnotifystatus.roomid = str_new_cstr(roomid);
+			event.roomnotifystatus.roomid = buffer_new_cstr(roomid);
 			event.roomnotifystatus.enabled = false;
 			event_handler_callback(event);
-			str_decref(event.roomnotifystatus.roomid);
+			buffer_decref(event.roomnotifystatus.roomid);
 			return;
 		}
 	}
@@ -752,13 +752,13 @@ static void process_sync_response(const char *output, size_t sz, void *params) {
  * No message is retrieved in this phase.
  */
 bool matrix_initial_sync(void) {
-	Str *url = str_new();
-	str_append_cstr(url, "/_matrix/client/r0/sync");
-	str_append_cstr(url, "?");
-	str_append_cstr(url, SYNC_REQUEST_FILTER("\"limit\":0,"));
-	str_append_cstr(url, "&access_token=");
-	str_append_cstr(url, token);
-	Str *res = matrix_send_sync_alloc(HTTP_GET, str_buf(url), NULL);
+	Buffer *url = buffer_new();
+	buffer_append_cstr(url, "/_matrix/client/r0/sync");
+	buffer_append_cstr(url, "?");
+	buffer_append_cstr(url, SYNC_REQUEST_FILTER("\"limit\":0,"));
+	buffer_append_cstr(url, "&access_token=");
+	buffer_append_cstr(url, token);
+	Buffer *res = matrix_send_sync_alloc(HTTP_GET, buffer_buf(url), NULL);
 	if (!res)
 		return false;
 
@@ -800,12 +800,12 @@ bool matrix_initial_sync(void) {
 
 	char *n = cache_get_alloc("next_batch");
 
-	process_sync_response(str_buf(res), str_bytelen(res), NULL);
+	process_sync_response(buffer_buf(res), buffer_bytelen(res), NULL);
 
 	if (n)
 		next_batch = n;
 
-	str_decref(res);
+	buffer_decref(res);
 	return true;
 }
 
@@ -813,24 +813,24 @@ void matrix_sync(void) {
 	if (insync)
 		return;
 	insync = true;
-	Str *url = str_new();
-	str_append_cstr(url, "/_matrix/client/r0/sync");
-	str_append_cstr(url, "?");
-	str_append_cstr(url, SYNC_REQUEST_FILTER(""));
-	str_append_cstr(url, "&since=");
+	Buffer *url = buffer_new();
+	buffer_append_cstr(url, "/_matrix/client/r0/sync");
+	buffer_append_cstr(url, "?");
+	buffer_append_cstr(url, SYNC_REQUEST_FILTER(""));
+	buffer_append_cstr(url, "&since=");
 	assert(next_batch);
-	str_append_cstr(url, next_batch);
-	str_append_cstr(url, "&timeout=");
+	buffer_append_cstr(url, next_batch);
+	buffer_append_cstr(url, "&timeout=");
 #define INT2STR_(x) #x
 #define INT2STR(x) INT2STR_(x)
-	str_append_cstr(url, INT2STR(MATRIX_SYNC_TIMEOUT_MS));
+	buffer_append_cstr(url, INT2STR(MATRIX_SYNC_TIMEOUT_MS));
 #undef INT2STR
 #undef INT2STR_
-	str_append_cstr(url, "&access_token=");
-	str_append_cstr(url, token);
-	matrix_send_async(HTTP_GET, str_buf(url), CALLBACK_INFO_TYPE_SYNC,
+	buffer_append_cstr(url, "&access_token=");
+	buffer_append_cstr(url, token);
+	matrix_send_async(HTTP_GET, buffer_buf(url), CALLBACK_INFO_TYPE_SYNC,
 		 NULL, process_sync_response, NULL);
-	str_decref(url);
+	buffer_decref(url);
 }
 
 const char *matrix_login_alloc(
@@ -838,24 +838,24 @@ const char *matrix_login_alloc(
 	const char *user,
 	const char *password)
 {
-	Str *username = str_new();
-	str_append_cstr(username, "@");
-	str_append_cstr(username, user);
-	str_append_cstr(username, ":");
-	str_append_cstr(username, server);
+	Buffer *username = buffer_new();
+	buffer_append_cstr(username, "@");
+	buffer_append_cstr(username, user);
+	buffer_append_cstr(username, ":");
+	buffer_append_cstr(username, server);
 	matrix_server = strdup(server);
 	json_t *root = json_object();
 	json_object_set(root, "type", json_string("m.login.password"));
 	json_object_set(root, "user", json_string(user));
 	json_object_set(root, "password", json_string(password));
 	json_object_set(root, "initial_device_display_name", json_string("janechat"));
-	const char *s = json2str_alloc(root);
+	const char *s = json2buffer_alloc(root);
 	json_decref(root);
-	Str *res = matrix_send_sync_alloc(HTTP_POST,
+	Buffer *res = matrix_send_sync_alloc(HTTP_POST,
 		"/_matrix/client/v3/login", s);
 	free((void *)s);
-	json_t *jsonres = str2json_alloc(str_buf(res));
-	str_decref(res);
+	json_t *jsonres = str2json_alloc(buffer_buf(res));
+	buffer_decref(res);
 	json_t *tok = json_object_get(jsonres, "access_token");
 	if (!tok)
 		return NULL;
@@ -912,13 +912,13 @@ void matrix_resume(void) {
 
 	if (msg && msg->msg == CURLMSG_DONE) {
 #if DEBUG_RESPONSE
-		printf("DEBUG_RESPONSE: output: %s\n", str_buf(c->data));
+		printf("DEBUG_RESPONSE: output: %s\n", buffer_buf(c->data));
 #endif
 		if (c->callback)
-			c->callback(str_buf(c->data),
-				str_bytelen(c->data),
+			c->callback(buffer_buf(c->data),
+				buffer_bytelen(c->data),
 				c->params);
-		str_decref(c->data);
+		buffer_decref(c->data);
 		free(c);
 	}
 
