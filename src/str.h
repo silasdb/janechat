@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "buffer.h"
+
 typedef struct Str Str;
 
 /*
@@ -13,23 +15,16 @@ typedef struct Str Str;
  * always guaranteed to have null-terminated strings.
  */
 struct Str {
-	char *buf;	/* Buffer that store string (always with null byte) */
-	size_t bytelen;	/* Length of string in buf (don't count null byte )*/
-	bool utf8;
-	int len;	/* UTF-8 length (don't count null byte) */
-	size_t max;	/* Length of buf - 1 (cause we don't count null byte */
+	Buffer *buf;	/* Buffer that store string (always with null byte) */
+	int utf8len;	/* UTF-8 length (don't count null byte) */
 	int rc;		/* Reference count */
 };
 
-inline const char *str_buf(const Str *ss) { return ss->buf; }
-inline size_t str_bytelen(const Str *ss) { return ss->bytelen; }
+inline const char *str_data(const Str *ss) { return buffer_data(ss->buf); }
+inline size_t str_utf8len(const Str *ss) { return ss->utf8len; }
 
-#define streq(x, y) (strcmp(x, y) == 0)
 #define str_sc_eq(x, y) (strcmp(str_buf(x), y) == 0)
 Str *str_new(void);
-Str *str_new_cstr(const char *);
-Str *str_new_bytelen(size_t);
-void str_set_utf8(Str *, bool);
 int str_len(const Str *);
 void str_append(Str *ss, const Str *s);
 void str_append_cstr(Str *ss, const char *s);

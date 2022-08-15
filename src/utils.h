@@ -6,6 +6,8 @@
 
 #include "str.h"
 
+#define streq(x, y) (strcmp(x, y) == 0)
+
 void debug(const char *path, const char *format, ...);
 char *read_line_alloc(void);
 char *read_file_alloc(FILE *);
