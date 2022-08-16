@@ -46,25 +46,25 @@ Str *str_new_bytelen(size_t len) {
 	ss->bytelen = 0;
 	ss->max = len;
 	ss->rc = 1;
-	ss->len = -1;
+	ss->utf8len = -1;
 	ss->utf8 = false;
 	return ss;
 }
 
 void str_set_utf8(Str *s, bool utf8) {
 	if (utf8) {
-		s->len = utf8len(s->buf);
+		s->utf8len = utf8len(s->buf);
 		s->utf8 = true;
 	} else {
-		s->len = -1;
+		s->utf8len = -1;
 		s->utf8 = false;
 	}
 
 }
 
-int str_len(const Str *s) {
-	assert(s->len > -1);
-	return s->len;
+int str_utf8len(const Str *s) {
+	assert(s->utf8len > -1);
+	return s->utf8len;
 }
 
 void str_append(Str *ss, const Str *s) {
@@ -84,7 +84,7 @@ void str_append_cstr(Str *ss, const char *s) {
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t len) {
 	grow(ss, len);
 	if (ss->utf8)
-		ss->len += utf8len(s);
+		ss->utf8len += utf8len(s);
 	char *sb;
 	sb = &ss->buf[ss->bytelen];
 	while (len > 0) {
@@ -114,7 +114,7 @@ void str_decref(Str *ss) {
 
 void str_reset(Str *ss) {
 	ss->bytelen = 0;
-	ss->len = ss->utf8 ? 0 : -1;
+	ss->utf8len = ss->utf8 ? 0 : -1;
 	ss->buf[0] = '\0';
 }
 
@@ -130,7 +130,7 @@ void str_insert_cstr(Str *s, const char *cstr, size_t offset) {
 		s->buf[pos+i] = cstr[i];
 	s->bytelen += sz;
 	if (s->utf8)
-		s->len += utf8len(cstr);
+		s->utf8len += utf8len(cstr);
 }
 
 Str *str_dup(const Str *s) {
@@ -139,7 +139,7 @@ Str *str_dup(const Str *s) {
 	dup->bytelen = s->bytelen;
 	dup->buf[dup->bytelen] = '\0';
 	dup->utf8 = s->utf8;
-	dup->len = s->len;
+	dup->utf8len = s->utf8len;
 	dup->utf8 = s->utf8;
 	dup->rc = 1;
 	return dup;
@@ -162,7 +162,7 @@ void str_remove_char_at(Str *s, size_t pos) {
 	s->buf[i] = '\0';
 	s->bytelen -= sz;
 	if (s->utf8)
-		s->len -= 1;
+		s->utf8len -= 1;
 }
 
 bool str_starts_with_cstr(Str *ss, char *s) {

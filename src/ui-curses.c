@@ -516,7 +516,7 @@ void input_redraw(void) {
 	/* Now discover largest possible right */
 	size_t screenwidth = 0;
 	right = *left;
-	while (right < str_len(cur_buffer->buf)) {
+	while (right < str_utf8len(cur_buffer->buf)) {
 		size_t bytepos = utf8_char_bytepos(buf, right);
 		screenwidth += utf8_char_width(&buf[bytepos]);
 		if (screenwidth >= maxx)
@@ -527,7 +527,7 @@ void input_redraw(void) {
 	if (*pos > right) {
 		right = *pos;
 
-		assert(right <= str_len(cur_buffer->buf));
+		assert(right <= str_utf8len(cur_buffer->buf));
 
 		/*
 		 * Discover new left: we need to walk backwards from `right`, to
@@ -535,7 +535,7 @@ void input_redraw(void) {
 		 * printing our string.
 		 */
 		*left = right;
-		if (*left == str_len(cur_buffer->buf))
+		if (*left == str_utf8len(cur_buffer->buf))
 			(*left)--;
 		screenwidth = 0;
 		for (; *left > 0; (*left)--) {
@@ -576,7 +576,7 @@ void input_redraw(void) {
 void input_cursor_inc(int offset) {
 	if ((int)cur_buffer->pos + offset < 0)
 		return;
-	if (cur_buffer->pos + offset > str_len(cur_buffer->buf))
+	if (cur_buffer->pos + offset > str_utf8len(cur_buffer->buf))
 		return;
 	cur_buffer->pos += offset;
 }

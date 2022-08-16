@@ -16,7 +16,7 @@ struct Str {
 	char *buf;	/* Buffer that store string (always with null byte) */
 	size_t bytelen;	/* Length of string in buf (don't count null byte )*/
 	bool utf8;
-	int len;	/* UTF-8 length (don't count null byte) */
+	int utf8len;	/* UTF-8 length (don't count null byte) */
 	size_t max;	/* Length of buf - 1 (cause we don't count null byte */
 	int rc;		/* Reference count */
 };
@@ -30,7 +30,7 @@ Str *str_new(void);
 Str *str_new_cstr(const char *);
 Str *str_new_bytelen(size_t);
 void str_set_utf8(Str *, bool);
-int str_len(const Str *);
+int str_utf8len(const Str *);
 void str_append(Str *ss, const Str *s);
 void str_append_cstr(Str *ss, const char *s);
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t);
