@@ -118,10 +118,10 @@ void str_reset(Str *ss) {
 	ss->buf[0] = '\0';
 }
 
-void str_insert_cstr(Str *s, const char *cstr, size_t offset) {
+void str_insert_cstr(Str *s, const char *cstr, struct str_utf8_offset offset) {
 	size_t sz = strlen(cstr);
 	grow(s, sz);
-	size_t pos = utf8_char_bytepos(s->buf, offset);
+	size_t pos = utf8_char_bytepos(s->buf, offset.utf8_offset);
 	/* Make room for cstr */
 	for (size_t i = s->bytelen+1; i > pos; i--)
 		s->buf[i+sz-1] = s->buf[i-1];

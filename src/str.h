@@ -21,6 +21,11 @@ struct Str {
 	int rc;		/* Reference count */
 };
 
+struct str_utf8_offset {
+	size_t utf8_offset;
+};
+#define UTF8_OFFSET(x) ((struct str_utf8_offset){ .utf8_offset = x, })
+
 inline const char *str_buf(const Str *ss) { return ss->buf; }
 inline size_t str_bytelen(const Str *ss) { return ss->bytelen; }
 
@@ -34,7 +39,7 @@ int str_utf8len(const Str *);
 void str_append(Str *ss, const Str *s);
 void str_append_cstr(Str *ss, const char *s);
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t);
-void str_insert_cstr(Str *, const char *s, size_t);
+void str_insert_cstr(Str *, const char *s, struct str_utf8_offset);
 Str *str_dup(const Str *);
 int str_cmp(const Str *, const Str *);
 void str_reset(Str *);

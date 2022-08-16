@@ -40,15 +40,15 @@ static void test_str_insert_cstr() {
 	assert(s->max == 3);
 	assert(str_sc_eq(s, "abc"));
 
-	str_insert_cstr(s, "x", 1);
+	str_insert_cstr(s, "x", UTF8_OFFSET(1));
 	assert(s->max == 6);
 	assert(str_sc_eq(s, "axbc"));
 
-	str_insert_cstr(s, "yz", 3);
+	str_insert_cstr(s, "yz", UTF8_OFFSET(3));
 	assert(s->max == 6);
 	assert(str_sc_eq(s, "axbyzc"));
 
-	str_insert_cstr(s, "-老师café-", 3);
+	str_insert_cstr(s, "-老师café-", UTF8_OFFSET(3));
 	str_set_utf8(s, true);
 	assert(s->max == 24);
 	assert(str_sc_eq(s, "axb-老师café-yzc"));
@@ -56,7 +56,7 @@ static void test_str_insert_cstr() {
 
 	str_reset(s);
 	str_append_cstr(s, "çaç");
-	str_insert_cstr(s, "a", 3);
+	str_insert_cstr(s, "a", UTF8_OFFSET(3));
 	assert(str_sc_eq(s, "çaça"));
 }
 
