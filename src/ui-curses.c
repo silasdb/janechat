@@ -26,7 +26,7 @@
  */
 struct buffer {
 	Room *room;
-	Str *buf; /* Input buffer. TODO: use Str? */
+	Utf8Str *buf; /* Input buffer */
 	size_t pos; /* Cursor position - UTF-8 index. */
 
 	/* Left-most character index showed in the input window - UTF-8 index */
@@ -815,8 +815,7 @@ void ui_curses_iter(void) {
 void ui_curses_room_new(Str *roomid) {
 	struct buffer *b;
 	b = malloc(sizeof(struct buffer));
-	b->buf = str_new();
-	str_set_utf8(b->buf, true);
+	b->buf = utf8str_new();
 	b->room = room_byid(roomid);
 	b->pos = 0;
 	b->left = 0;

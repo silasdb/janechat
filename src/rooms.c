@@ -51,7 +51,7 @@ Room *room_byid(const Str *id) {
 	return hash_get(rooms_hash, str_buf(id));
 }
 
-Str *room_displayname(Room *r) {
+Utf8Str *room_displayname(Room *r) {
 	if (r->name)
 		return r->name;
 	if (!r->displayname) {
@@ -61,9 +61,9 @@ Str *room_displayname(Room *r) {
 		 * should be more serious about that and really implement
 		 * https://spec.matrix.org/latest/client-server-api/#calculating-the-display-name-for-a-room
 		 */
-		Str *displayname = str_new();
+		Utf8Str *displayname = utf8str_new();
 		for (size_t i = 0; i < vector_len(r->users) && i < 5; i++) {
-			str_append(displayname,
+			utf8str_append(displayname,
 			 user_name(vector_at(r->users, i)));
 			str_append_cstr(displayname, " / ");
 		}
@@ -72,7 +72,7 @@ Str *room_displayname(Room *r) {
 	return r->displayname;
 }
 
-void room_set_info(Room *r, Str *sender, Str *name) {
+void room_set_info(Room *r, Str *sender, Utf8Str *name) {
 	/*
 	 * TODO: it seems client can receive m.room.name before m.room.create,
 	 * so we'll need to handle that.
@@ -83,7 +83,7 @@ void room_set_info(Room *r, Str *sender, Str *name) {
 	if (sender)
 		r->sender = str_incref(sender);
 	if (name)
-		r->name = str_incref(name);
+		r->name = utf8str_incref(name);
 }
 
 void room_append_msg(Room *room, Msg m) {
@@ -102,17 +102,17 @@ void room_append_user(Room *room, Str *sender) {
 	vector_append(room->users, str_incref(sender));
 }
 
-void user_add(Str *id, Str *name) {
+void user_add(Str *id, Utf8Str *name) {
 	/*
 	 * Maybe the user didn't specify its human readable name. Store NULL in
 	 * users_hash anyway.
 	 */
 	if (name)
-		str_incref(name);
+		utf8str_incref(name);
 	hash_insert(users_hash, str_buf(id), name);
 }
 
-Str *user_name(Str *id) {
+Utf8Str *user_name(Str *id) {
 	Str *name = hash_get(users_hash, str_buf(id));
 	if (!name)
 		return id;

@@ -13,7 +13,7 @@ struct Room {
 	 * The name of the room. It is always set for normal rooms, but it can
 	 * optionally be set for direct message rooms as well. 
 	 */
-	Str *name;
+	Utf8Str *name;
 
 	/*
 	 * It is always set for direct message rooms but not for normal rooms.
@@ -21,7 +21,7 @@ struct Room {
 	Str *sender;
 
 	/* This is only used if name is NULL. It is calculated lazely. */
-	Str *displayname;
+	Utf8Str *displayname;
 
 	Vector *users;		/* Vector of joined users: Vector<Str*> */
 	Vector *msgs;
@@ -33,7 +33,7 @@ typedef struct Room Room;
 void rooms_init(void);
 Room *room_new(Str *);
 Room *room_byid(const Str *);
-Str *room_displayname(Room *);
+Utf8Str *room_displayname(Room *);
 void room_set_info(Room *, Str *, Str *);
 void room_append_msg(Room *, Msg msg);
 void room_append_user(Room *, Str *);

@@ -510,30 +510,32 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 			return;
 		}
 
-		event.msg.msg.text.content = str_new();
+		event.msg.msg.text.content = utf8str_new();
 		event.msg.msg.type = MSGTYPE_TEXT;
 		if (streq(json_string_value(msgtype), "m.text")) {
-			str_append_cstr(event.msg.msg.text.content,
+			utf8str_append_cstr(event.msg.msg.text.content,
 				json_string_value(body));
 		} else {
-			str_append_cstr(event.msg.msg.text.content, "==== ");
-			str_append_cstr(event.msg.msg.text.content, json_string_value(msgtype));
-			str_append_cstr(event.msg.msg.text.content, " ====");
+			utf8str_append_cstr(event.msg.msg.text.content, "==== ");
+			utf8str_append_cstr(event.msg.msg.text.content,
+				json_string_value(msgtype));
+			utf8str_append_cstr(event.msg.msg.text.content, " ====");
 		}
 		event_handler_callback(event);
 		str_decref(event.msg.roomid);
 		str_decref(event.msg.msg.sender);
-		str_decref(event.msg.msg.text.content);
+		utf8str_decref(event.msg.msg.text.content);
 	} else if (streq(json_string_value(type), "m.room.encrypted")) {
 		MatrixEvent event;
 		event.type = EVENT_MSG;
 		event.msg.roomid = str_new_cstr(roomid);
 		event.msg.msg.sender = str_new_cstr(json_string_value(sender));
-		event.msg.msg.text.content = str_new_cstr("== encrypted message ==");
+		event.msg.msg.text.content =
+			utf8str_new_cstr("== encrypted message ==");
 		event_handler_callback(event);
 		str_decref(event.msg.roomid);
 		str_decref(event.msg.msg.sender);
-		str_decref(event.msg.msg.text.content);
+		utf8str_decref(event.msg.msg.text.content);
 	}
 }
 

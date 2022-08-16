@@ -48,7 +48,10 @@ inline size_t ut8str_len(Utf8Str *us) {
 }
 
 Utf8Str *utf8str_new(void);
+Utf8Str *utf8str_new_cstr(const char *);
 Utf8Str *utf8str_incref(Utf8Str *);
+void utf8str_append(Utf8Str *, Utf8Str *);
+void utf8str_append_cstr(Utf8Str *, const char *);
 void utf8str_decref(Utf8Str *);
 void utf8str_copy_utf8char_at(const Utf8Str *, size_t, char[5]);
 void utf8str_remove_char_at(Utf8Str *, size_t);

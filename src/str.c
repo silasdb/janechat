@@ -130,9 +130,25 @@ Utf8Str *utf8str_new(void) {
 	return us;
 }
 
+Utf8Str *utf8str_new_cstr(const char *s) {
+	Utf8Str *us = malloc(sizeof(Utf8Str));
+	utf8str_append_cstr(us, s);
+	return us;
+}
+
 Utf8Str *utf8str_incref(Utf8Str *us) {
 	str_incref(us->str);
 	return us;
+}
+
+void utf8str_append(Utf8Str *us1, Utf8Str *us2) {
+	str_append_cstr(us1->str, us2->str);
+	us1->utf8len += us2->utf8len;
+}
+
+void utf8str_append_cstr(Utf8Str *us, const char *s) {
+	str_append_cstr(us->str, s);
+	us->utf8len += utf8len(s);
 }
 
 void utf8str_decref(Utf8Str *us) {
@@ -163,9 +179,9 @@ void utf8str_remove_char_at(Utf8Str *us, size_t pos) {
 	us->utf8len++;
 }
 
-void utf8str_insert_utf8char(Utf8Str *us, char[5] uc, size_t i) {
-	str_insert_cstr(utf8str->str, uc, i);
-	utf8str->len++;
+void utf8str_insert_utf8char(Utf8Str *us, char uc[5], size_t i) {
+	str_insert_cstr(us->str, uc, i);
+	us->utf8len++;
 }
 
 bool utf8str_starts_with_cstr(Utf8Str *us, char *s) {
