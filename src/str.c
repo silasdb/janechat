@@ -46,25 +46,7 @@ Str *str_new_bytelen(size_t len) {
 	ss->bytelen = 0;
 	ss->max = len;
 	ss->rc = 1;
-	ss->len = -1;
-	ss->utf8 = false;
 	return ss;
-}
-
-void str_set_utf8(Str *s, bool utf8) {
-	if (utf8) {
-		s->len = utf8len(s->buf);
-		s->utf8 = true;
-	} else {
-		s->len = -1;
-		s->utf8 = false;
-	}
-
-}
-
-int str_len(const Str *s) {
-	assert(s->len > -1);
-	return s->len;
 }
 
 void str_append(Str *ss, const Str *s) {
@@ -83,8 +65,6 @@ void str_append_cstr(Str *ss, const char *s) {
 
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t len) {
 	grow(ss, len);
-	if (ss->utf8)
-		ss->len += utf8len(s);
 	char *sb;
 	sb = &ss->buf[ss->bytelen];
 	while (len > 0) {
@@ -114,23 +94,19 @@ void str_decref(Str *ss) {
 
 void str_reset(Str *ss) {
 	ss->bytelen = 0;
-	ss->len = ss->utf8 ? 0 : -1;
 	ss->buf[0] = '\0';
 }
 
 void str_insert_cstr(Str *s, const char *cstr, size_t offset) {
 	size_t sz = strlen(cstr);
 	grow(s, sz);
-	size_t pos = utf8_char_bytepos(s->buf, offset);
 	/* Make room for cstr */
-	for (size_t i = s->bytelen+1; i > pos; i--)
+	for (size_t i = s->bytelen+1; i > offset; i--)
 		s->buf[i+sz-1] = s->buf[i-1];
 	/* Insert cstr bytes */
 	for (size_t i = 0; i < sz; i++)
-		s->buf[pos+i] = cstr[i];
+		s->buf[offset+i] = cstr[i];
 	s->bytelen += sz;
-	if (s->utf8)
-		s->len += utf8len(cstr);
 }
 
 Str *str_dup(const Str *s) {
@@ -138,33 +114,61 @@ Str *str_dup(const Str *s) {
 	strcpy(dup->buf, s->buf);
 	dup->bytelen = s->bytelen;
 	dup->buf[dup->bytelen] = '\0';
-	dup->utf8 = s->utf8;
-	dup->len = s->len;
-	dup->utf8 = s->utf8;
 	dup->rc = 1;
 	return dup;
-}
-
-void str_copy_utf8char_at(const Str *s, size_t pos, char uc[5]) {
-	uc[0] = uc[1] = uc[2] = uc[3] = uc[4] = '\0';
-	size_t p = utf8_char_bytepos(s->buf, pos);
-	size_t sz = utf8_char_size(s->buf[p]);
-	for (size_t i = 0; i < sz; i++)
-		uc[i] = s->buf[p+i];
-}
-
-void str_remove_char_at(Str *s, size_t pos) {
-	size_t p = utf8_char_bytepos(s->buf, pos);
-	size_t sz = utf8_char_size(s->buf[p]);
-	size_t i;
-	for (i = p; i < s->bytelen-sz; i++)
-		s->buf[i] = s->buf[i+sz];
-	s->buf[i] = '\0';
-	s->bytelen -= sz;
-	if (s->utf8)
-		s->len -= 1;
 }
 
 bool str_starts_with_cstr(Str *ss, char *s) {
 	return (strncmp(ss->buf, s, strlen(s)) == 0);
 }
+
+/*  Utf8Str related functions. */
+
+Utf8Str *utf8str_new(void) {
+	Utf8Str *us = malloc(sizeof(Utf8Str));
+	us->str = str_new();
+	return us;
+}
+
+Utf8Str *utf8str_incref(Utf8Str *us) {
+	str_incref(us->str);
+	return us;
+}
+
+void utf8str_decref(Utf8Str *us) {
+	if (!us)
+		return;
+	int rc = us->str->rc;
+	str_decref(us->str);
+	if (rc == 1)
+		free(us);
+}
+
+void utf8str_copy_utf8char_at(const Utf8Str *us, size_t pos, char uc[5]) {
+	uc[0] = uc[1] = uc[2] = uc[3] = uc[4] = '\0';
+	size_t p = utf8_char_bytepos(us->str->buf, pos);
+	size_t sz = utf8_char_size(us->str->buf[p]);
+	for (size_t i = 0; i < sz; i++)
+		uc[i] = us->str->buf[p+i];
+}
+
+void utf8str_remove_char_at(Utf8Str *us, size_t pos) {
+	size_t p = utf8_char_bytepos(us->str->buf, pos);
+	size_t sz = utf8_char_size(us->str->buf[p]);
+	size_t i;
+	for (i = p; i < us->str->bytelen-sz; i++)
+		us->str->buf[i] = us->str->buf[i+sz];
+	us->str->buf[i] = '\0';
+	us->str->bytelen -= sz;
+	us->utf8len++;
+}
+
+void utf8str_insert_utf8char(Utf8Str *us, char[5] uc, size_t i) {
+	str_insert_cstr(utf8str->str, uc, i);
+	utf8str->len++;
+}
+
+bool utf8str_starts_with_cstr(Utf8Str *us, char *s) {
+	return str_starts_with_cstr(us->str, s);
+}
+

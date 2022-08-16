@@ -27,7 +27,7 @@ struct Msg {
 	Str *sender;
 	union {
 		struct {
-			Str *content;
+			Utf8Str *content;
 		} text;
 		FileInfo fileinfo;
 	};

@@ -15,8 +15,6 @@ typedef struct Str Str;
 struct Str {
 	char *buf;	/* Buffer that store string (always with null byte) */
 	size_t bytelen;	/* Length of string in buf (don't count null byte )*/
-	bool utf8;
-	int len;	/* UTF-8 length (don't count null byte) */
 	size_t max;	/* Length of buf - 1 (cause we don't count null byte */
 	int rc;		/* Reference count */
 };
@@ -29,19 +27,32 @@ inline size_t str_bytelen(const Str *ss) { return ss->bytelen; }
 Str *str_new(void);
 Str *str_new_cstr(const char *);
 Str *str_new_bytelen(size_t);
-void str_set_utf8(Str *, bool);
-int str_len(const Str *);
 void str_append(Str *ss, const Str *s);
 void str_append_cstr(Str *ss, const char *s);
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t);
 void str_insert_cstr(Str *, const char *s, size_t);
 Str *str_dup(const Str *);
-int str_cmp(const Str *, const Str *);
 void str_reset(Str *);
 Str *str_incref(Str *);
 void str_decref(Str *);
-void str_copy_utf8char_at(const Str *, size_t, char [5]);
-void str_remove_char_at(Str *, size_t);
 bool str_starts_with_cstr(Str *, char *);
+
+struct Utf8Str {
+	Str *str;
+	size_t utf8len;
+};
+typedef struct Utf8Str Utf8Str;
+
+inline size_t ut8str_len(Utf8Str *us) {
+	return us->utf8len;
+}
+
+Utf8Str *utf8str_new(void);
+Utf8Str *utf8str_incref(Utf8Str *);
+void utf8str_decref(Utf8Str *);
+void utf8str_copy_utf8char_at(const Utf8Str *, size_t, char[5]);
+void utf8str_remove_char_at(Utf8Str *, size_t);
+void utf8str_insert_utf8char(Utf8Str *, char[5], size_t);
+bool utf8str_starts_with_cstr(Utf8Str *, char *s);
 
 #endif /* !JANECHAT_STR_H */
