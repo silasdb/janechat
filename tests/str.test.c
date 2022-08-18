@@ -4,6 +4,13 @@
 #include "../src/str.c"
 #include "../src/utils.c" /* TODO: recursive include! */
 
+static void test_str_new() {
+	Str *s;
+	s = str_new_cstr_fixed("foo");
+	assert(str_bytelen(s) == strlen(str_buf(s)));
+	assert(str_bytelen(s) == s->max);
+}
+
 static void test_str_append_cstr() {
 	Str *s = str_new_cstr("abc");
 	str_set_utf8(s, true);
@@ -126,6 +133,7 @@ void test_str_dup(void) {
 }
 
 int main(int argc, char *argv[]) {
+	test_str_new();
 	test_str_append_cstr();
 	test_grow();
 	test_str_insert_utf8char_at();
