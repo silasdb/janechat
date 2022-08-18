@@ -594,9 +594,9 @@ bool input_key_index(int c) {
 		else if (str_sc_eq(cur_buffer->buf, "unset mute"))
 			set_buffer_mute(false);
 		else {
-			char uc[5]; /* An UTF-8 char */
-			str_copy_utf8char_at(cur_buffer->buf, 0, uc);
-			if (uc[0] == '/') {
+			Utf8Char uc;
+			uc = str_utf8char_at(cur_buffer->buf, UTF8_INDEX(0));
+			if (uc.c[0] == '/') {
 				regcomp(&re, &(str_buf(cur_buffer->buf)[1]),
 					REG_EXTENDED|REG_ICASE|REG_NOSUB);
 				/* TODO: only redraw if we found a valid item */
@@ -672,9 +672,9 @@ bool input_key_chat(int c) {
 				}
 			}
 		} else {
-			char uc[5];
-			str_copy_utf8char_at(cur_buffer->buf, 0, uc);
-			if (uc[0] == '/') {
+			Utf8Char uc;
+			uc = str_utf8char_at(cur_buffer->buf, UTF8_INDEX(0));
+			if (uc.c[0] == '/') {
 				/* TODO: show in the UI invalid command */
 				/*
 				 * TODO: still need to allow user to send messages that
@@ -698,7 +698,8 @@ void input_key_common(int c) {
 	case KEY_BACKSPACE: {
 		if (cur_buffer->pos == 0)
 			break;
-		str_remove_char_at(cur_buffer->buf, cur_buffer->pos-1);
+		str_remove_utf8char_at(cur_buffer->buf,
+			UTF8_INDEX(cur_buffer->pos-1));
 		cur_buffer->pos--;
 		break;
 	}
@@ -709,15 +710,16 @@ void input_key_common(int c) {
 		input_cursor_inc(+1);
 		break;
 	default: {
-		char utf8c[5] = { '\0' };
-		utf8c[0] = c;
+		Utf8Char uc = {.c = '\0' };
+		uc.c[0] = c;
 		size_t sz = utf8_char_size(c);
 		for (size_t i = 1; i < sz; i++) {
 			c = wgetch(winput);
-			utf8c[i] = c;
+			uc.c[i] = c;
 		}
 
-		str_insert_cstr(cur_buffer->buf, utf8c, cur_buffer->pos);
+		str_insert_utf8char_at(cur_buffer->buf, uc,
+			UTF8_INDEX(cur_buffer->pos));
 		input_cursor_inc(+1);
 		break;
 	}

@@ -4,6 +4,13 @@
 #include "../src/str.c"
 #include "../src/utils.c" /* TODO: recursive include! */
 
+static void test_str_new() {
+	Str *s;
+	s = str_new_cstr_fixed("foo");
+	assert(str_bytelen(s) == strlen(str_buf(s)));
+	assert(str_bytelen(s) == s->max);
+}
+
 static void test_str_append_cstr() {
 	Str *s = str_new_cstr("abc");
 	str_set_utf8(s, true);
@@ -34,21 +41,29 @@ static void test_grow() {
 	assert(s->max == 12);
 }
 
-static void test_str_insert_cstr() {
+static void test_str_insert_utf8char_at() {
 	Str *s = str_new_bytelen(3);
 	str_append_cstr(s, "abc");
 	assert(s->max == 3);
 	assert(str_sc_eq(s, "abc"));
 
-	str_insert_cstr(s, "x", 1);
+	str_insert_utf8char_at(s, (Utf8Char){.c = "x",}, UTF8_INDEX(1));
 	assert(s->max == 6);
 	assert(str_sc_eq(s, "axbc"));
 
-	str_insert_cstr(s, "yz", 3);
+	str_insert_utf8char_at(s, (Utf8Char){.c = "y",}, UTF8_INDEX(3));
+	str_insert_utf8char_at(s, (Utf8Char){.c = "z",}, UTF8_INDEX(4));
 	assert(s->max == 6);
 	assert(str_sc_eq(s, "axbyzc"));
 
-	str_insert_cstr(s, "-老师café-", 3);
+	str_insert_utf8char_at(s, (Utf8Char){.c = "-",}, UTF8_INDEX(3));
+	str_insert_utf8char_at(s, (Utf8Char){.c = "老",}, UTF8_INDEX(4));
+	str_insert_utf8char_at(s, (Utf8Char){.c = "师",}, UTF8_INDEX(5));
+	str_insert_utf8char_at(s, (Utf8Char){.c = "c",}, UTF8_INDEX(6));
+	str_insert_utf8char_at(s, (Utf8Char){.c = "a",}, UTF8_INDEX(7));
+	str_insert_utf8char_at(s, (Utf8Char){.c = "f",}, UTF8_INDEX(8));
+	str_insert_utf8char_at(s, (Utf8Char){.c = "é",}, UTF8_INDEX(9));
+	str_insert_utf8char_at(s, (Utf8Char){.c = "-",}, UTF8_INDEX(10));
 	str_set_utf8(s, true);
 	assert(s->max == 24);
 	assert(str_sc_eq(s, "axb-老师café-yzc"));
@@ -56,37 +71,37 @@ static void test_str_insert_cstr() {
 
 	str_reset(s);
 	str_append_cstr(s, "çaç");
-	str_insert_cstr(s, "a", 3);
+	str_insert_utf8char_at(s, (Utf8Char){.c = "a"}, UTF8_INDEX(3));
 	assert(str_sc_eq(s, "çaça"));
 }
 
-static void test_str_remove_char_at() {
+static void test_str_remove_utf8char_at() {
 	Str *s = str_new_cstr("I am 老师。 I love café.");
 	str_set_utf8(s, true);
 
-	str_remove_char_at(s, 0); /* Remove I */
-	str_remove_char_at(s, 0); /* Remove space */ /* Remove space */
+	str_remove_utf8char_at(s, UTF8_INDEX(0)); /* Remove I */
+	str_remove_utf8char_at(s, UTF8_INDEX(0)); /* Remove space */ /* Remove space */
 	assert(str_sc_eq(s, "am 老师。 I love café."));
 	assert(str_utf8len(s) == 19);
 
-	str_remove_char_at(s, 5); /* Remove 。*/
-	str_remove_char_at(s, 3); /* Remove 老 */
+	str_remove_utf8char_at(s, UTF8_INDEX(5)); /* Remove 。*/
+	str_remove_utf8char_at(s, UTF8_INDEX(3)); /* Remove 老 */
 	assert(str_sc_eq(s, "am 师 I love café."));
 	assert(str_utf8len(s) == 17);
 }
 
-static void test_str_copy_utf8char_at() {
+static void test_str_utf8char_at() {
 	Str *s = str_new_cstr("I am 老师。 I love café.");
-	char uc[5];
+	Utf8Char uc;
 
-	str_copy_utf8char_at(s, 0, uc);
-	assert(streq(uc, "I"));
-	str_copy_utf8char_at(s, 5, uc);
-	assert(streq(uc, "老"));
-	str_copy_utf8char_at(s, 19, uc);
-	assert(streq(uc, "é"));
-	str_copy_utf8char_at(s, 20, uc);
-	assert(streq(uc, "."));
+	uc = str_utf8char_at(s, UTF8_INDEX(0));
+	assert(streq(uc.c, "I"));
+	uc = str_utf8char_at(s, UTF8_INDEX(5));
+	assert(streq(uc.c, "老"));
+	uc = str_utf8char_at(s, UTF8_INDEX(19));
+	assert(streq(uc.c, "é"));
+	uc = str_utf8char_at(s, UTF8_INDEX(20));
+	assert(streq(uc.c, "."));
 }
 
 static void test_str_starts_with_cstr() {
@@ -118,11 +133,12 @@ void test_str_dup(void) {
 }
 
 int main(int argc, char *argv[]) {
+	test_str_new();
 	test_str_append_cstr();
 	test_grow();
-	test_str_insert_cstr();
-	test_str_remove_char_at();
-	test_str_copy_utf8char_at();
+	test_str_insert_utf8char_at();
+	test_str_remove_utf8char_at();
+	test_str_utf8char_at();
 	test_str_starts_with_cstr();
 	test_str_reset();
 	test_str_dup();

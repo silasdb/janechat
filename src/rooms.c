@@ -63,7 +63,7 @@ Str *room_displayname(Room *r) {
 		 */
 		Str *displayname = str_new();
 		for (size_t i = 0; i < vector_len(r->users) && i < 5; i++) {
-			str_append(displayname,
+			str_append_str(displayname,
 			 user_name(vector_at(r->users, i)));
 			str_append_cstr(displayname, " / ");
 		}

@@ -312,9 +312,9 @@ void matrix_request_file(FileInfo fileinfo) {
 	Str *server = mxc_uri_extract_server_alloc(fileinfo.uri);
 	Str *path = mxc_uri_extract_path_alloc(fileinfo.uri);
 	Str *url = str_new_cstr("/_matrix/media/v3/download/");
-	str_append(url, server);
+	str_append_str(url, server);
 	str_append_cstr(url, "/");
-	str_append(url, path);
+	str_append_str(url, path);
 	str_decref(server);
 	str_decref(path);
 	FileInfo *fileinfoptr = malloc(sizeof(FileInfo));
@@ -335,8 +335,8 @@ void matrix_set_token(char *tok) {
 static void process_direct_event(const char *sender, json_t *roomid) {
 	MatrixEvent event;
 	event.type = EVENT_ROOM_INFO;
-	event.roominfo.id = str_new_cstr(json_string_value(roomid));
-	event.roominfo.sender = str_new_cstr(sender);
+	event.roominfo.id = str_new_cstr_fixed(json_string_value(roomid));
+	event.roominfo.sender = str_new_cstr_fixed(sender);
 	event.roominfo.name = NULL;
 	event_handler_callback(event);
 	str_decref(event.roominfo.id);
@@ -352,7 +352,7 @@ static void process_room_event(json_t *item, const char *roomid) {
 		const char *name = json_string_value(nam);
 		MatrixEvent event;
 		event.type = EVENT_ROOM_INFO;
-		event.roominfo.id = str_new_cstr(roomid);
+		event.roominfo.id = str_new_cstr_fixed(roomid);
 		event.roominfo.name = str_new_cstr(name);
 		event.roominfo.sender = NULL;
 		event_handler_callback(event);
@@ -361,7 +361,7 @@ static void process_room_event(json_t *item, const char *roomid) {
 	} else if (streq(json_string_value(type), "m.room.create")) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_CREATE;
-		event.roomcreate.id = str_new_cstr(roomid);
+		event.roomcreate.id = str_new_cstr_fixed(roomid);
 		event_handler_callback(event);
 		str_decref(event.roomcreate.id);
 	} else if (streq(json_string_value(type), "m.room.member")) {
@@ -373,9 +373,9 @@ static void process_room_event(json_t *item, const char *roomid) {
 		assert(sender != NULL);
 		MatrixEvent event;
 		event.type = EVENT_ROOM_JOIN;
-		event.roomjoin.roomid = str_new_cstr(roomid);
+		event.roomjoin.roomid = str_new_cstr_fixed(roomid);
 		event.roomjoin.senderid =
-			str_new_cstr(json_string_value(sender));
+			str_new_cstr_fixed(json_string_value(sender));
 		json_t *name = json_path(item, "content", "displayname", NULL);
 		/* TODO: See: https://spec.matrix.org/latest/client-server-api/#calculating-the-display-name-for-a-user */
 		if (name) {
@@ -387,7 +387,7 @@ static void process_room_event(json_t *item, const char *roomid) {
 			 */
 			assert(json_is_string(name));
 			event.roomjoin.sendername =
-				str_new_cstr(json_string_value(name));
+				str_new_cstr_fixed(json_string_value(name));
 		} else
 			event.roomjoin.sendername = NULL;
 		event_handler_callback(event);
@@ -478,8 +478,8 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.roomid = str_new_cstr(roomid);
-		event.msg.msg.sender = str_new_cstr(json_string_value(sender));
+		event.msg.roomid = str_new_cstr_fixed(roomid);
+		event.msg.msg.sender = str_new_cstr_fixed(json_string_value(sender));
 
 		if (streq(json_string_value(msgtype), "m.image")
 		|| streq(json_string_value(msgtype), "m.audio")
@@ -491,7 +491,7 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 				json_path(content, "info", "mimetype", NULL));
 			if (!m)
 				m = "(unknown mimetype)";
-			event.msg.msg.fileinfo.mimetype = str_new_cstr(m);
+			event.msg.msg.fileinfo.mimetype = str_new_cstr_fixed(m);
 
 			/*
 			 * TODO: I once got a error about NULL pointer when
@@ -500,7 +500,7 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 			 */
 			assert(json_object_get(content, "url"));
 			assert(json_string_value(json_object_get(content, "url")));
-			event.msg.msg.fileinfo.uri = str_new_cstr(
+			event.msg.msg.fileinfo.uri = str_new_cstr_fixed(
 				json_string_value(json_object_get(content, "url")));
 			assert(event.msg.msg.fileinfo.uri);
 			event_handler_callback(event);
@@ -527,9 +527,9 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 	} else if (streq(json_string_value(type), "m.room.encrypted")) {
 		MatrixEvent event;
 		event.type = EVENT_MSG;
-		event.msg.roomid = str_new_cstr(roomid);
-		event.msg.msg.sender = str_new_cstr(json_string_value(sender));
-		event.msg.msg.text.content = str_new_cstr("== encrypted message ==");
+		event.msg.roomid = str_new_cstr_fixed(roomid);
+		event.msg.msg.sender = str_new_cstr_fixed(json_string_value(sender));
+		event.msg.msg.text.content = str_new_cstr_fixed("== encrypted message ==");
 		event_handler_callback(event);
 		str_decref(event.msg.roomid);
 		str_decref(event.msg.msg.sender);
@@ -540,8 +540,8 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 static void process_error(json_t *root) {
 	MatrixEvent event;
 	event.type = EVENT_MATRIX_ERROR;
-	event.error.errorcode = str_new_cstr(json_string_value(json_object_get(root, "errcode")));
-	event.error.error = str_new_cstr(json_string_value(json_object_get(root, "error")));
+	event.error.errorcode = str_new_cstr_fixed(json_string_value(json_object_get(root, "errcode")));
+	event.error.error = str_new_cstr_fixed(json_string_value(json_object_get(root, "error")));
 	event_handler_callback(event);
 	str_decref(event.error.errorcode);
 	str_decref(event.error.error);
@@ -574,7 +574,7 @@ static void process_push_rules(json_t *rule) {
 				json_object_get(rule, "rule_id"));
 
 			event.type = EVENT_ROOM_NOTIFY_STATUS;
-			event.roomnotifystatus.roomid = str_new_cstr(roomid);
+			event.roomnotifystatus.roomid = str_new_cstr_fixed(roomid);
 			event.roomnotifystatus.enabled = false;
 			event_handler_callback(event);
 			str_decref(event.roomnotifystatus.roomid);
