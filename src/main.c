@@ -228,7 +228,7 @@ Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
 	/* TODO: use a temporary directory instead of /tmp */
 	Str *filepath = str_new_cstr("/tmp/");
 
-	str_append(filepath, upath);
+	str_append_str(filepath, upath);
 	str_decref(upath);
 	return filepath;
 }
@@ -246,19 +246,19 @@ void open_file(FileInfo fileinfo) {
 	|| streq(str_buf(fileinfo.mimetype), "image/jpeg")) {
 		cmd = str_new();
 		str_append_cstr(cmd, "feh -. ");
-		str_append(cmd, filepath); /* TODO: shell quote? */
+		str_append_str(cmd, filepath); /* TODO: shell quote? */
 	} else if (streq(str_buf(fileinfo.mimetype), "application/pdf")) {
 		cmd = str_new();
 		str_append_cstr(cmd, "evince ");
-		str_append(cmd, filepath); /* TODO: shell quote? */
+		str_append_str(cmd, filepath); /* TODO: shell quote? */
 	} else if (streq(str_buf(fileinfo.mimetype), "video/mp4")) {
 		cmd = str_new();
 		str_append_cstr(cmd, "mplayer ");
-		str_append(cmd, filepath); /* TODO: shell quote? */
+		str_append_str(cmd, filepath); /* TODO: shell quote? */
 	} else if (streq(str_buf(fileinfo.mimetype), "audio/ogg; codecs=opus")) {
 		cmd = str_new();
 		str_append_cstr(cmd, "mplayer -softvol -softvol-max 2000 -volume 90 ");
-		str_append(cmd, filepath); /* TODO: shell quote? */
+		str_append_str(cmd, filepath); /* TODO: shell quote? */
 	}
 
 	if (cmd) {

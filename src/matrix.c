@@ -312,9 +312,9 @@ void matrix_request_file(FileInfo fileinfo) {
 	Str *server = mxc_uri_extract_server_alloc(fileinfo.uri);
 	Str *path = mxc_uri_extract_path_alloc(fileinfo.uri);
 	Str *url = str_new_cstr("/_matrix/media/v3/download/");
-	str_append(url, server);
+	str_append_str(url, server);
 	str_append_cstr(url, "/");
-	str_append(url, path);
+	str_append_str(url, path);
 	str_decref(server);
 	str_decref(path);
 	FileInfo *fileinfoptr = malloc(sizeof(FileInfo));
