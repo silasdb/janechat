@@ -223,7 +223,7 @@ void process_msg(Str *roomid, Msg msg) {
 }
 
 Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
-	Str *upath = mxc_uri_extract_path_alloc(fileinfo.uri);
+	Str *upath = str_new_uri_extract_path(fileinfo.uri);
 
 	/* TODO: use a temporary directory instead of /tmp */
 	Str *filepath = str_new_cstr("/tmp/");

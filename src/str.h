@@ -57,4 +57,9 @@ inline size_t str_bytelen(const Str *s) {
 	return s->bytelen;
 }
 
+/* Other helper methods */
+
+Str *str_new_uri_extract_server(Str *);
+Str *str_new_uri_extract_path(Str *);
+
 #endif /* !JANECHAT_STR_H */

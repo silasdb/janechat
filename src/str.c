@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "str.h"
-#include "utils.h" /* TODO: recursive include! */
+#include "utils.h"
 
 #define INITSIZE 256
 
@@ -156,4 +156,25 @@ void str_remove_utf8char_at(Str *s, struct str_utf8_index uidx) {
 
 bool str_starts_with_cstr(Str *ss, const char *s) {
 	return (strncmp(ss->buf, s, strlen(s)) == 0);
+}
+
+/* Other helper methods */
+
+Str *str_new_uri_extract_server(Str *uri) {
+	const char *a, *b;
+	a = str_buf(uri) + strlen("mxc://");
+	b = a + strcspn(a, "/");
+	char *server = malloc(sizeof(char) * (b - a + 1));
+	strncpy(server, a, b-a);
+	server[b-a] = '\0';
+	Str *ret = str_new_cstr(server);
+	free(server);
+	return ret;
+}
+
+Str *str_new_uri_extract_path(Str *uri) {
+	const char *a;
+	a = str_buf(uri) + strlen("mxc://");
+	a += strcspn(a, "/") + 1;
+	return str_new_cstr(a);
 }
