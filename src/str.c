@@ -17,17 +17,6 @@ static void grow(Str *s, size_t delta) {
 	s->buf = realloc(s->buf, (sizeof(char) * s->max) + 1);
 }
 
-static int utf8len(const char *s) {
-	int len = 0;
-	size_t sz;
-	while (*s != '\0') {
-		sz = utf8_char_size(*s);
-		len += 1;
-		s += sz;
-	}
-	return len;
-}
-
 Str *str_new(void) {
 	return str_new_bytelen(INITSIZE);
 }
@@ -44,8 +33,6 @@ Str *str_new_cstr_fixed(const char *s) {
 	ss->bytelen = strlen(s);
 	ss->max = ss->bytelen;
 	ss->rc = 1;
-	ss->utf8len = -1;
-	ss->utf8 = false;
 	return ss;
 }
 
@@ -57,20 +44,19 @@ Str *str_new_bytelen(size_t len) {
 	ss->bytelen = 0;
 	ss->max = len;
 	ss->rc = 1;
-	ss->utf8len = -1;
-	ss->utf8 = false;
 	return ss;
 }
 
-void str_set_utf8(Str *s, bool utf8) {
-	if (utf8) {
-		s->utf8len = utf8len(s->buf);
-		s->utf8 = true;
-	} else {
-		s->utf8len = -1;
-		s->utf8 = false;
+size_t str_utf8len(const Str *s) {
+	size_t sz;
+	size_t len = 0;
+	char *buf = s->buf;
+	while (*buf != '\0') {
+		sz = utf8_char_size(*buf);
+		len += 1;
+		buf += sz;
 	}
-
+	return len;
 }
 
 void str_append_str(Str *ss, const Str *s) {
@@ -89,8 +75,6 @@ void str_append_cstr(Str *ss, const char *s) {
 
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t len) {
 	grow(ss, len);
-	if (ss->utf8)
-		ss->utf8len += utf8len(s);
 	char *sb;
 	sb = &ss->buf[ss->bytelen];
 	while (len > 0) {
@@ -120,7 +104,6 @@ void str_decref(Str *ss) {
 
 void str_reset(Str *ss) {
 	ss->bytelen = 0;
-	ss->utf8len = ss->utf8 ? 0 : -1;
 	ss->buf[0] = '\0';
 }
 
@@ -136,8 +119,6 @@ void str_insert_utf8char_at(Str *s, Utf8Char utf8char, struct str_utf8_index uid
 	for (size_t i = 0; i < sz; i++)
 		s->buf[pos+i] = utf8char.c[i];
 	s->bytelen += sz;
-	if (s->utf8)
-		s->utf8len += 1;
 }
 
 Str *str_dup(const Str *s) {
@@ -145,9 +126,6 @@ Str *str_dup(const Str *s) {
 	strcpy(dup->buf, s->buf);
 	dup->bytelen = s->bytelen;
 	dup->buf[dup->bytelen] = '\0';
-	dup->utf8 = s->utf8;
-	dup->utf8len = s->utf8len;
-	dup->utf8 = s->utf8;
 	dup->rc = 1;
 	return dup;
 }
@@ -174,8 +152,6 @@ void str_remove_utf8char_at(Str *s, struct str_utf8_index uidx) {
 		s->buf[i] = s->buf[i+sz];
 	s->buf[i] = '\0';
 	s->bytelen -= sz;
-	if (s->utf8)
-		s->utf8len -= 1;
 }
 
 bool str_starts_with_cstr(Str *ss, const char *s) {

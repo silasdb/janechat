@@ -13,7 +13,6 @@ static void test_str_new() {
 
 static void test_str_append_cstr() {
 	Str *s = str_new_cstr("abc");
-	str_set_utf8(s, true);
 	assert(str_bytelen(s) == 3);
 	assert(str_utf8len(s) == 3);
 	assert(str_buf(s)[3] == '\0');
@@ -64,7 +63,6 @@ static void test_str_insert_utf8char_at() {
 	str_insert_utf8char_at(s, (Utf8Char){.c = "f",}, UTF8_INDEX(8));
 	str_insert_utf8char_at(s, (Utf8Char){.c = "é",}, UTF8_INDEX(9));
 	str_insert_utf8char_at(s, (Utf8Char){.c = "-",}, UTF8_INDEX(10));
-	str_set_utf8(s, true);
 	assert(s->max == 24);
 	assert(str_sc_eq(s, "axb-老师café-yzc"));
 	assert(str_utf8len(s) == 14);
@@ -77,7 +75,6 @@ static void test_str_insert_utf8char_at() {
 
 static void test_str_remove_utf8char_at() {
 	Str *s = str_new_cstr("I am 老师。 I love café.");
-	str_set_utf8(s, true);
 
 	str_remove_utf8char_at(s, UTF8_INDEX(0)); /* Remove I */
 	str_remove_utf8char_at(s, UTF8_INDEX(0)); /* Remove space */ /* Remove space */
@@ -114,12 +111,6 @@ static void test_str_starts_with_cstr() {
 
 void test_str_reset(void) {
 	Str *s = str_new_cstr("I am 老师。 I love café.");
-
-	str_reset(s);
-	assert(s->utf8len == -1);
-	assert(s->bytelen == 0);
-
-	str_set_utf8(s, true);
 	str_reset(s);
 	assert(str_utf8len(s) == 0);
 	assert(s->bytelen == 0);

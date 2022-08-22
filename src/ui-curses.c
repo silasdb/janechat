@@ -818,7 +818,6 @@ void ui_curses_room_new(Str *roomid) {
 	struct buffer *b;
 	b = malloc(sizeof(struct buffer));
 	b->buf = str_new();
-	str_set_utf8(b->buf, true);
 	b->room = room_byid(roomid);
 	b->pos = 0;
 	b->left = 0;

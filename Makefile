@@ -3,6 +3,7 @@ all:
 
 clean:
 	make -C src $@
+	make -C tests $@
 
 .PHONY: test check
 check: test

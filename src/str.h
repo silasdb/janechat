@@ -13,8 +13,6 @@
 struct Str {
 	char *buf;	/* Buffer that store string (always with null byte) */
 	size_t bytelen;	/* Length of string in buf (don't count null byte )*/
-	bool utf8;
-	int utf8len;	/* UTF-8 length (don't count null byte) */
 	size_t max;	/* Length of buf - 1 (cause we don't count null byte */
 	int rc;		/* Reference count */
 };
@@ -37,7 +35,7 @@ Str *str_new(void);
 Str *str_new_cstr(const char *);
 Str *str_new_cstr_fixed(const char *);
 Str *str_new_bytelen(size_t len);
-void str_set_utf8(Str *, bool);
+size_t str_utf8len(const Str *);
 void str_append_str(Str *ss, const Str *s);
 void str_append_cstr(Str *ss, const char *s);
 void str_append_cstr_bytelen(Str *ss, const char *s, size_t);
@@ -57,11 +55,6 @@ inline const char *str_buf(const Str *s) {
 
 inline size_t str_bytelen(const Str *s) {
 	return s->bytelen;
-}
-
-inline int str_utf8len(const Str *s) {
-	assert(s->utf8len > -1);
-	return s->utf8len;
 }
 
 #endif /* !JANECHAT_STR_H */
