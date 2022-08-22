@@ -517,7 +517,7 @@ void input_redraw(void) {
 	size_t screenwidth = 0;
 	right = *left;
 	while (right < str_utf8len(cur_buffer->buf)) {
-		size_t bytepos = utf8_char_bytepos(buf, right, str_bytelen(cur_buffer));
+		size_t bytepos = utf8_char_bytepos(buf, right, str_bytelen(cur_buffer->buf));
 		screenwidth += utf8_char_width(&buf[bytepos]);
 		if (screenwidth >= maxx)
 			break;
@@ -539,7 +539,7 @@ void input_redraw(void) {
 			(*left)--;
 		screenwidth = 0;
 		for (; *left > 0; (*left)--) {
-			size_t bytepos = utf8_char_bytepos(buf, *left, str_bytelen(cur_buffer));
+			size_t bytepos = utf8_char_bytepos(buf, *left, str_bytelen(cur_buffer->buf));
 			screenwidth += utf8_char_width(&buf[bytepos]);
 			if (screenwidth >= maxx)
 				break;
@@ -550,7 +550,7 @@ void input_redraw(void) {
 	/* Draw string in input window */
 	int screenpos = 0;
 	for (size_t i = cur_buffer->left; i < right; i++) {
-		size_t bytepos = utf8_char_bytepos(buf, i, str_bytelen(cur_buffer));
+		size_t bytepos = utf8_char_bytepos(buf, i, str_bytelen(cur_buffer->buf));
 		if (buf[bytepos] == '\0')
 			break;
 		size_t chsize = utf8_char_size(buf[bytepos]);
@@ -565,7 +565,7 @@ void input_redraw(void) {
 	 */
 	screenpos = 0;
 	for (size_t i = cur_buffer->left; i < cur_buffer->pos; i++) {
-		size_t bytepos = utf8_char_bytepos(buf, i, str_bytelen(cur_buffer));
+		size_t bytepos = utf8_char_bytepos(buf, i, str_bytelen(cur_buffer->buf));
 		screenpos += utf8_char_width(&buf[bytepos]);
 	}
 	wmove(winput, 0, screenpos);
