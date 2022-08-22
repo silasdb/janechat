@@ -129,6 +129,18 @@ void test_str_dup(void) {
 	assert(str_buf(s) != str_buf(t));
 }
 
+void test_str_utf8char_foreach() {
+	Str *s = str_new_cstr("I am 老师。 I love café.");
+	size_t i;
+	Utf8Char uc;
+	int count = 0;
+	STR_UTF8CHAR_FOREACH(s, uc, i) {
+		count++;
+	}
+	assert(count == 21);
+	str_decref(s);
+}
+
 int main(int argc, char *argv[]) {
 	test_str_new();
 	test_str_append_cstr();
@@ -139,5 +151,6 @@ int main(int argc, char *argv[]) {
 	test_str_starts_with_cstr();
 	test_str_reset();
 	test_str_dup();
+	test_str_utf8char_foreach();
 	return 0;
 }

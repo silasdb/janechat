@@ -28,6 +28,11 @@ struct str_utf8_index {
 };
 #define UTF8_INDEX(x) ((struct str_utf8_index){ .utf8_index = x, })
 
+#define STR_UTF8CHAR_FOREACH(s, uc, i) \
+	for (i = 0; \
+		 uc = str_utf8char_at(s, UTF8_INDEX(i)), uc.c[0] != '\0'; \
+		 i++)
+
 #define streq(x, y) (strcmp(x, y) == 0)
 #define str_sc_eq(x, y) (strcmp(str_buf(x), y) == 0)
 
