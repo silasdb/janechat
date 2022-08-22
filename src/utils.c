@@ -83,7 +83,9 @@ size_t utf8_char_size(int c) {
 	return 1;
 }
 
-size_t utf8_char_bytepos(const char *s, size_t i) {
+int utf8_char_bytepos(const char *s, size_t i, size_t len) {
+	if (i > len)
+		return -1;
 	size_t pos = 0;
 	while (i--) {
 		size_t sz;

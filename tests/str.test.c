@@ -99,6 +99,12 @@ static void test_str_utf8char_at() {
 	assert(streq(uc.c, "é"));
 	uc = str_utf8char_at(s, UTF8_INDEX(20));
 	assert(streq(uc.c, "."));
+
+	str_reset(s);
+	uc = str_utf8char_at(s, UTF8_INDEX(5));
+	assert(streq(uc.c, ""));
+
+	str_decref(s);
 }
 
 static void test_str_starts_with_cstr() {
