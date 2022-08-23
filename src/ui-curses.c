@@ -57,15 +57,14 @@ bool curses_init = false; /* Did we started curses? */
 bool autopilot = false;
 
 WINDOW *windex; /* The index window - that shows rooms */
-WINDOW *wchat; /* The chat window, that show room messages and the input field */
 WINDOW *wchat_msgs; /* A subwindow for the chat window: show messages received */
 WINDOW *wchat_status; /* A subwindow for the chat window: show room status bar */
-WINDOW *winput; /* A window for input common to both windex and wchat */
+WINDOW *winput; /* A window for input common to both windex and wchat_msgs */
 
 enum Focus {
 	/* Focus is on the index window */
 	FOCUS_INDEX,
-	/* wchat window is visible and focus is on its input subwindow */
+	/* chat windows are visible and focus is on its input subwindow */
 	FOCUS_CHAT_INPUT,
 	FOCUS_INDEX_INPUT,
 } focus = FOCUS_INDEX;
@@ -180,7 +179,6 @@ void set_focus(enum Focus f) {
 	case FOCUS_CHAT_INPUT:
 		chat_msgs_fill();
 		chat_draw_statusbar();
-		wrefresh(wchat);
 		break;
 	}
 	input_redraw();
@@ -193,7 +191,6 @@ void resize(void) {
 	getmaxyx(stdscr, maxy, maxx);
 
 	wresize(windex, maxy-1, maxx);
-	wresize(wchat, maxy-1, maxx);
 	wresize(wchat_msgs, maxy-2, maxx);
 	mvwin(wchat_status, maxy-2, 0);
 	wresize(wchat_status, 1, maxx);
@@ -408,7 +405,7 @@ void index_key(void) {
 void chat_draw_statusbar(void) {
 	int maxy, maxx;
 	(void)maxy;
-	getmaxyx(wchat, maxy, maxx);
+	getmaxyx(stdscr, maxy, maxx);
 	Str *roomname = room_displayname(cur_buffer->room);
 	mvwprintw(wchat_status, 0, 0, "%s", str_buf(roomname));
 	mvwhline(wchat_status, 0, str_bytelen(roomname), ' ', maxx);
@@ -773,10 +770,9 @@ void ui_curses_init(void) {
 	int maxy, maxx;
 	getmaxyx(stdscr, maxy, maxx);
 
-	wchat = newwin(maxy-1, maxx, 0, 0);
 	windex = newwin(maxy-1, maxx, 0, 0);
-	wchat_msgs = subwin(wchat, maxy-2, maxx, 0, 0);
-	wchat_status = subwin(wchat, 1, maxx, maxy-2, 0);
+	wchat_msgs = newwin(maxy-2, maxx, 0, 0);
+	wchat_status = newwin(1, maxx, maxy-2, 0);
 	winput = newwin(1, maxx, maxy-1, 0);
 	keypad(windex, TRUE);
 	keypad(winput, TRUE);
