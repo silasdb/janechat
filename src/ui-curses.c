@@ -46,7 +46,7 @@ struct buffer {
 	int user_separator;
 
 	/*
-	 * As messages text are rendered backwards (on the wchat_msgs window),
+	 * As messages text are rendered backwards (on the wmsgs window),
 	 * we need to store the index of the last line. If last_line == -1, then
 	 * the last line is the most recent message received.
 	 */
@@ -57,9 +57,9 @@ bool curses_init = false; /* Did we started curses? */
 bool autopilot = false;
 
 WINDOW *windex; /* The index window - that shows rooms */
-WINDOW *wchat_msgs; /* A subwindow for the chat window: show messages received */
-WINDOW *wchat_status; /* A subwindow for the chat window: show room status bar */
-WINDOW *winput; /* A window for input common to both windex and wchat_msgs */
+WINDOW *wmsgs; /* A window that show messages received */
+WINDOW *wstatus; /* A window to: show room status bar */
+WINDOW *winput; /* A window for input common to both windex and wmsgs */
 
 enum Focus {
 	/* Focus is on the index window */
@@ -191,9 +191,9 @@ void resize(void) {
 	getmaxyx(stdscr, maxy, maxx);
 
 	wresize(windex, maxy-1, maxx);
-	wresize(wchat_msgs, maxy-2, maxx);
-	mvwin(wchat_status, maxy-2, 0);
-	wresize(wchat_status, 1, maxx);
+	wresize(wmsgs, maxy-2, maxx);
+	mvwin(wstatus, maxy-2, 0);
+	wresize(wstatus, 1, maxx);
 
 	wresize(winput, 1, maxx);
 	mvwin(winput, maxy-1, 0);
@@ -399,7 +399,7 @@ void index_key(void) {
 }
 
 /*
- * Private functions for wchat window behaviour.
+ * Private functions for chat windows.
  */
 
 void chat_draw_statusbar(void) {
@@ -407,9 +407,9 @@ void chat_draw_statusbar(void) {
 	(void)maxy;
 	getmaxyx(stdscr, maxy, maxx);
 	Str *roomname = room_displayname(cur_buffer->room);
-	mvwprintw(wchat_status, 0, 0, "%s", str_buf(roomname));
-	mvwhline(wchat_status, 0, str_bytelen(roomname), ' ', maxx);
-	wrefresh(wchat_status);
+	mvwprintw(wstatus, 0, 0, "%s", str_buf(roomname));
+	mvwhline(wstatus, 0, str_bytelen(roomname), ' ', maxx);
+	wrefresh(wstatus);
 }
 
 int text_height(const Str *sender, const Str *text, int width) {
@@ -426,36 +426,36 @@ int text_height(const Str *sender, const Str *text, int width) {
 }
 
 void chat_msgs_fill(void) {
-	werase(wchat_msgs);
+	werase(wmsgs);
 	int last = cur_buffer->last_line;
 	if (last == -1)
 		last = vector_len(cur_buffer->room->msgs)-1;
 	if (last < 0) {
 		/*
 		 * TODO: With ncurses, we need to force a wrefresh() to erase
-		 * wchat_msgs content for this case (when there is no messages
+		 * wmsgs content for this case (when there is no messages
 		 * for the room). This is not needed for NetBSD curses. Why?
 		 */
-		wrefresh(wchat_msgs);
+		wrefresh(wmsgs);
 		return;
 	}
 	int maxy, maxx;
-	getmaxyx(wchat_msgs, maxy, maxx);
+	getmaxyx(wmsgs, maxy, maxx);
 	int y = maxy;
 	for (ssize_t i = last; i >= 0; i--) {
 		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
 		if (cur_buffer->read_separator == i+1
 		&&  cur_buffer->read_separator != (int)vector_len(cur_buffer->room->msgs)) {
 			y--;
-			wattron(wchat_msgs, COLOR_PAIR(1));
-			mvwhline(wchat_msgs, y, 0, '-', maxx);
-			wattroff(wchat_msgs, COLOR_PAIR(1));
+			wattron(wmsgs, COLOR_PAIR(1));
+			mvwhline(wmsgs, y, 0, '-', maxx);
+			wattroff(wmsgs, COLOR_PAIR(1));
 		}
 		if (cur_buffer->user_separator == i) {
 			y--;
-			wattron(wchat_msgs, COLOR_PAIR(2));
-			mvwhline(wchat_msgs, y, 0, '-', maxx);
-			wattroff(wchat_msgs, COLOR_PAIR(2));
+			wattron(wmsgs, COLOR_PAIR(2));
+			mvwhline(wmsgs, y, 0, '-', maxx);
+			wattroff(wmsgs, COLOR_PAIR(2));
 		}
 		int height;
 		if (msg->type == MSGTYPE_TEXT)
@@ -466,22 +466,22 @@ void chat_msgs_fill(void) {
 		if (y < 0)
 			break;
 
-		wattron(wchat_msgs, COLOR_PAIR(1));
-		mvwprintw(wchat_msgs, y, 0, "[%zu] %s", i,
+		wattron(wmsgs, COLOR_PAIR(1));
+		mvwprintw(wmsgs, y, 0, "[%zu] %s", i,
 			str_buf(user_name(msg->sender)));
 
 		/* TODO: why does it set background to COLOR_BLACK? */
-		wattroff(wchat_msgs, COLOR_PAIR(1));
+		wattroff(wmsgs, COLOR_PAIR(1));
 
 		if (msg->type == MSGTYPE_TEXT)
-			wprintw(wchat_msgs, ": %s", str_buf(msg->text.content));
+			wprintw(wmsgs, ": %s", str_buf(msg->text.content));
 		else
-			wprintw(wchat_msgs, ": %s: %s",
+			wprintw(wmsgs, ": %s: %s",
 				str_buf(msg->fileinfo.mimetype),
 				str_buf(msg->fileinfo.uri));
 
 	}
-	wrefresh(wchat_msgs);
+	wrefresh(wmsgs);
 }
 
 void input_clear(void) {
@@ -623,7 +623,7 @@ bool input_key_chat(int c) {
 				cur_buffer->last_line = vector_len(cur_buffer->room->msgs);
 			int maxy, maxx;
 			(void)maxx;
-			getmaxyx(wchat_msgs, maxy, maxx);
+			getmaxyx(wmsgs, maxy, maxx);
 			maxy /= 2;
 			cur_buffer->last_line -= maxy;
 			chat_msgs_fill();
@@ -636,7 +636,7 @@ bool input_key_chat(int c) {
 				return true;
 			int maxy, maxx;
 			(void)maxx;
-			getmaxyx(wchat_msgs, maxy, maxx);
+			getmaxyx(wmsgs, maxy, maxx);
 			maxy /= 2;
 			cur_buffer->last_line += maxy;
 			if (cur_buffer->last_line >= (int)vector_len(cur_buffer->room->msgs))
@@ -771,8 +771,8 @@ void ui_curses_init(void) {
 	getmaxyx(stdscr, maxy, maxx);
 
 	windex = newwin(maxy-1, maxx, 0, 0);
-	wchat_msgs = newwin(maxy-2, maxx, 0, 0);
-	wchat_status = newwin(1, maxx, maxy-2, 0);
+	wmsgs = newwin(maxy-2, maxx, 0, 0);
+	wstatus = newwin(1, maxx, maxy-2, 0);
 	winput = newwin(1, maxx, maxy-1, 0);
 	keypad(windex, TRUE);
 	keypad(winput, TRUE);
@@ -783,7 +783,7 @@ void ui_curses_init(void) {
 	init_pair(2, COLOR_YELLOW, -1);
 	init_pair(3, COLOR_WHITE, COLOR_BLUE);
 
-	wattron(wchat_status, COLOR_PAIR(3));
+	wattron(wstatus, COLOR_PAIR(3));
 
 	signal(SIGINT, handle_sigint);
 	signal(SIGWINCH, handle_sigwinch);
