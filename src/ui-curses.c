@@ -19,8 +19,6 @@
 /* We can detect Ctrl+key sequences by masking the return of getch() */
 #define CTRL(x) (x & 037)
 
-#define MAXY 1000 /* Max lines we allow to be shown in the terminal */
-
 /*
  * We call the data structure that holds the room information for the UI as
  * "buffer".  We have very few UI elements, the only thing that changes is the
@@ -48,17 +46,18 @@ struct buffer {
 	int user_separator;
 
 	/*
-	 * Index of the first message printed in the wmsgs pad. Not necessarily
-	 * shown on the screen.
+	 * As messages text are rendered backwards (on the wmsgs window),
+	 * we need to store the index of the last line. If last_line == -1, then
+	 * the last line is the most recent message received.
 	 */
-	int msg_index;
+	int last_line;
 };
 
 bool curses_init = false; /* Did we started curses? */
 bool autopilot = false;
 
 WINDOW *windex; /* The index window - that shows rooms */
-WINDOW *wmsgs; /* A pad that show messages received */
+WINDOW *wmsgs; /* A window that show messages received */
 WINDOW *wstatus; /* A window to: show room status bar */
 WINDOW *winput; /* A window for input common to both windex and wmsgs */
 
@@ -146,7 +145,7 @@ void set_cur_buffer(struct buffer *buffers) {
 	cur_buffer->left = 0;
 	if (cur_buffer->room) {
 		cur_buffer->room->unread_msgs = 0;
-		cur_buffer->msg_index = 0; /* TODO: setup to the message? */
+		cur_buffer->last_line = -1;
 	}
 }
 
@@ -413,31 +412,76 @@ void chat_draw_statusbar(void) {
 	wrefresh(wstatus);
 }
 
+int text_height(const Str *sender, const Str *text, int width) {
+	/* TODO: still need to consider UTF-8 characters */
+	int height = 1;
+	int w = str_bytelen(sender) + 2; /* +2 because of ": " */
+	const char *c;
+	for (c = str_buf(text); *c != '\0'; c++, w++)
+		if (*c == '\n' || w >= width) {
+			height++;
+			w = 0;
+		}
+	return height;
+}
+
 void chat_msgs_fill(void) {
+	werase(wmsgs);
+	int last = cur_buffer->last_line;
+	if (last == -1)
+		last = vector_len(cur_buffer->room->msgs)-1;
+	if (last < 0) {
+		/*
+		 * TODO: With ncurses, we need to force a wrefresh() to erase
+		 * wmsgs content for this case (when there is no messages
+		 * for the room). This is not needed for NetBSD curses. Why?
+		 */
+		wrefresh(wmsgs);
+		return;
+	}
 	int maxy, maxx;
 	getmaxyx(wmsgs, maxy, maxx);
-
-	werase(wmsgs);
-	int msgidx = cur_buffer->msg_index;
-	if (vector_len(cur_buffer->room->msgs) == 0)
-		return;
-	Msg *msg;
-	for (ssize_t i = msgidx;
-			msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
-			i++) {
+	int y = maxy;
+	for (ssize_t i = last; i >= 0; i--) {
 		Msg *msg = (Msg *)vector_at(cur_buffer->room->msgs, i);
-		waddstr(wmsgs, str_buf(msg->sender));
-		waddstr(wmsgs, ": ");
-		waddstr(wmsgs, str_buf(msg->text.content));
-		waddstr(wmsgs, "\n");
-
-		int y;
-		y = getcury(wmsgs);
-		if (y > maxy)
+		if (cur_buffer->read_separator == i+1
+		&&  cur_buffer->read_separator != (int)vector_len(cur_buffer->room->msgs)) {
+			y--;
+			wattron(wmsgs, COLOR_PAIR(1));
+			mvwhline(wmsgs, y, 0, '-', maxx);
+			wattroff(wmsgs, COLOR_PAIR(1));
+		}
+		if (cur_buffer->user_separator == i) {
+			y--;
+			wattron(wmsgs, COLOR_PAIR(2));
+			mvwhline(wmsgs, y, 0, '-', maxx);
+			wattroff(wmsgs, COLOR_PAIR(2));
+		}
+		int height;
+		if (msg->type == MSGTYPE_TEXT)
+			height = text_height(msg->sender, msg->text.content, maxx);
+		else
+			height = 2; /* TODO */
+		y -= height;
+		if (y < 0)
 			break;
+
+		wattron(wmsgs, COLOR_PAIR(1));
+		mvwprintw(wmsgs, y, 0, "[%zu] %s", i,
+			str_buf(user_name(msg->sender)));
+
+		/* TODO: why does it set background to COLOR_BLACK? */
+		wattroff(wmsgs, COLOR_PAIR(1));
+
+		if (msg->type == MSGTYPE_TEXT)
+			wprintw(wmsgs, ": %s", str_buf(msg->text.content));
+		else
+			wprintw(wmsgs, ": %s: %s",
+				str_buf(msg->fileinfo.mimetype),
+				str_buf(msg->fileinfo.uri));
+
 	}
-	prefresh(wmsgs, 0, 0, 0, 0, maxy, maxx);
-	return;
+	wrefresh(wmsgs);
 }
 
 void input_clear(void) {
@@ -575,28 +619,28 @@ bool input_key_chat(int c) {
 		break;
 	case CTRL('b'):
 		{
-			if (cur_buffer->msg_index == -1)
-				cur_buffer->msg_index = vector_len(cur_buffer->room->msgs);
+			if (cur_buffer->last_line == -1)
+				cur_buffer->last_line = vector_len(cur_buffer->room->msgs);
 			int maxy, maxx;
 			(void)maxx;
 			getmaxyx(wmsgs, maxy, maxx);
 			maxy /= 2;
-			cur_buffer->msg_index -= maxy;
+			cur_buffer->last_line -= maxy;
 			chat_msgs_fill();
 			return true;
 		}
 		break;
 	case CTRL('f'):
 		{
-			if (cur_buffer->msg_index == -1)
+			if (cur_buffer->last_line == -1)
 				return true;
 			int maxy, maxx;
 			(void)maxx;
 			getmaxyx(wmsgs, maxy, maxx);
 			maxy /= 2;
-			cur_buffer->msg_index += maxy;
-			if (cur_buffer->msg_index >= (int)vector_len(cur_buffer->room->msgs))
-				cur_buffer->msg_index = -1;
+			cur_buffer->last_line += maxy;
+			if (cur_buffer->last_line >= (int)vector_len(cur_buffer->room->msgs))
+				cur_buffer->last_line = -1;
 			chat_msgs_fill();
 			return true;
 		}
@@ -727,7 +771,7 @@ void ui_curses_init(void) {
 	getmaxyx(stdscr, maxy, maxx);
 
 	windex = newwin(maxy-1, maxx, 0, 0);
-	wmsgs = newpad(MAXY, maxx);
+	wmsgs = newwin(maxy-2, maxx, 0, 0);
 	wstatus = newwin(1, maxx, maxy-2, 0);
 	winput = newwin(1, maxx, maxy-1, 0);
 	keypad(windex, TRUE);
@@ -773,7 +817,7 @@ void ui_curses_room_new(Str *roomid) {
 	b->room = room_byid(roomid);
 	b->pos = 0;
 	b->left = 0;
-	b->msg_index = 0;
+	b->last_line = -1;
 	b->read_separator = -1;
 	b->user_separator = -1;
 	vector_append(buffers, b);
