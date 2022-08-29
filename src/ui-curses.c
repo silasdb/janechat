@@ -19,6 +19,8 @@
 /* We can detect Ctrl+key sequences by masking the return of getch() */
 #define CTRL(x) (x & 037)
 
+#define MAXY 1000 /* Max lines we allow to be shown in the terminal */
+
 /*
  * We call the data structure that holds the room information for the UI as
  * "buffer".  We have very few UI elements, the only thing that changes is the
@@ -182,7 +184,6 @@ void resize(void) {
 	getmaxyx(stdscr, maxy, maxx);
 
 	wresize(windex, maxy-1, maxx);
-	wresize(wmsgs, maxy-2, maxx);
 	mvwin(wstatus, maxy-2, 0);
 	wresize(wstatus, 1, maxx);
 
@@ -450,7 +451,14 @@ void chat_msgs_fill(void) {
 				str_buf(msg->fileinfo.uri));
 
 	}
-	wrefresh(wmsgs);
+	int y = getcury(wmsgs);
+	int maxy, maxx;
+	getmaxyx(stdscr, maxy, maxx);
+	maxy -= 2;
+	int top = y - maxy;
+	if (top < 0)
+		top = 0;
+	prefresh(wmsgs, top, 0, 0, 0, y, 10);
 }
 
 void input_clear(void) {
@@ -722,13 +730,11 @@ void ui_curses_init(void) {
 	getmaxyx(stdscr, maxy, maxx);
 
 	windex = newwin(maxy-1, maxx, 0, 0);
-	wmsgs = newwin(maxy-2, maxx, 0, 0);
+	wmsgs = newpad(MAXY, maxx);
 	wstatus = newwin(1, maxx, maxy-2, 0);
 	winput = newwin(1, maxx, maxy-1, 0);
 	keypad(windex, TRUE);
 	keypad(winput, TRUE);
-
-	scrollok(wmsgs, true);
 
 	start_color();
 	use_default_colors();
