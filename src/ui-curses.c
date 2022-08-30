@@ -454,11 +454,12 @@ void chat_msgs_fill(void) {
 	int y = getcury(wmsgs);
 	int maxy, maxx;
 	getmaxyx(stdscr, maxy, maxx);
-	maxy -= 2;
+	maxy -= 2; /* subtract winput and status bar height */
 	int top = y - maxy;
 	if (top < 0)
 		top = 0;
-	prefresh(wmsgs, top, 0, 0, 0, y, 10);
+	maxy--; /* subtract last message '\n' */
+	assert(prefresh(wmsgs, top, 0, 0, 0, maxy, maxx) == OK);
 }
 
 void input_clear(void) {
