@@ -404,19 +404,6 @@ void chat_draw_statusbar(void) {
 	wrefresh(wstatus);
 }
 
-int text_height(const Str *sender, const Str *text, int width) {
-	/* TODO: still need to consider UTF-8 characters */
-	int height = 1;
-	int w = str_bytelen(sender) + 2; /* +2 because of ": " */
-	const char *c;
-	for (c = str_buf(text); *c != '\0'; c++, w++)
-		if (*c == '\n' || w >= width) {
-			height++;
-			w = 0;
-		}
-	return height;
-}
-
 void chat_msgs_fill(void) {
 	werase(wmsgs);
 	wrefresh(wmsgs);
