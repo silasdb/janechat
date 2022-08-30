@@ -46,6 +46,12 @@ struct buffer {
 	 * disabled.
 	 */
 	int user_separator;
+
+	/*
+	 * First line to be displayed in wmsgs pad when calling prefresh()
+	 * function. -1 if we should display the last message.
+	 */
+	int top_line;
 };
 
 bool curses_init = false; /* Did we started curses? */
@@ -140,6 +146,7 @@ void set_cur_buffer(struct buffer *buffers) {
 	cur_buffer->left = 0;
 	if (cur_buffer->room)
 		cur_buffer->room->unread_msgs = 0;
+	cur_buffer->top_line = -1;
 }
 
 void set_focus(enum Focus f) {
@@ -438,14 +445,27 @@ void chat_msgs_fill(void) {
 				str_buf(msg->fileinfo.uri));
 
 	}
-	int y = getcury(wmsgs);
+
+	if (cur_buffer->top_line < -1)
+		cur_buffer->top_line = 0;
+
+	int top;
 	int maxy, maxx;
 	getmaxyx(stdscr, maxy, maxx);
 	maxy -= 2; /* subtract winput and status bar height */
-	int top = y - maxy;
-	if (top < 0)
-		top = 0;
+
+	int y = getcury(wmsgs);
+
+	if (cur_buffer->top_line == -1) {
+		top = y - maxy;
+		if (top < 0)
+			top = 0;
+	} else {
+		top = cur_buffer->top_line;
+	}
+
 	maxy--; /* subtract last message '\n' */
+
 	assert(prefresh(wmsgs, top, 0, 0, 0, maxy, maxx) == OK);
 }
 
@@ -583,13 +603,15 @@ bool input_key_chat(int c) {
 		return true;
 		break;
 	case CTRL('b'):
-		wscrl(wmsgs, -5);
-		wrefresh(wmsgs);
+		cur_buffer->top_line -= (getmaxy(stdscr) - 2) / 2;
+		chat_msgs_fill();
 		return true;
 		break;
 	case CTRL('f'):
-		wscrl(wmsgs, 5);
-		wrefresh(wmsgs);
+		if (cur_buffer->top_line == -1)
+			return true;
+		cur_buffer->top_line += (getmaxy(stdscr) - 2) / 2;
+		chat_msgs_fill();
 		return true;
 		break;
 	case 10: /* LF */
@@ -766,6 +788,7 @@ void ui_curses_room_new(Str *roomid) {
 	b->left = 0;
 	b->read_separator = -1;
 	b->user_separator = -1;
+	b->top_line = -1;
 	vector_append(buffers, b);
 	if (curses_init) {
 		vector_sort(buffers, buffer_comparison);
