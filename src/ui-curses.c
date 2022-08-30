@@ -427,12 +427,12 @@ void chat_msgs_fill(void) {
 		if (cur_buffer->read_separator == i+1
 		&&  cur_buffer->read_separator != (int)vector_len(cur_buffer->room->msgs)) {
 			wattron(wmsgs, COLOR_PAIR(1));
-			waddstr(wmsgs, "-----");
+			waddstr(wmsgs, "-----\n");
 			wattroff(wmsgs, COLOR_PAIR(1));
 		}
 		if (cur_buffer->user_separator == i) {
 			wattron(wmsgs, COLOR_PAIR(2));
-			waddstr(wmsgs, "-----");
+			waddstr(wmsgs, "-----\n");
 			wattroff(wmsgs, COLOR_PAIR(2));
 		}
 
