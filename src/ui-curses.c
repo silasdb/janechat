@@ -418,7 +418,11 @@ void chat_msgs_fill(void) {
 	Msg *msg;
 	size_t i;
 	ROOM_MESSAGES_FOREACH(cur_buffer->room, msg, i) {
-		if (cur_buffer->read_separator == i+1
+		/*
+		 * TODO: it currently doesn't render separators after last
+		 * message
+		 */
+		if (cur_buffer->read_separator == i
 		&&  cur_buffer->read_separator != (int)vector_len(cur_buffer->room->msgs)) {
 			wattron(wmsgs, COLOR_PAIR(1));
 			waddstr(wmsgs, "-----\n");
@@ -619,7 +623,7 @@ bool input_key_chat(int c) {
 		if (str_sc_eq(cur_buffer->buf, "/quit")) {
 			set_focus(FOCUS_INDEX);
 		} else if (str_sc_eq(cur_buffer->buf, "/line")) {
-			cur_buffer->user_separator = vector_len(cur_buffer->room->msgs)-1;
+			cur_buffer->user_separator = vector_len(cur_buffer->room->msgs);
 			chat_msgs_fill();
 		} else if (str_sc_eq(cur_buffer->buf, "/disableautopilot")) {
 			autopilot = false;
