@@ -19,7 +19,7 @@ void rooms_init(void) {
 /*
  * TODO: is this the best name, since it changes the global variable?
  */
-Room *room_new(Str *id) {
+Room *room_new(Str *id, bool space) {
 	Room *room;
 	room = room_byid(id);
 	if (room) {
@@ -37,6 +37,7 @@ Room *room_new(Str *id) {
 	room->name = NULL;
 	room->displayname = NULL;
 	room->sender = NULL;
+	room->space = space;
 	
 	room->users = vector_new();
 	room->msgs = vector_new();

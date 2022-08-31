@@ -27,11 +27,12 @@ struct Room {
 	Vector *msgs;
 	size_t unread_msgs;	/* Should be reset by the caller */
 	bool notify;
+	bool space;
 };
 typedef struct Room Room;
 
 void rooms_init(void);
-Room *room_new(Str *);
+Room *room_new(Str *, bool);
 Room *room_byid(const Str *);
 Str *room_displayname(Room *);
 void room_set_info(Room *, Str *, Str *);

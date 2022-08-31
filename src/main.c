@@ -198,8 +198,8 @@ void do_matrix_login(void) {
 	// TODO: free(password)?
 }
 
-void process_room_create(Str *id) {
-	room_new(id);
+void process_room_create(Str *id, bool space) {
+	room_new(id, space);
 	if (ui_hooks.room_new)
 		ui_hooks.room_new(id);
 }
@@ -282,7 +282,7 @@ void open_file(FileInfo fileinfo) {
 void handle_matrix_event(MatrixEvent ev) {
 	switch (ev.type) {
 	case EVENT_ROOM_CREATE:
-		process_room_create(ev.roomcreate.id);
+		process_room_create(ev.roomcreate.id, ev.roomcreate.space);
 		break;
 	case EVENT_ROOM_INFO:
 		process_room_info(ev.roominfo.id,

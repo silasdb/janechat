@@ -804,6 +804,14 @@ void ui_curses_room_new(Str *roomid) {
 	b = malloc(sizeof(struct buffer));
 	b->buf = str_new();
 	b->room = room_byid(roomid);
+
+	/* TODO: let's ignore spaces for now */
+	if (b->room->space) {
+		str_decref(b->buf);
+		free(b);
+		return;
+	}
+
 	b->pos = 0;
 	b->left = 0;
 	b->read_separator = -1;
