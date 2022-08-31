@@ -450,9 +450,6 @@ void chat_msgs_fill(void) {
 
 	}
 
-	if (top_line < -1)
-		top_line = 0;
-
 	int top;
 	int maxy, maxx;
 	getmaxyx(stdscr, maxy, maxx);
@@ -468,9 +465,27 @@ void chat_msgs_fill(void) {
 		top = top_line;
 	}
 
-	maxy--; /* subtract last message '\n' */
+	assert(prefresh(wmsgs, top, 0, 0, 0, maxy-1, maxx) == OK);
+}
 
-	assert(prefresh(wmsgs, top, 0, 0, 0, maxy, maxx) == OK);
+void chat_msgs_scroll(int direction) {
+	assert(direction == 1 || direction == -1);
+	if (top_line == -1 && direction == 1)
+		return;
+	int maxy = getmaxy(stdscr) - 2;
+
+	int lines = direction * (maxy / 2);
+	if (top_line + lines < 0)
+		top_line = 0;
+	else
+		top_line += lines;
+
+	int bottom_line, y;
+	bottom_line = top_line + maxy;
+	y = getcury(wmsgs);
+	if (bottom_line > y)
+		top_line = -1;
+	chat_msgs_fill();
 }
 
 void input_clear(void) {
@@ -607,15 +622,11 @@ bool input_key_chat(int c) {
 		return true;
 		break;
 	case CTRL('b'):
-		top_line -= (getmaxy(stdscr) - 2) / 2;
-		chat_msgs_fill();
+		chat_msgs_scroll(-1);
 		return true;
 		break;
 	case CTRL('f'):
-		if (top_line == -1)
-			return true;
-		top_line += (getmaxy(stdscr) - 2) / 2;
-		chat_msgs_fill();
+		chat_msgs_scroll(+1);
 		return true;
 		break;
 	case 10: /* LF */
