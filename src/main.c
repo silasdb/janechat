@@ -235,46 +235,15 @@ Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
 
 void open_file(FileInfo fileinfo) {
 	Str *filepath = fileinfo_to_path_alloc(fileinfo);
-	Str *cmd = NULL;
+	Str *cmd = str_new();
 
-	/*
-	 * TODO: We are going to have hardcoded programs for now, butin the
-	 * future we can allow setting them from configuration file or, better,
-	 * parse mailcap
-	 */
-	if (streq(str_buf(fileinfo.mimetype), "image/png")
-	|| streq(str_buf(fileinfo.mimetype), "image/jpeg")) {
-		cmd = str_new();
-		str_append_cstr(cmd, "feh -. ");
-		str_append_str(cmd, filepath); /* TODO: shell quote? */
-	} else if (streq(str_buf(fileinfo.mimetype), "application/pdf")) {
-		cmd = str_new();
-		str_append_cstr(cmd, "evince ");
-		str_append_str(cmd, filepath); /* TODO: shell quote? */
-	} else if (streq(str_buf(fileinfo.mimetype), "video/mp4")) {
-		cmd = str_new();
-		str_append_cstr(cmd, "mplayer ");
-		str_append_str(cmd, filepath); /* TODO: shell quote? */
-	} else if (streq(str_buf(fileinfo.mimetype), "audio/ogg; codecs=opus")) {
-		cmd = str_new();
-		str_append_cstr(cmd, "mplayer -softvol -softvol-max 2000 -volume 90 ");
-		str_append_str(cmd, filepath); /* TODO: shell quote? */
-	}
+	/* janechat_attachment.sh have to exist in PATH */
+	str_append_cstr(cmd, "janechat_attachment.sh open ");
 
-	if (cmd) {
-		/*
-		 * TODO: Running the program with system() in foreground freezes
-		 * janechat, making it timeout on socket connection (a problem
-		 * I'm facing with libcurl. For now, as a workaround, let's run
-		 * the program in background. This brings other problems,
-		 * because I'm unable to control the child process from the
-		 * terminal (janechat still controls the terminal). I should
-		 * rather study process groups!
-		 */
-		str_append_cstr(cmd, " &");
-		system(str_buf(cmd));
-	}
-
+	str_append_str(cmd, filepath);
+	str_append_cstr(cmd, " ");
+	str_append_str(cmd, fileinfo.mimetype);
+	system(str_buf(cmd));
 	str_decref(cmd);
 	str_decref(filepath);
 }
