@@ -19,7 +19,12 @@
 /* We can detect Ctrl+key sequences by masking the return of getch() */
 #define CTRL(x) (x & 037)
 
-#define MAXY 1000 /* Max lines we allow to be shown in the terminal */
+/*
+ * TODO: ncurses under NetBSD seem to support 32767 lines for a pad. Is it
+ * possible to increase it? Can it be smaller on other platforms?  What do we do
+ * if we reach this limit? (currently it fails when calling prefresh().
+ */
+#define MAXY 32767 /* Max lines we allow to be shown in the terminal */
 
 /*
  * We call the data structure that holds the room information for the UI as
