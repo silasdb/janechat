@@ -237,8 +237,8 @@ void open_file(FileInfo fileinfo) {
 	Str *filepath = fileinfo_to_path_alloc(fileinfo);
 	Str *cmd = str_new();
 
-	/* janechat_attachment.sh have to exist in PATH */
-	str_append_cstr(cmd, "janechat_attachment.sh open ");
+	/* janechat-attachment-handler.sh have to exist in PATH */
+	str_append_cstr(cmd, "janechat-attachment-handler.sh open ");
 
 	str_append_str(cmd, filepath);
 	str_append_cstr(cmd, " ");
