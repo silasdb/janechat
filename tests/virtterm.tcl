@@ -207,6 +207,15 @@ proc printterm {title} {
 	}
 }
 
+proc test {args} {
+	foreach {k v} $args {
+		set opts($k) $v
+	}
+	assert {[lsort [array names opts]] eq {-input -title}}
+	uplevel 1 $opts(-input)
+	printterm $opts(-title)
+}
+
 set key_left "\x1bKEY_LEFT\x1b"
 set key_right "\x1bKEY_RIGHT\x1b"
 
