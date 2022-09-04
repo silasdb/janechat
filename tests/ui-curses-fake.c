@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
 #define new_room(id, name) \
 	id_s = str_new_cstr(id); \
 	name_s = str_new_cstr(name); \
-	room = room_new(id_s); \
+	room = room_new(id_s, false); \
 	room_set_info(room, str_new_cstr("@example:matrix.org"), name_s); \
 	ui_curses_room_new(id_s);
 
