@@ -1,28 +1,61 @@
 #!/bin/sh
+#
+# Possible commands:
+#
+# janechat-attachment-handler.sh exists mimetype filename
+# janechat-attachment-handler.sh save mimetype filename
+# janechat-attachment-handler.sh open mimetype filename
+
+echo "$@" >> /tmp/cmd
+
 set -eu
 
+mimetype2extension () {
+	case "$1" in
+	application/pdf) echo pdf ;;
+	audio/ogg) echo ogg ;;
+	image/jpeg) echo jpeg ;;
+	image/png) echo png ;;
+	video/mp4) echo mp4 ;;
+	*) return 1 ;;
+	esac
+}
+
 cmd="$1"
-filepath="$2"
-mimetype="$3"
+mimetype="$2"
+filename="$3"
 
-if [ "$1" = 'exists' ]; then
-	# TODO
-	exit
-fi
+tmpdir=/tmp
+extension="$(mimetype2extension "$mimetype")"
+filepath="$tmpdir/$filename.$extension"
 
-# "$1" is open
-
-case "$mimetype" in
-image/png|image/jpeg)
-	feh "$filepath" &
+case "$cmd" in
+exists)
+	if [ -f "$filepath" ]; then
+		echo yes
+	else
+		echo no
+	fi
 	;;
-application/pdf)
-	evince "$filepath" &
+save)
+	cat > "$filepath"
 	;;
-video/mp4)
-	mplayer "$filepath" &
+open)
+	case "$mimetype" in
+	image/png|image/jpeg)
+		feh "$filepath" &
+		;;
+	application/pdf)
+		evince "$filepath" &
+		;;
+	video/mp4)
+		mplayer "$filepath" &
+		;;
+	'audio/ogg; codecs=opus')
+		xterm -c "mplayer $filepath" &
+		;;
+	esac
 	;;
-'audio/ogg; codecs=opus')
-	xterm -c "mplayer $filepath" &
-	;;
+*)
+	exit 1
 esac

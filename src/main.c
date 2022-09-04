@@ -222,27 +222,16 @@ void process_msg(Str *roomid, Msg msg) {
 	ui_hooks.msg_new(room, msg);
 }
 
-Str *fileinfo_to_path_alloc(FileInfo fileinfo) {
-	Str *upath = str_new_uri_extract_path(fileinfo.uri);
-
-	/* TODO: use a temporary directory instead of /tmp */
-	Str *filepath = str_new_cstr("/tmp/");
-
-	str_append_str(filepath, upath);
-	str_decref(upath);
-	return filepath;
-}
-
 void open_file(FileInfo fileinfo) {
-	Str *filepath = fileinfo_to_path_alloc(fileinfo);
+	Str *filepath = str_new_uri_extract_path(fileinfo.uri);
 	Str *cmd = str_new();
 
 	/* janechat-attachment-handler.sh have to exist in PATH */
 	str_append_cstr(cmd, "janechat-attachment-handler.sh open ");
 
-	str_append_str(cmd, filepath);
-	str_append_cstr(cmd, " ");
 	str_append_str(cmd, fileinfo.mimetype);
+	str_append_cstr(cmd, " ");
+	str_append_str(cmd, filepath);
 	system(str_buf(cmd));
 	str_decref(cmd);
 	str_decref(filepath);
@@ -280,17 +269,24 @@ void handle_matrix_event(MatrixEvent ev) {
 	case EVENT_CONN_ERROR:
 		//puts("Connection error.\n");
 		break;
-	case EVENT_FILE:
-		{
-		Str *filepath = fileinfo_to_path_alloc(ev.file.fileinfo);
-		FILE *f = fopen(str_buf(filepath), "w");
+	case EVENT_FILE: {
+		Str *filepath = str_new_uri_extract_path(ev.file.fileinfo.uri);
+		Str *cmd = str_new();;
+		str_append_cstr(cmd, "janechat-attachment-handler.sh save ");
+		str_append_str(cmd, ev.file.fileinfo.mimetype);
+		str_append_cstr(cmd, " ");
+		str_append_str(cmd, filepath);
+
+		FILE *f = popen(str_buf(cmd), "w");
 		fwrite(ev.file.payload, 1, ev.file.size, f);
 		fclose(f);
+
 		str_decref(filepath);
+		str_decref(cmd);
+
 		open_file(ev.file.fileinfo);
-		}
 		break;
-	}
+	} }
 }
 
 void handle_ui_event(UiEvent ev) {
@@ -301,16 +297,27 @@ void handle_ui_event(UiEvent ev) {
 	case UIEVENTTYPE_SENDMSG:
 		matrix_send_message(ev.msg.roomid, ev.msg.text);
 		break;
-	case UIEVENTTYPE_OPENATTACHMENT:
-		{
-		Str *filepath = fileinfo_to_path_alloc(ev.openattachment.fileinfo);
+	case UIEVENTTYPE_OPENATTACHMENT: {
+		Str *filepath = str_new_uri_extract_path(ev.openattachment.fileinfo.uri);
+		Str *cmd = str_new();;
+		str_append_cstr(cmd, "janechat-attachment-handler.sh exists ");
+		str_append_str(cmd, ev.openattachment.fileinfo.mimetype);
+		str_append_cstr(cmd, " ");
+		str_append_str(cmd, filepath);
+
+		FILE *f = popen(str_buf(cmd), "r");
+		char buf[256] = { '\0' };
+		fread(buf, 256, sizeof(char), f);
+		assert(streq(buf, "yes\n") || streq(buf, "no\n"));
+		fclose(f);
+
 		/* Only request file if it doesn't exist in our local cache */
-		if (access(str_buf(filepath), F_OK) == -1)
+		if (streq(buf, "no\n"))
 			matrix_request_file(ev.openattachment.fileinfo);
 		else
 			open_file(ev.openattachment.fileinfo);
 		str_decref(filepath);
-		}
+		str_decref(cmd);
 		break;
-	}
+	} }
 }
