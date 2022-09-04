@@ -175,6 +175,7 @@ expect_background {
 	-re "^\[^\x01-\x1f]+" {
 		term_text_append $expect_out(0,string)
 	} "^\n" {
+		puts "Wrongly received NL. Exiting."
 		exit 1
 	} "^\r" {
 		set ::column 0
