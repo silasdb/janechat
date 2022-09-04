@@ -388,6 +388,7 @@ void index_key(void) {
 	case '/':
 		str_reset(index_input_buffer.buf);
 		str_append_cstr(index_input_buffer.buf, "/");
+		index_input_buffer.pos = 1;
 		/* FALLTHROUGH */
 	case ':':
 		set_cur_buffer(&index_input_buffer);

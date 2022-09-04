@@ -15,3 +15,10 @@ test -title "Now adding string so it becomes wider than the terminal, testing ke
 }
 
 test -title "Sending it as a message" -input {send "\r"}
+
+test -title "Go back to the index. Search for room \"Test C\" and open it" -input {
+	send \x07; # CTRL('g')
+	send "/test c"
+	send "\r"
+	send "\r"
+}
