@@ -308,6 +308,8 @@ void handle_ui_event(UiEvent ev) {
 		FILE *f = popen(str_buf(cmd), "r");
 		char buf[256] = { '\0' };
 		fread(buf, 256, sizeof(char), f);
+
+		/* TODO: what if janechat-attachment-handler.sh is not found? */
 		assert(streq(buf, "yes\n") || streq(buf, "no\n"));
 		fclose(f);
 
