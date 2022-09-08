@@ -6,8 +6,6 @@
 # janechat-attachment-handler.sh save mimetype filename
 # janechat-attachment-handler.sh open mimetype filename
 
-echo "$@" >> /tmp/cmd
-
 set -eu
 
 mimetype2extension () {
@@ -58,4 +56,5 @@ open)
 	;;
 *)
 	exit 1
+	;;
 esac
