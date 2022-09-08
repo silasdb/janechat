@@ -130,6 +130,15 @@ Str *str_dup(const Str *s) {
 	return dup;
 }
 
+Str *str_shellquote_alloc(const Str *s) {
+	/* TODO: quote inline characters as well */
+	Str *ss = str_new();
+	str_append_cstr(ss, "'");
+	str_append_str(ss, s);
+	str_append_cstr(ss, "'");
+	return ss;
+}
+
 Utf8Char str_utf8char_at(const Str *s, struct str_utf8_index uidx) {
 	Utf8Char uc;
 	uc.c[0] = '\0';

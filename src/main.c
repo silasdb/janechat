@@ -226,10 +226,15 @@ void open_file(FileInfo fileinfo) {
 	Str *filepath = str_new_uri_extract_path(fileinfo.uri);
 	Str *cmd = str_new();
 
+	Str *f = str_shellquote_alloc(filepath);
+	str_decref(filepath);
+	filepath = f;
+	Str *mimetype = str_shellquote_alloc(fileinfo.mimetype);
+
 	/* janechat-attachment-handler.sh have to exist in PATH */
 	str_append_cstr(cmd, "janechat-attachment-handler.sh open ");
 
-	str_append_str(cmd, fileinfo.mimetype);
+	str_append_str(cmd, mimetype);
 	str_append_cstr(cmd, " ");
 	str_append_str(cmd, filepath);
 	system(str_buf(cmd));
@@ -272,8 +277,15 @@ void handle_matrix_event(MatrixEvent ev) {
 	case EVENT_FILE: {
 		Str *filepath = str_new_uri_extract_path(ev.file.fileinfo.uri);
 		Str *cmd = str_new();;
+
+
+		Str *fp = str_shellquote_alloc(filepath);
+		str_decref(filepath);
+		filepath = fp;
+		Str *mimetype = str_shellquote_alloc(ev.file.fileinfo.mimetype);
+
 		str_append_cstr(cmd, "janechat-attachment-handler.sh save ");
-		str_append_str(cmd, ev.file.fileinfo.mimetype);
+		str_append_str(cmd, mimetype);
 		str_append_cstr(cmd, " ");
 		str_append_str(cmd, filepath);
 
@@ -299,9 +311,16 @@ void handle_ui_event(UiEvent ev) {
 		break;
 	case UIEVENTTYPE_OPENATTACHMENT: {
 		Str *filepath = str_new_uri_extract_path(ev.openattachment.fileinfo.uri);
+
+
+		Str *fp = str_shellquote_alloc(filepath);
+		str_decref(filepath);
+		filepath = fp;
+		Str *mimetype = str_shellquote_alloc(ev.openattachment.fileinfo.mimetype);
+
 		Str *cmd = str_new();;
 		str_append_cstr(cmd, "janechat-attachment-handler.sh exists ");
-		str_append_str(cmd, ev.openattachment.fileinfo.mimetype);
+		str_append_str(cmd, mimetype);
 		str_append_cstr(cmd, " ");
 		str_append_str(cmd, filepath);
 
