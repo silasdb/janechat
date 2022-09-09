@@ -289,9 +289,9 @@ void handle_matrix_event(MatrixEvent ev) {
 		str_append_cstr(cmd, " ");
 		str_append_str(cmd, filepath);
 
-		FILE *f = popen(str_buf(cmd), "w");
-		fwrite(ev.file.payload, 1, ev.file.size, f);
-		fclose(f);
+		FILE *proc = popen(str_buf(cmd), "w");
+		fwrite(ev.file.payload, 1, ev.file.size, proc);
+		pclose(proc);
 
 		str_decref(filepath);
 		str_decref(cmd);
@@ -324,13 +324,13 @@ void handle_ui_event(UiEvent ev) {
 		str_append_cstr(cmd, " ");
 		str_append_str(cmd, filepath);
 
-		FILE *f = popen(str_buf(cmd), "r");
+		FILE *proc = popen(str_buf(cmd), "r");
 		char buf[256] = { '\0' };
-		fread(buf, 256, sizeof(char), f);
+		fread(buf, 256, sizeof(char), proc);
+		pclose(proc);
 
 		/* TODO: what if janechat-attachment-handler.sh is not found? */
 		assert(streq(buf, "yes\n") || streq(buf, "no\n"));
-		fclose(f);
 
 		/* Only request file if it doesn't exist in our local cache */
 		if (streq(buf, "no\n"))
