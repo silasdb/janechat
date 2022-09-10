@@ -41,7 +41,7 @@ save)
 open)
 	case "$mimetype" in
 	image/png|image/jpeg)
-		feh "$filepath" &
+		feh -. "$filepath" &
 		;;
 	application/pdf)
 		evince "$filepath" &
