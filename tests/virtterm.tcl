@@ -144,11 +144,24 @@ exec tic $terminfo_src
 
 log_user 0
 spawn ./ui-curses-fake
-set rows 24
-set cols 80
-stty rows $rows cols $cols < $spawn_out(slave,name)
+
+# Force resize of a terminal.
+#
+# TODO: for some reason it doesn't work if we change rows to something different
+# from the first call to force_resize. It seems it issues a CLEAR command after
+# everything is drawn on the screen, cleaning everything.
+proc force_resize {rows cols} {
+	stty rows $rows cols $cols < $::spawn_out(slave,name)
+	set ::rows $rows
+	set ::cols $cols
+}
+
+force_resize 24 80
 
 proc term_clear {} {
+	if {[info exists ::termdata]} {
+		unset ::termdata
+	}
 	for {set row 0} {$row < $::rows} {incr row} {
 		set ::termdata($row) ""
 	}

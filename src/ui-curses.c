@@ -196,6 +196,7 @@ void resize(void) {
 	getmaxyx(stdscr, maxy, maxx);
 
 	wresize(windex, maxy-1, maxx);
+	wresize(wmsgs, MAXY, maxx);
 	mvwin(wstatus, maxy-2, 0);
 	wresize(wstatus, 1, maxx);
 
