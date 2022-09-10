@@ -9,5 +9,4 @@ test -title "Add a long message" -input {
 }
 
 force_resize 24 50
-
 test -title "After resizing" -input {}

@@ -142,21 +142,17 @@ puts $file {virtterm|virtual terminal emulator,
 close $file
 exec tic $terminfo_src
 
-log_user 0
-spawn ./ui-curses-fake
-
 # Force resize of a terminal.
 #
-# TODO: for some reason it doesn't work if we change rows to something different
-# from the first call to force_resize. It seems it issues a CLEAR command after
-# everything is drawn on the screen, cleaning everything.
+# TODO: for some reason it doesn't work if we change both rows and columns in
+# the same call. It seems it issues a CLEAR command after everything is drawn on
+# the screen, cleaning everything. Needs further investigation.
 proc force_resize {rows cols} {
 	stty rows $rows cols $cols < $::spawn_out(slave,name)
 	set ::rows $rows
 	set ::cols $cols
+	term_clear
 }
-
-force_resize 24 80
 
 proc term_clear {} {
 	if {[info exists ::termdata]} {
@@ -165,6 +161,8 @@ proc term_clear {} {
 	for {set row 0} {$row < $::rows} {incr row} {
 		set ::termdata($row) ""
 	}
+	set ::row 0
+	set ::column 0
 }
 
 proc term_text_append {text} {
@@ -178,11 +176,9 @@ proc term_set_cursor {row column} {
 	set ::column $column
 }
 
-set row 0
-set column 0
-
-# Initialize ::termdata array
-term_clear
+log_user 0
+spawn ./ui-curses-fake
+force_resize 24 80
 
 expect_background {
 	-re "^\[^\x01-\x1f]+" {
