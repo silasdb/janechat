@@ -200,7 +200,7 @@ proc iter {} {
 proc printterm {title} {
 	iter
 	puts "TITLE: $title"
-	for {set row 0} {$row < 24} {incr row} {
+	for {set row 0} {$row < $::rows} {incr row} {
 		# ncurses likes to insert spaces to clear older data. In order
 		# not to have trailing spaces everywhere, we trim them off.
 		puts [string trimright $::termdata($row)]
