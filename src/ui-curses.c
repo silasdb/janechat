@@ -471,7 +471,7 @@ void chat_msgs_fill(void) {
 		top = top_line;
 	}
 
-	assert(prefresh(wmsgs, top, 0, 0, 0, maxy-1, maxx) == OK);
+	assert(prefresh(wmsgs, top, 0, 0, 0, maxy-1, maxx-1) == OK);
 }
 
 void chat_msgs_scroll(int direction) {
