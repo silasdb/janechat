@@ -13,6 +13,15 @@ janechat is a small Matrix client for the terminal.
 If you are seeing this from GitHub, you are encouraged to submit questions and
 track code from the [oficial website](https://silas.net.br/projects/janechat).
 
+# Dependencies
+
+* [libcurl](https://curl.se/libcurl/)
+
+* [jansson](http://www.digip.org/jansson/)
+
+* a [curses](https://en.wikipedia.org/wiki/Curses_%28programming_library%29)
+library like [ncurses](https://invisible-island.net/ncurses/) or others.
+
 # Building
 
 ```
