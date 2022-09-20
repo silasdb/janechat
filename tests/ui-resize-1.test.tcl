@@ -27,6 +27,7 @@ test -title "Scroll up" -input {
 }
 
 test -title "Scroll up, down, down" -input {
+	send [ctrl b]
 	send [ctrl f]
 	send [ctrl f]
 	send "foo\n"

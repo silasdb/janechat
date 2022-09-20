@@ -48,3 +48,24 @@ AAAAAAAAAA1234567890_1234567890_1234567890_1234567
 
 Test A
 
+TITLE: Scroll up
+[1] test: ABC
+[2] test: 123
+[3] test: abc
+[4] test: xyz
+Test A
+
+TITLE: Scroll up, down, down
+[4] test: xyz
+[5] test: asd
+[6] test: qwe
+[7] test: foo
+Test A
+
+TITLE: Scroll up, down, input
+[5] test: asd
+[6] test: qwe
+[7] test: foo
+[8] test: bar
+Test A
+
