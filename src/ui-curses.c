@@ -477,9 +477,11 @@ void chat_msgs_fill(void) {
 
 void chat_msgs_scroll(int direction) {
 	assert(direction == 1 || direction == -1);
+	int maxy = getmaxy(stdscr) - 2;
+	if (top_line == -1 && direction == -1)
+		top_line = getcury(wmsgs) - maxy;
 	if (top_line == -1 && direction == 1)
 		return;
-	int maxy = getmaxy(stdscr) - 2;
 
 	int lines = direction * (maxy / 2);
 	if (top_line + lines < 0)
@@ -490,7 +492,7 @@ void chat_msgs_scroll(int direction) {
 	int bottom_line, y;
 	bottom_line = top_line + maxy;
 	y = getcury(wmsgs);
-	if (bottom_line > y)
+	if (bottom_line >= y)
 		top_line = -1;
 	chat_msgs_fill();
 }

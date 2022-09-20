@@ -176,6 +176,16 @@ proc term_set_cursor {row column} {
 	set ::column $column
 }
 
+# Returns a CTRL code
+proc ctrl {x} {
+	set x [string toupper $x]
+	scan $x %c x
+	incr x -64
+	set x [format %02d $x]
+	set x [subst "\\x$x"]
+	return $x
+}
+
 log_user 0
 spawn ./ui-curses-fake
 force_resize 24 80
