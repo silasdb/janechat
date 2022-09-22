@@ -810,7 +810,7 @@ void ui_curses_room_new(Str *roomid) {
 	b->room = room_byid(roomid);
 
 	/* TODO: let's ignore spaces for now */
-	if (b->room->space) {
+	if (b->room->is_space) {
 		str_decref(b->buf);
 		free(b);
 		return;

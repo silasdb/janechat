@@ -27,7 +27,7 @@ struct MatrixEvent {
 		} msg;
 		struct MatrixEventRoomCreate {
 			Str *id;
-			bool space;
+			bool is_space;
 		} roomcreate;
 		struct MatrixEventRoomInfo {
 			Str *id;

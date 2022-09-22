@@ -361,11 +361,11 @@ static void process_room_event(json_t *item, const char *roomid) {
 	} else if (streq(json_string_value(type), "m.room.create")) {
 		MatrixEvent event;
 		event.type = EVENT_ROOM_CREATE;
-		event.roomcreate.space = false;
+		event.roomcreate.is_space = false;
 		json_t *content_type = json_path(item, "content", "type", NULL);
 		if (content_type && streq(json_string_value(content_type),
 				"m.space"))
-			event.roomcreate.space = true;
+			event.roomcreate.is_space = true;
 		event.roomcreate.id = str_new_cstr_fixed(roomid);
 		event_handler_callback(event);
 		str_decref(event.roomcreate.id);
@@ -637,6 +637,9 @@ static void process_sync_response(const char *output, size_t sz, void *params) {
 	(void)sz;
 	(void)params;
 	assert(output);
+
+	debug("/tmp/o", "%s\n", output);
+	exit(1);
 
 	insync = false;
 

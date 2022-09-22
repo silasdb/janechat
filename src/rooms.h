@@ -27,7 +27,7 @@ struct Room {
 	Vector *msgs;
 	size_t unread_msgs;	/* Should be reset by the caller */
 	bool notify;
-	bool space;
+	bool is_space;
 };
 typedef struct Room Room;
 
