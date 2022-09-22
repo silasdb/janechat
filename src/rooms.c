@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -101,6 +102,19 @@ void room_append_msg(Room *room, Msg m) {
 
 void room_append_user(Room *room, Str *sender) {
 	vector_append(room->users, str_incref(sender));
+}
+
+void room_destroy(Room *room) {
+	Room *iter;
+	size_t i;
+	ssize_t pos = -1;
+	ROOMS_FOREACH(iter, i)
+		if (iter == room) {
+			pos = i;
+			break;
+		}
+	assert(pos > -1);
+	vector_remove_at(rooms_vector, pos);
 }
 
 void user_add(Str *id, Str *name) {

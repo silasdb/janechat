@@ -40,7 +40,7 @@ str.o: str.c str.h
 cache.o: cache.h cache.c
 	$(CC) ${CFLAGS} -c -o cache.o cache.c
 
-main.o: main.c cache.h hash.h str.h ui.h 
+main.o: main.c cache.h hash.h matrix.h str.h ui.h 
 	$(CC) ${CFLAGS} -c -o main.o main.c
 
 matrix.o: matrix.c  list.h matrix.h str.h utils.h

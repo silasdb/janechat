@@ -260,7 +260,11 @@ void handle_matrix_event(MatrixEvent ev) {
 		room->notify = ev.roomnotifystatus.enabled;
 		}
 		break;
-	case EVENT_ROOM_JOIN:
+	case EVENT_ROOM_REPLACES: {
+		Room *r = room_byid(ev.roomreplaces.predecessor_roomid);
+		room_destroy(r);
+		break;
+	} case EVENT_ROOM_JOIN:
 		process_room_join(ev.roomjoin.roomid,
 			ev.roomjoin.senderid, ev.roomjoin.sendername);
 		break;

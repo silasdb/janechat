@@ -26,3 +26,7 @@ void vector_append(Vector *v, void *elem) {
 void vector_sort(Vector *v, int (*compar)(const void *, const void *)) {
 	qsort(v->elems, v->len, sizeof(void *), compar);
 }
+
+void vector_remove_at(Vector *v, size_t i) {
+	/* TODO */
+}

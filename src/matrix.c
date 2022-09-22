@@ -369,6 +369,18 @@ static void process_room_event(json_t *item, const char *roomid) {
 		event.roomcreate.id = str_new_cstr_fixed(roomid);
 		event_handler_callback(event);
 		str_decref(event.roomcreate.id);
+		json_t *predecessor = json_path(item, "content", "predecessor", NULL);
+		if (predecessor) {
+			MatrixEvent event;
+			event.type = EVENT_ROOM_REPLACES;
+			event.roomreplaces.roomid = str_new_cstr_fixed(roomid);
+			event.roomreplaces.predecessor_roomid =
+				str_new_cstr_fixed(json_string_value(
+				json_path(item, "content", "predecessor", "room_id", NULL)));
+			event_handler_callback(event);
+			str_decref(event.roomreplaces.roomid);
+			str_decref(event.roomreplaces.predecessor_roomid);
+		}
 	} else if (streq(json_string_value(type), "m.room.member")) {
 		json_t *membership = json_path(item, "content", "membership", NULL);
 		assert(membership != NULL);
@@ -637,9 +649,6 @@ static void process_sync_response(const char *output, size_t sz, void *params) {
 	(void)sz;
 	(void)params;
 	assert(output);
-
-	debug("/tmp/o", "%s\n", output);
-	exit(1);
 
 	insync = false;
 

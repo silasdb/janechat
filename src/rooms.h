@@ -38,6 +38,7 @@ Str *room_displayname(Room *);
 void room_set_info(Room *, Str *, Str *);
 void room_append_msg(Room *, Msg msg);
 void room_append_user(Room *, Str *);
+void room_destroy(Room *);
 
 void user_add(Str *, Str *);
 Str *user_name(Str *);

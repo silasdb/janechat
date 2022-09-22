@@ -13,6 +13,7 @@ enum MatrixEventType {
 	EVENT_ROOM_INFO,
 	EVENT_ROOM_JOIN,
 	EVENT_ROOM_NOTIFY_STATUS,
+	EVENT_ROOM_REPLACES,
 	EVENT_MATRIX_ERROR,
 	EVENT_CONN_ERROR,
 };
@@ -38,6 +39,10 @@ struct MatrixEvent {
 			Str *roomid;
 			bool enabled;
 		} roomnotifystatus;
+		struct MatrixEventRoomReplaces {
+			Str *roomid;
+			Str *predecessor_roomid;
+		} roomreplaces;
 		struct MatrixEventRoomJoin {
 			Str *roomid;
 			Str *senderid;
