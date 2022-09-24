@@ -7,13 +7,13 @@ failed=0
 for f in $@; do
 	this_failed=0
 	case "$f" in
-	*.test.tcl)
+	*.ui.test.tcl)
 		radix="${f%.test.tcl}"
 		tclsh "$f" > "$radix.result.tmp"
 		diff -u "$radix.result" "$radix.result.tmp" || this_failed=1
 		rm "$radix.result.tmp"
 		;;
-	*.test.c)
+	*.unit.test.c)
 		./"${f%.c}" >/dev/null || this_failed=1
 		;;
 	esac
