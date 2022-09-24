@@ -26,6 +26,20 @@
 #define DEBUG_REQUEST 0
 #define DEBUG_RESPONSE 0
 
+/*
+ * TODO: we allow optionally setting it for testing purposes (by using
+ * compiler's -D option). In the future we might let user pass other parameters
+ * via the command line
+ */
+#define TOCSTR_(x) #x
+#define TOCSTR(x) TOCSTR_(x)
+#ifndef MATRIX_PROTOCOL_SCHEMA
+#define MATRIX_PROTOCOL_SCHEMA https
+#endif
+#ifndef MATRIX_SERVER_PORT
+#define MATRIX_SERVER_PORT 443
+#endif
+
 /* Used for the /sync endpoint only. */
 #define MATRIX_SYNC_TIMEOUT_MS 10000
 
@@ -87,10 +101,12 @@ Str * matrix_send_sync_alloc(
 	const char *json)
 {
 	Str *url = str_new();
-	str_append_cstr(url, "https://");
+	str_append_cstr(url, TOCSTR(MATRIX_PROTOCOL_SCHEMA));
+	str_append_cstr(url, "://");
 	assert(matrix_server != NULL);
 	str_append_cstr(url, matrix_server);
-	str_append_cstr(url, ":443");
+	str_append_cstr(url, ":");
+	str_append_cstr(url, TOCSTR(MATRIX_SERVER_PORT));
 	str_append_cstr(url, path);
 	CURL *handle = curl_easy_init();
 	assert(handle);
@@ -168,10 +184,12 @@ static void matrix_send_async(
 	
 	Str *url = str_new();
 	
-	str_append_cstr(url, "https://");
+	str_append_cstr(url, TOCSTR(MATRIX_PROTOCOL_SCHEMA));
+	str_append_cstr(url, "://");
 	assert(matrix_server != NULL);
 	str_append_cstr(url, matrix_server);
-	str_append_cstr(url, ":443");
+	str_append_cstr(url, ":");
+	str_append_cstr(url, TOCSTR(MATRIX_SERVER_PORT));
 	str_append_cstr(url, path);
 
 #if DEBUG_REQUEST
