@@ -638,9 +638,6 @@ static void process_sync_response(const char *output, size_t sz, void *params) {
 	(void)params;
 	assert(output);
 
-	debug("/tmp/o", "%s\n", output);
-	exit(1);
-
 	insync = false;
 
 	json_t *root;
