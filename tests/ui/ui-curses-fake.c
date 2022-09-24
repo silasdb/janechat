@@ -1,12 +1,12 @@
 #undef NDEBUG
-#include "../src/hash.c"
-#include "../src/utils.c"
-#include "../src/list.c"
-#include "../src/rooms.c"
-#include "../src/str.c"
-#include "../src/ui.c"
-#include "../src/vector.c"
-#include "../src/ui-curses.c"
+#include "../../src/hash.c"
+#include "../../src/utils.c"
+#include "../../src/list.c"
+#include "../../src/rooms.c"
+#include "../../src/str.c"
+#include "../../src/ui.c"
+#include "../../src/vector.c"
+#include "../../src/ui-curses.c"
 
 void fake_event_handler(UiEvent ev) {
 	switch (ev.type) {

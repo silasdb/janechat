@@ -1,8 +1,8 @@
 #undef NDEBUG
 #include <assert.h>
 
-#include "../src/str.c"
-#include "../src/utils.c" /* TODO: recursive include! */
+#include "../../src/str.c"
+#include "../../src/utils.c" /* TODO: recursive include! */
 
 static void test_str_new() {
 	Str *s;
