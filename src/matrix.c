@@ -310,6 +310,7 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 	json_object_set(root, "msgtype", json_string("m.text"));
 	json_object_set(root, "body", json_string(str_buf(msg)));
 	const char *s = json2str_alloc(root);
+	json_decref(root);
 	matrix_send_async(HTTP_POST, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
 		s, NULL, NULL);
 	free((void *)s);
