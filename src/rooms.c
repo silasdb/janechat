@@ -101,6 +101,13 @@ void room_append_msg(Room *room, Msg m) {
 
 void room_append_user(Room *room, Str *sender) {
 	vector_append(room->users, str_incref(sender));
+
+	/*
+	 * TODO: force the displayname to be recalculated when a user joins.
+	 * Spaghetti code!
+	 */
+	free(room->displayname);
+	room->displayname = NULL;
 }
 
 void user_add(Str *id, Str *name) {
