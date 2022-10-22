@@ -651,6 +651,31 @@ static void process_rooms_join(json_t *root) {
 
 }
 
+static void process_rooms_invite(json_t *root) {
+	const char *roomid;
+	json_t *item;
+
+	json_t *body = json_object();
+	const char *body_cstr = json2str_alloc(body);
+
+	Str *url = str_new();
+
+	/* TODO: automatically join rooms we were invited to */
+	json_object_foreach(root, roomid, item) {
+		str_append_cstr(url, "/_matrix/client/v3/join/");
+		str_append_cstr(url, roomid);
+		str_append_cstr(url, "?access_token=");
+		str_append_cstr(url, token);
+		matrix_send_async(HTTP_POST, str_buf(url),
+			CALLBACK_INFO_TYPE_OTHER, body_cstr, NULL, NULL);
+		str_reset(url);
+	}
+
+	json_decref(body);
+	free(body_cstr);
+	str_decref(url);
+}
+
 static void process_sync_response(const char *output, size_t sz, void *params) {
 	(void)sz;
 	(void)params;
@@ -717,6 +742,9 @@ static void process_sync_response(const char *output, size_t sz, void *params) {
 		}
 	}
 
+	json_t *rooms_invite = json_path(root, "rooms", "invite", NULL);
+	if (rooms_invite)
+		process_rooms_invite(rooms_invite);
 
 	free(next_batch);
 	json_t *n = json_object_get(root, "next_batch");
