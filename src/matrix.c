@@ -61,6 +61,7 @@ struct callback_info {
 enum HTTPMethod {
 	HTTP_GET,
 	HTTP_POST,
+	HTTP_PUT,
 };
 
 char *next_batch = NULL;
@@ -233,6 +234,7 @@ static void matrix_send_async(
         curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
 	switch (method) {
+	case HTTP_PUT:
 	case HTTP_POST:
 		/*
 		 * TODO: According to
@@ -243,6 +245,9 @@ static void matrix_send_async(
 		curl_easy_setopt(handle, CURLOPT_POST, 1L);
 		curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, (long)strlen(json));
 		curl_easy_setopt(handle, CURLOPT_COPYPOSTFIELDS, json);
+		if (method == HTTP_PUT) {
+			curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, "PUT");
+		}
 		break;
 	default:
 		break;
@@ -312,6 +317,27 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 	const char *s = json2str_alloc(root);
 	json_decref(root);
 	matrix_send_async(HTTP_POST, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
+		s, NULL, NULL);
+	free((void *)s);
+	str_decref(url);
+}
+
+void matrix_set_room_notifystatus(const Str *roomid, bool enabled) {
+	Str *url = str_new();
+	str_append_cstr(url, "/_matrix/client/v3/pushrules/global/room/");
+	str_append_str(url, roomid);
+	str_append_cstr(url, "?access_token=");
+	str_append_cstr(url, token);
+	json_t *actions = json_array();
+	if (enabled)
+		json_array_append_new(actions, json_string("notify"));
+	else
+		json_array_append_new(actions, json_string("dont_notify"));
+	json_t *body = json_object();
+	json_object_set(body, "actions", actions);
+	const char *s = json2str_alloc(body);
+	json_decref(body);
+	matrix_send_async(HTTP_PUT, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
 		s, NULL, NULL);
 	free((void *)s);
 	str_decref(url);
@@ -587,23 +613,26 @@ static void process_push_rules(json_t *rule) {
 	json_array_foreach(actions, i, item) {
 		if (!json_is_string(item))
 			continue;
-		if (streq(json_string_value(item), "dont_notify")) {
-			MatrixEvent event;
-
-			/*
-			 * In the case of room rules, rule_id == roomid.
-			 * See https://matrix.org/docs/spec/client_server/r0.6.1#predefined-rules
-			 */
-			const char *roomid =json_string_value(
-				json_object_get(rule, "rule_id"));
-
-			event.type = EVENT_ROOM_NOTIFY_STATUS;
-			event.roomnotifystatus.roomid = str_new_cstr_fixed(roomid);
+		MatrixEvent event;
+		if (streq(json_string_value(item), "dont_notify"))
 			event.roomnotifystatus.enabled = false;
-			event_handler_callback(event);
-			str_decref(event.roomnotifystatus.roomid);
-			return;
-		}
+		else if (streq(json_string_value(item), "notify"))
+			event.roomnotifystatus.enabled = true;
+		else
+			continue;
+
+		/*
+		 * In the case of room rules, rule_id == roomid.
+		 * See https://matrix.org/docs/spec/client_server/r0.6.1#predefined-rules
+		 */
+		const char *roomid =json_string_value(
+			json_object_get(rule, "rule_id"));
+
+		event.type = EVENT_ROOM_NOTIFY_STATUS;
+		event.roomnotifystatus.roomid = str_new_cstr_fixed(roomid);
+		event_handler_callback(event);
+		str_decref(event.roomnotifystatus.roomid);
+		return;
 	}
 }
 

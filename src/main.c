@@ -339,6 +339,11 @@ void handle_ui_event(UiEvent ev) {
 			open_file(ev.openattachment.fileinfo);
 		str_decref(filepath);
 		str_decref(cmd);
+		break; }
+	case UIEVENTTYPE_NOTIFYSTATUS:
+		matrix_set_room_notifystatus(
+			ev.roomnotifystatus.roomid,
+			ev.roomnotifystatus.enabled);
 		break;
-	} }
+	}
 }

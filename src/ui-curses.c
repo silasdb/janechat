@@ -333,9 +333,11 @@ void index_find_next(int direction) {
 
 void set_buffer_mute(bool mute) {
 	struct buffer *b = vector_at(buffers, index_idx);
-	if (!b)
-		return;
-	b->room->notify = !mute;
+	struct UiEvent ev;
+	ev.type = UIEVENTTYPE_NOTIFYSTATUS;
+	ev.roomnotifystatus.roomid = b->room->id;
+	ev.roomnotifystatus.enabled = !mute;
+	ui_event_handler_callback(ev);
 }
 
 void index_key(void) {

@@ -8,6 +8,7 @@ enum UiEventType {
 	UIEVENTTYPE_SYNC,
 	UIEVENTTYPE_SENDMSG,
 	UIEVENTTYPE_OPENATTACHMENT,
+	UIEVENTTYPE_NOTIFYSTATUS,
 };
 
 struct UiEvent {
@@ -20,6 +21,10 @@ struct UiEvent {
 		struct UiEventOpenAttachment {
 			FileInfo fileinfo;
 		} openattachment;
+		struct UiEventNotifyStatus {
+			Str *roomid;
+			bool enabled;
+		} roomnotifystatus;
 		/*
 		 * UIEVENTTYPE_SYNC has an associated
 		 * empty struct.

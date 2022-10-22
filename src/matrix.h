@@ -67,6 +67,7 @@ void matrix_set_event_handler(void (*callback)(MatrixEvent));
 bool matrix_initial_sync(void);
 void matrix_sync(void);
 void matrix_send_message(const Str *roomid, const Str *msg);
+void matrix_set_room_notifystatus(const Str *roomid, bool);
 void matrix_request_file(FileInfo);
 MatrixEvent * matrix_next_event();
 void matrix_set_server(char *token);
