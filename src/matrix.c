@@ -658,6 +658,7 @@ static void process_rooms_invite(json_t *root) {
 
 	json_t *body = json_object();
 	const char *body_cstr = json2str_alloc(body);
+	json_decref(body);
 
 	Str *url = str_new();
 
@@ -672,7 +673,6 @@ static void process_rooms_invite(json_t *root) {
 		str_reset(url);
 	}
 
-	json_decref(body);
 	free(body_cstr);
 	str_decref(url);
 }
