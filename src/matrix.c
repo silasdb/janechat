@@ -360,6 +360,10 @@ void matrix_set_room_name(const Str *roomid, const Str *name) {
 	);
 	const char *s = json2str_alloc(root);
 	json_decref(root);
+	/*
+	 * TODO: this and other HTTP_PUT requests doesn't seem to always be
+	 * honoured by the server, or takes a while to work. Why?
+	 */
 	matrix_send_async(HTTP_PUT, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
 		s, NULL, NULL);
 	free((void *)s);
@@ -395,6 +399,10 @@ void matrix_set_room_notifystatus(const Str *roomid, bool enabled) {
 	);
 	const char *s = json2str_alloc(body);
 	json_decref(body);
+	/*
+	 * TODO: this and other HTTP_PUT requests doesn't seem to always be
+	 * honoured by the server, or takes a while to work. Why?
+	 */
 	matrix_send_async(HTTP_PUT, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
 		s, NULL, NULL);
 	free((void *)s);
