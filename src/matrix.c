@@ -360,25 +360,10 @@ void matrix_set_room_name(const Str *roomid, const Str *name) {
 	);
 	const char *s = json2str_alloc(root);
 	json_decref(root);
-	/*
-	 * TODO: this and other HTTP_PUT requests doesn't seem to always be
-	 * honoured by the server, or takes a while to work. Why?
-	 */
 	matrix_send_async(HTTP_PUT, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
 		s, NULL, NULL);
 	free((void *)s);
 	str_decref(url);
-
-	/*
-	 * TODO: it seems the new name is not echoed back for us from the /sync
-	 * response, se we have to set it manually.
-	 */
-	MatrixEvent event;
-	event.type = EVENT_ROOM_INFO;
-	event.roominfo.id = roomid;
-	event.roominfo.name = name;
-	event.roominfo.sender = NULL;
-	event_handler_callback(event);
 }
 
 void matrix_set_room_notifystatus(const Str *roomid, bool enabled) {
@@ -399,10 +384,6 @@ void matrix_set_room_notifystatus(const Str *roomid, bool enabled) {
 	);
 	const char *s = json2str_alloc(body);
 	json_decref(body);
-	/*
-	 * TODO: this and other HTTP_PUT requests doesn't seem to always be
-	 * honoured by the server, or takes a while to work. Why?
-	 */
 	matrix_send_async(HTTP_PUT, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
 		s, NULL, NULL);
 	free((void *)s);
@@ -556,14 +537,14 @@ enum SelectStatus select_matrix_stdin(void) {
 
 static void process_timeline_event(json_t *item, const char *roomid) {
 	json_t *type = json_object_get(item, "type");
-	assert(type != NULL);
-	if ((!streq(json_string_value(type), "m.room.message"))
-	&& (!streq(json_string_value(type), "m.room.encrypted")))
+	if (!type)
 		return;
 	json_t *sender = json_object_get(item, "sender");
-	assert(sender != NULL);
+	if (!sender)
+		return;
 	json_t *content = json_object_get(item, "content");
-	assert(content != NULL);
+	if (!content)
+		return;
 	if (streq(json_string_value(type), "m.room.message")) {
 		json_t *msgtype = json_object_get(content, "msgtype");
 
@@ -640,6 +621,16 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 		str_decref(event.msg.roomid);
 		str_decref(event.msg.msg.sender);
 		str_decref(event.msg.msg.text.content);
+	} else if (streq(json_string_value(type), "m.room.name")) {
+		MatrixEvent event;
+		event.type = EVENT_ROOM_INFO;
+		event.roominfo.name = str_new_cstr(
+			json_string_value(json_object_get(content, "name")));
+		event.roominfo.id = str_new_cstr(roomid);
+		event.roominfo.sender = NULL;
+		event_handler_callback(event);
+		str_decref(event.roominfo.name);
+		str_decref(event.roominfo.id);
 	} else if (streq(json_string_value(type), "m.room.encrypted")) {
 		MatrixEvent event;
 		event.type = EVENT_MSG;
@@ -881,6 +872,7 @@ static void process_sync_response(const char *output, size_t sz, void *params) {
 			"\"timeline\":{" \
 				timeline_arg \
 				"\"types\":[" \
+					"\"m.room.name\"," \
 					"\"m.room.message\"," \
 					"\"m.room.encrypted\"" \
 				"]" \
