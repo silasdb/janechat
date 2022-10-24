@@ -605,7 +605,17 @@ bool input_key_index(int c) {
 			set_buffer_mute(true);
 		else if (str_sc_eq(cur_buffer->buf, "unset mute"))
 			set_buffer_mute(false);
-		else {
+		else if (strncmp(str_buf(cur_buffer->buf), "rename ", strlen("rename ")) == 0) {
+			size_t offset = strlen("rename ");
+			Str *name = str_new_cstr(str_buf(index_input_buffer.buf) + offset);
+			struct UiEvent ev;
+			ev.type = UIEVENTTYPE_ROOM_RENAME;
+			struct buffer *b = vector_at(buffers, index_idx);
+			ev.roomrename.roomid = b->room->id;
+			ev.roomrename.name = name;
+			ui_event_handler_callback(ev);
+			str_decref(name);
+		} else {
 			Utf8Char uc;
 			uc = str_utf8char_at(cur_buffer->buf, UTF8_INDEX(0));
 			if (uc.c[0] == '/') {

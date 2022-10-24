@@ -345,5 +345,8 @@ void handle_ui_event(UiEvent ev) {
 			ev.roomnotifystatus.roomid,
 			ev.roomnotifystatus.enabled);
 		break;
+	case UIEVENTTYPE_ROOM_RENAME:
+		matrix_set_room_name(ev.roomrename.roomid, ev.roomrename.name);
+		break;
 	}
 }

@@ -9,6 +9,7 @@ enum UiEventType {
 	UIEVENTTYPE_SENDMSG,
 	UIEVENTTYPE_OPENATTACHMENT,
 	UIEVENTTYPE_NOTIFYSTATUS,
+	UIEVENTTYPE_ROOM_RENAME,
 };
 
 struct UiEvent {
@@ -25,6 +26,10 @@ struct UiEvent {
 			Str *roomid;
 			bool enabled;
 		} roomnotifystatus;
+		struct UiEventRoomRename {
+			Str *roomid;
+			Str *name;
+		} roomrename;
 		/*
 		 * UIEVENTTYPE_SYNC has an associated
 		 * empty struct.
