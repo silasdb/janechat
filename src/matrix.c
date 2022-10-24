@@ -286,6 +286,29 @@ static json_t *json_path(json_t *root, const char *path, ...) {
 	return root;
 }
 
+static json_t *json_object_build(const char *key, json_t *jt, ...) {
+	va_list args;
+	va_start(args, key);
+	json_t *obj = json_object();
+	do {
+		json_object_set(obj, key, jt);
+		key = va_arg(args, const char *);
+		jt = va_arg(args, json_t *);
+	} while (key != NULL && jt != NULL);
+	return obj;
+}
+
+static json_t *json_array_build(json_t *jt, ...) {
+	va_list args;
+	va_start(args, jt);
+	json_t *array = json_array();
+	do {
+		json_array_append_new(array, jt);
+		jt = va_arg(args, json_t *);
+	} while (jt != NULL);
+	return array;
+}
+
 static const char *json2str_alloc(json_t *j) {
 	return json_dumps(j, 0);
 }
@@ -311,9 +334,11 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 	str_append_cstr(url, str_buf(roomid));
 	str_append_cstr(url, "/send/m.room.message?access_token=");
 	str_append_cstr(url, token);
-	json_t *root = json_object();
-	json_object_set(root, "msgtype", json_string("m.text"));
-	json_object_set(root, "body", json_string(str_buf(msg)));
+	json_t *root = json_object_build(
+		"msgtype", json_string("m.text"),
+		"body", json_string(str_buf(msg)),
+		NULL
+	);
 	const char *s = json2str_alloc(root);
 	json_decref(root);
 	matrix_send_async(HTTP_POST, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
@@ -329,12 +354,15 @@ void matrix_set_room_notifystatus(const Str *roomid, bool enabled) {
 	str_append_cstr(url, "?access_token=");
 	str_append_cstr(url, token);
 	json_t *actions = json_array();
+	const char *type;
 	if (enabled)
-		json_array_append_new(actions, json_string("notify"));
+		type = "notify";
 	else
-		json_array_append_new(actions, json_string("dont_notify"));
-	json_t *body = json_object();
-	json_object_set(body, "actions", actions);
+		type = "dont_notify";
+	json_t *body = json_object_build(
+		"actions", json_array_build(json_string(type), NULL),
+		NULL
+	);
 	const char *s = json2str_alloc(body);
 	json_decref(body);
 	matrix_send_async(HTTP_PUT, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
@@ -925,11 +953,13 @@ const char *matrix_login_alloc(
 	str_append_cstr(username, ":");
 	str_append_cstr(username, server);
 	matrix_server = strdup(server);
-	json_t *root = json_object();
-	json_object_set(root, "type", json_string("m.login.password"));
-	json_object_set(root, "user", json_string(user));
-	json_object_set(root, "password", json_string(password));
-	json_object_set(root, "initial_device_display_name", json_string("janechat"));
+	json_t *root = json_object_build(
+		"type", json_string("m.login.password"),
+		"user", json_string(user),
+		"password", json_string(password),
+		"initial_device_display_name", json_string("janechat"),
+		NULL
+	);
 	const char *s = json2str_alloc(root);
 	json_decref(root);
 	Str *res = matrix_send_sync_alloc(HTTP_POST,
