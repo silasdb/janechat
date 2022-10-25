@@ -198,6 +198,18 @@ static void matrix_send_async(
 	if (json)
 		printf("DEBUG_REQUEST: json: %s\n", json);
 #endif
+
+#ifdef CURLOPT_PROTOCOLS_STR
+	/* Since Curl 7.85.0 */
+	curl_easy_setopt(handle, CURLOPT_PROTOCOLS_STR, "https");
+#else
+	/*
+	 * TODO: test why initial sync works even if CURLPROTO_HTTPS is
+	 * disabled.
+	 */
+	/* Deprecated from 7.85.0 on */
+	curl_easy_setopt(handle, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
+#endif
 	
 	/*
 	 * TODO: libcurl timeouts with SIGALRM, so we need to caught this signal
