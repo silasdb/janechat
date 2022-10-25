@@ -621,7 +621,8 @@ static void process_timeline_event(json_t *item, const char *roomid) {
 
 		event.msg.msg.text.content = str_new();
 		event.msg.msg.type = MSGTYPE_TEXT;
-		if (streq(json_string_value(msgtype), "m.text")) {
+		if (streq(json_string_value(msgtype), "m.text")
+		|| streq(json_string_value(msgtype), "m.notice")) {
 			str_append_cstr(event.msg.msg.text.content,
 				json_string_value(body));
 		} else {
