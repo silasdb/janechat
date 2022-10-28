@@ -11,7 +11,7 @@ set -eu
 mimetype2extension () {
 	case "$1" in
 	application/pdf) echo pdf ;;
-	audio/ogg\;*) echo ogg ;;
+	audio/ogg|audio/ogg\;*) echo ogg ;;
 	image/jpeg) echo jpeg ;;
 	image/png) echo png ;;
 	video/mp4) echo mp4 ;;
@@ -49,7 +49,7 @@ open)
 	video/mp4)
 		mplayer "$filepath" &
 		;;
-	audio/ogg\;*)
+	audio/ogg|audio/ogg\;*)
 		${TERM} -e "mplayer $filepath" &
 		;;
 	esac
