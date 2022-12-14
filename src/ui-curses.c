@@ -605,7 +605,13 @@ bool input_key_index(int c) {
 			set_buffer_mute(true);
 		else if (str_sc_eq(cur_buffer->buf, "unset mute"))
 			set_buffer_mute(false);
-		else if (strncmp(str_buf(cur_buffer->buf), "rename ", strlen("rename ")) == 0) {
+		else if (str_sc_eq(cur_buffer->buf, "set sessionmute")) {
+			struct buffer *b = vector_at(buffers, index_idx);
+			b->room->notify = false;
+		} else if (str_sc_eq(cur_buffer->buf, "unset sessionmute")) {
+			struct buffer *b = vector_at(buffers, index_idx);
+			b->room->notify = true;
+		} else if (strncmp(str_buf(cur_buffer->buf), "rename ", strlen("rename ")) == 0) {
 			size_t offset = strlen("rename ");
 			Str *name = str_new_cstr(str_buf(index_input_buffer.buf) + offset);
 			struct UiEvent ev;
