@@ -15,7 +15,7 @@ OBJS = cache.o \
 
 # TODO: split debug / release build rules
 CC ?= gcc
-CFLAGS += -g -std=c11 -Wall -Wextra -Wpedantic -fno-omit-frame-pointer
+CFLAGS += -std=c11 -Wall -Wextra -Wpedantic -fno-omit-frame-pointer
 CFLAGS += ${SANITIZER_FLAGS}
 LDFLAGS += ${SANITIZER_FLAGS}
 

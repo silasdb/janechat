@@ -11,6 +11,7 @@ usage () {
 while [ $# -gt 0 ]; do
 	if [ x"$1" = x'--enable-sanitizers' ]; then
 		cat >>config.mk <<-EOF
+			CFLAGS += -g
 			LDFLAGS += -g
 		EOF
 	fi
