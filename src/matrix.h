@@ -2,6 +2,7 @@
 #define JANECHAT_MATRIX_H
 
 #include <fcntl.h>
+#include <sys/select.h>
 
 #include "common.h"
 #include "str.h"
