@@ -20,7 +20,10 @@ CFLAGS += ${SANITIZER_FLAGS}
 LDFLAGS += ${SANITIZER_FLAGS}
 
 janechat: ${OBJS}
-	$(CC) ${LDFLAGS} -o $@ ${OBJS}
+	# TODO: why the following line works NetBSD but not on Alpine
+	# Linux?
+	# $(CC) ${LDFLAGS} -o $@ ${OBJS}
+	$(CC) -o $@ ${OBJS} ${LDFLAGS} -lc
 
 hash.o: hash.c hash.h list.h
 	$(CC) ${CFLAGS} -c -o hash.o hash.c
