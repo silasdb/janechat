@@ -3,6 +3,28 @@ set -eu
 
 >config.mk
 
+usage () {
+	echo >&2 'usage: configure [--enable-sanitizers]'
+	echo >&2 '                 [--enable-debug]'
+}
+
+while [ $# -gt 0 ]; do
+	if [ x"$1" = x'--enable-sanitizers' ]; then
+		cat >>config.mk <<-EOF
+			LDFLAGS += -g
+		EOF
+	fi
+	if [ x"$1" = x'--enable-sanitizers' ]; then
+		cat >>config.mk <<-EOF
+			LDFLAGS += -lasan
+			SANITIZER_FLAGS  = -fsanitize=address
+			SANITIZER_FLAGS += -fsanitize=undefined
+			SANITIZER_FLAGS += -fsanitize=signed-integer-overflow
+			SANITIZER_FLAGS += -fno-sanitize-recover=all
+		EOF
+	fi
+done
+
 # TODO: use pkg-config or curl-config?
 cat >>config.mk <<-EOF
 	LDFLAGS += $(pkg-config --libs libcurl)

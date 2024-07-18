@@ -1,4 +1,3 @@
-LDFLAGS += -lasan -g
 OBJS = cache.o \
 	hash.o \
 	list.o \
@@ -13,11 +12,6 @@ OBJS = cache.o \
 	vector.o
 
 -include ../config.mk
-
-SANITIZER_FLAGS  = -fsanitize=address
-SANITIZER_FLAGS += -fsanitize=undefined
-SANITIZER_FLAGS += -fsanitize=signed-integer-overflow
-SANITIZER_FLAGS += -fno-sanitize-recover=all
 
 # TODO: split debug / release build rules
 CC ?= gcc
