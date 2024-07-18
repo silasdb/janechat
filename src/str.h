@@ -55,11 +55,11 @@ Utf8Char str_utf8char_at(const Str *, struct str_utf8_index);
 void str_remove_utf8char_at(Str *, struct str_utf8_index);
 bool str_starts_with_cstr(Str *, const char *);
 
-inline const char *str_buf(const Str *s) {
+static inline const char *str_buf(const Str *s) {
 	return s->buf;
 }
 
-inline size_t str_bytelen(const Str *s) {
+static inline size_t str_bytelen(const Str *s) {
 	return s->bytelen;
 }
 

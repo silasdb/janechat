@@ -14,8 +14,8 @@ typedef struct Vector Vector;
 Vector *vector_new(void);
 void vector_append(Vector *, void *);
 void vector_sort(Vector *, int (*compar)(const void *, const void *));
-inline void *vector_at(Vector *v, size_t i) { return v->elems[i]; }
-inline size_t vector_len(Vector *v) { return v->len; }
+static inline void *vector_at(Vector *v, size_t i) { return v->elems[i]; }
+static inline size_t vector_len(Vector *v) { return v->len; }
 
 #define VECTOR_FOREACH(v, iter, i) \
 	for (i = 0; (i < v->len) && (iter = v->elems[i]); i++)
