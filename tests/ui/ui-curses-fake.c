@@ -44,6 +44,21 @@ int main(int argc, char *argv[]) {
 	new_room("#test2:matrix.org", "Test C");
 	new_room("#test3:matrix.org", "Test B");
 
+	Msg msg;
+	Str *roomid = str_new();;
+	Str *sender = str_new_cstr_fixed("test");
+#define new_msg(roomid_cstr, msg_cstr) \
+	str_reset(roomid); \
+	str_append_cstr(roomid, roomid_cstr); \
+	room = room_byid(roomid); \
+	msg.sender = sender; \
+	msg.text.content = str_new_cstr(msg_cstr); \
+	room_append_msg(room, msg);
+
+	for (int i = 0; i < 100; i++) {
+		new_msg("#test1:matrix.org", "test");
+	}
+
 	ui_curses_init();
 	bottom = vector_len(buffers);
 
