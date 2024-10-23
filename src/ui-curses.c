@@ -93,6 +93,12 @@ size_t bottom = 0;
  */
 int top_line;
 
+/*
+ * Position of the cursor after drawing the last line of wmsgs. I.e., the height
+ * of the wmsgs window, considering the last valid character.
+ */
+int last_line_y;
+
 void input_redraw(void);
 void set_focus(enum Focus);
 void index_draw(void);
@@ -459,20 +465,36 @@ void chat_msgs_fill(void) {
 
 	}
 
+	/*
+	 * After drawing wmsgs window, get cursor vertical position within the
+	 * wmsgs window, so we know the wmsgs window height exactly.
+	 *
+	 * This seems the correctly place to call getcury(). Before that, we
+	 * were calling it in chat_msgs_scroll() when we needed the value, but
+	 * we couldn't make sure of the cursor position at that point. Worse:
+	 * Linux and NetBSD curses seem to return different values for that
+	 * situation because one put the cursor at the top and the other at
+	 * the bottom of the screen, after prefresh()'ing. Now, by placing
+	 * getcury() just after filling wmsgs with text, we expect to have the
+	 * same behaviour in both systems.
+	 *
+	 * Maybe there is a better way to query "last character" position in a
+	 * curses window?
+	 */
+	last_line_y = getcury(wmsgs);
+
 	int top;
 	int maxy, maxx;
 	getmaxyx(stdscr, maxy, maxx);
 	maxy -= 2; /* subtract winput and status bar height */
 
-	int y = getcury(wmsgs);
-
-	if (top_line == -1) {
-		top = y - maxy;
-		if (top < 0)
-			top = 0;
-	} else {
-		top = top_line;
-	}
+	/*
+	 * top holds the real value of top_line if top_line happens to be -1,
+	 * which means "always show the last line".
+	 */
+	top = top_line;
+	if (top == -1)
+		top = last_line_y - maxy;
 
 	assert(prefresh(wmsgs, top, 0, 0, 0, maxy-1, maxx-1) == OK);
 }
@@ -480,22 +502,45 @@ void chat_msgs_fill(void) {
 void chat_msgs_scroll(int direction) {
 	assert(direction == 1 || direction == -1);
 	int maxy = getmaxy(stdscr) - 2;
-	if (top_line == -1 && direction == -1)
-		top_line = getcury(wmsgs) - maxy;
-	if (top_line == -1 && direction == 1)
+
+	/*
+	 * Save us some instructions if we are on the very top or very bottom of
+	 * the wmsgs pad.
+	 */
+	if (direction == 1 && top_line == -1)
+		return;
+	if (direction == -1 && top_line == 0)
 		return;
 
-	int lines = direction * (maxy / 2);
-	if (top_line + lines < 0)
-		top_line = 0;
-	else
-		top_line += lines;
+	/*
+	 * If we are following the last line (top_line == -1) but want to go
+	 * back in the message history, we cannot just make calculations on
+	 * top_line, since -1 is a special value that means "always show the
+	 * last line. So, before doing calculation, we need to set top_line to
+	 * its real value.
+	 */
+	if (direction == -1 && top_line == -1)
+		top_line = last_line_y - maxy;
 
-	int bottom_line, y;
-	bottom_line = top_line + maxy;
-	y = getcury(wmsgs);
-	if (bottom_line >= y)
+	/* Sum (or subtract) half of the screen. */
+	int lines = direction * (maxy / 2);
+	top_line += lines;
+
+	/*
+	 * Check it again: after calculation, if top_line is a negative value,
+	 * we are at the top of the history. Just show the first line
+	 */
+	if (top_line < 0)
+		top_line = 0;
+
+	/*
+	 * Likewise, if we are past the last line, set top_line = -1, which
+	 * means, "always show the last line", i.e., "enable autoscroll" or
+	 * "update history scroll automatically on new messages".
+	 */
+	if (top_line + maxy >= last_line_y)
 		top_line = -1;
+
 	chat_msgs_fill();
 }
 
