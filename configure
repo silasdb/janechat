@@ -6,6 +6,7 @@ set -eu
 usage () {
 	echo >&2 'usage: configure [--enable-sanitizers]'
 	echo >&2 '                 [--enable-debug]'
+	echo >&2 '                 [--disable-ssl]'
 }
 
 while [ $# -gt 0 ]; do
@@ -24,6 +25,13 @@ while [ $# -gt 0 ]; do
 			SANITIZER_FLAGS += -fno-sanitize-recover=all
 		EOF
 	fi
+	if [ x"$1" = x'--disable-ssl' ]; then
+		cat >>config.mk <<-EOF
+			MATRIX_PROTOCOL_SCHEMA = http
+			MATRIX_PROTOCOL_PORT = 80
+		EOF
+	fi
+	shift
 done
 
 # TODO: use pkg-config or curl-config?

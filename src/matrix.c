@@ -34,10 +34,13 @@
 #define TOCSTR_(x) #x
 #define TOCSTR(x) TOCSTR_(x)
 #ifndef MATRIX_PROTOCOL_SCHEMA
-#define MATRIX_PROTOCOL_SCHEMA https
+# define MATRIX_PROTOCOL_SCHEMA https
+# define MATRIX_CURL_PROTO CURLPROTO_HTTPS
+#else
+# define MATRIX_CURL_PROTO CURLPROTO_HTTP /* TODO: probably not the best place to set that! */
 #endif
 #ifndef MATRIX_SERVER_PORT
-#define MATRIX_SERVER_PORT 443
+# define MATRIX_SERVER_PORT 443
 #endif
 
 /* Used for the /sync endpoint only. */
@@ -201,14 +204,14 @@ static void matrix_send_async(
 
 #ifdef CURLOPT_PROTOCOLS_STR
 	/* Since Curl 7.85.0 */
-	curl_easy_setopt(handle, CURLOPT_PROTOCOLS_STR, "https");
+	curl_easy_setopt(handle, CURLOPT_PROTOCOLS_STR, TOCSTR(MATRIX_PPROTOCOL_SCHEMA));
 #else
 	/*
 	 * TODO: test why initial sync works even if CURLPROTO_HTTPS is
 	 * disabled.
 	 */
 	/* Deprecated from 7.85.0 on */
-	curl_easy_setopt(handle, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
+	curl_easy_setopt(handle, CURLOPT_PROTOCOLS, MATRIX_CURL_PROTO);
 #endif
 	
 	/*
