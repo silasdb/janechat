@@ -12,4 +12,4 @@ test:
 	make -C tests
 
 distclean: clean
-	rm -f config.mk
+	rm -f config.mk config.h

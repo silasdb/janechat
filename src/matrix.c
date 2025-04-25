@@ -18,6 +18,7 @@
 #include <jansson.h>
 
 #include "cache.h"
+#include "../config.h"
 #include "list.h"
 #include "str.h"
 #include "matrix.h"
