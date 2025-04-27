@@ -20,8 +20,18 @@ struct Room {
 	 */
 	Str *sender;
 
-	/* This is only used if name is NULL. It is calculated lazely. */
+	/* User-set room displayname. */
 	Str *displayname;
+
+	/*
+	 * If the user didn't set displayname and the room doesn't have a name
+	 * set, the display name is calculated using members' names and store it
+	 * in this variable.
+	 *
+	 * See:
+	 * https://spec.matrix.org/latest/client-server-api/#calculating-the-display-name-for-a-user
+	 */
+        Str *calculatedname;
 
 	Vector *users;		/* Vector of joined users: Vector<Str*> */
 	Vector *msgs;
@@ -35,6 +45,7 @@ void rooms_init(void);
 Room *room_new(Str *, bool);
 Room *room_byid(const Str *);
 Str *room_displayname(Room *);
+void room_set_displayname(Room *, Str *);
 void room_set_info(Room *, Str *, Str *);
 void room_append_msg(Room *, Msg msg);
 void room_append_user(Room *, Str *);

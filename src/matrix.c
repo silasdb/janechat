@@ -363,25 +363,6 @@ void matrix_send_message(const Str *roomid, const Str *msg) {
 	str_decref(url);
 }
 
-void matrix_set_room_name(const Str *roomid, const Str *name) {
-	Str *url = str_new();
-	str_append_cstr(url, "/_matrix/client/v3/rooms/");
-	str_append_cstr(url, str_buf(roomid));
-	str_append_cstr(url, "/state/m.room.name");
-	str_append_cstr(url, "?access_token=");
-	str_append_cstr(url, token);
-	json_t *root = json_object_build(
-		"name", json_string(str_buf(name)),
-		NULL
-	);
-	const char *s = json2str_alloc(root);
-	json_decref(root);
-	matrix_send_async(HTTP_PUT, str_buf(url), CALLBACK_INFO_TYPE_OTHER,
-		s, NULL, NULL);
-	free((void *)s);
-	str_decref(url);
-}
-
 void matrix_set_room_notifystatus(const Str *roomid, bool enabled) {
 	Str *url = str_new();
 	str_append_cstr(url, "/_matrix/client/v3/pushrules/global/room/");

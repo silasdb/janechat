@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,6 +37,7 @@ Room *room_new(Str *id, bool is_space) {
 	room->id = str_incref(id);
 	room->name = NULL;
 	room->displayname = NULL;
+	room->calculatedname = NULL;
 	room->sender = NULL;
 	room->is_space = is_space;
 	
@@ -53,24 +55,31 @@ Room *room_byid(const Str *id) {
 }
 
 Str *room_displayname(Room *r) {
+	if (r->displayname)
+		return r->displayname;
 	if (r->name)
 		return r->name;
-	if (!r->displayname) {
+	if (!r->calculatedname) {
 		/*
 		 * TODO: very ugly workaround to calculate a room name from its
 		 * members if it doesn't already have a name. In the future we
 		 * should be more serious about that and really implement
 		 * https://spec.matrix.org/latest/client-server-api/#calculating-the-display-name-for-a-room
 		 */
-		Str *displayname = str_new();
+		Str *calculatedname = str_new();
 		for (size_t i = 0; i < vector_len(r->users) && i < 5; i++) {
-			str_append_str(displayname,
+			str_append_str(calculatedname,
 			 user_name(vector_at(r->users, i)));
-			str_append_cstr(displayname, " / ");
+			str_append_cstr(calculatedname, " / ");
 		}
-		r->displayname = displayname;
+		r->calculatedname = calculatedname;
 	}
-	return r->displayname;
+	return r->calculatedname;
+}
+
+void room_set_displayname(Room *r, Str *displayname) {
+	assert(r);
+	r->displayname = str_incref(displayname);
 }
 
 void room_set_info(Room *r, Str *sender, Str *name) {
@@ -103,11 +112,11 @@ void room_append_user(Room *room, Str *sender) {
 	vector_append(room->users, str_incref(sender));
 
 	/*
-	 * TODO: force the displayname to be recalculated when a user joins.
+	 * TODO: force the calculatedname to be recalculated when a user joins.
 	 * Spaghetti code!
 	 */
-	free(room->displayname);
-	room->displayname = NULL;
+	free(room->calculatedname);
+	room->calculatedname = NULL;
 }
 
 void user_add(Str *id, Str *name) {

@@ -199,9 +199,16 @@ void do_matrix_login(void) {
 }
 
 void process_room_create(Str *id, bool is_space) {
-	room_new(id, is_space);
+	Room *room = room_new(id, is_space);
 	if (ui_hooks.room_new)
 		ui_hooks.room_new(id);
+	char *dn = cache_get_alloc(str_buf(id));
+	if (dn) {
+		Str *displayname = str_new_cstr(dn);
+		room_set_displayname(room, displayname);
+		str_decref(displayname);
+	}
+	free(dn);
 }
 
 void process_room_info(Str *roomid, Str *sender, Str *name) {
@@ -346,7 +353,10 @@ void handle_ui_event(UiEvent ev) {
 			ev.roomnotifystatus.enabled);
 		break;
 	case UIEVENTTYPE_ROOM_RENAME:
-		matrix_set_room_name(ev.roomrename.roomid, ev.roomrename.name);
+		cache_set(str_buf(ev.roomrename.roomid),
+			str_buf(ev.roomrename.name));
+		Room *room = room_byid(ev.roomrename.roomid);
+		room_set_displayname(room, ev.roomrename.name);
 		break;
 	}
 }
