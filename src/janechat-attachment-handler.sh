@@ -56,10 +56,10 @@ open)
 		evince "$filepath" &
 		;;
 	video/mp4)
-		mplayer "$filepath" &
+		mpv "$filepath" &
 		;;
 	audio/ogg|audio/ogg\;*|audio/mp4)
-		${TERM} -e "mplayer $filepath" &
+		${TERM} -e "mpv $filepath" &
 		;;
 	esac
 	;;
