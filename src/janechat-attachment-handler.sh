@@ -25,15 +25,7 @@ mimetype="$2"
 filename="$3"
 
 tmpdir=/tmp
-
-# If we failed to obtain the extension (probably because the mimetype is not
-# registered) we echo "invalid\n" and exit with an error code. This case must be
-# handled by janechat.
-if ! extension="$(mimetype2extension "$mimetype")"; then
-	echo invalid
-	exit 1
-fi
-
+extension="$(mimetype2extension "$mimetype")"
 filepath="$tmpdir/$filename.$extension"
 
 case "$cmd" in

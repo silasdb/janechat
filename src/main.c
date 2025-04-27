@@ -336,12 +336,6 @@ void handle_ui_event(UiEvent ev) {
 		fread(buf, 256, sizeof(char), proc);
 		pclose(proc);
 
-		if (streq(buf, "invalid\n"))
-			return;
-
-		/* TODO: what if janechat-attachment-handler.sh is not found? */
-		assert(streq(buf, "yes\n") || streq(buf, "no\n"));
-
 		/* Only request file if it doesn't exist in our local cache */
 		if (streq(buf, "no\n"))
 			matrix_request_file(ev.openattachment.fileinfo);
