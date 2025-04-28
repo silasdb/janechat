@@ -109,6 +109,17 @@ void room_append_msg(Room *room, Msg m) {
 }
 
 void room_append_user(Room *room, Str *sender) {
+	/*
+	 * First, search for the user in the vector for this root. If the user is
+	 * already added, don't add they again.
+	 */
+	Str *iter;
+	size_t i;
+	VECTOR_FOREACH(room->users, iter, i) {
+		if (str_ss_eq(iter, sender))
+			return;
+	}
+
 	vector_append(room->users, str_incref(sender));
 
 	/*

@@ -35,6 +35,7 @@ struct str_utf8_index {
 
 #define streq(x, y) (strcmp(x, y) == 0)
 #define str_sc_eq(x, y) (strcmp(str_buf(x), y) == 0)
+#define str_ss_eq(x, y) (strcmp(str_buf(x), str_buf(y)) == 0)
 
 Str *str_new(void);
 Str *str_new_cstr(const char *);
