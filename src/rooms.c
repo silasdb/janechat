@@ -133,7 +133,8 @@ void room_append_user(Room *room, Str *sender) {
 void user_add(Str *id, Str *name) {
 	/*
 	 * Maybe the user didn't specify its human readable name. Store NULL in
-	 * users_hash anyway.
+	 * users_hash anyway, so user_name() function returns the id for this
+	 * case.
 	 */
 	if (name)
 		str_incref(name);
