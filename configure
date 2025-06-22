@@ -9,6 +9,8 @@ usage () {
 	echo >&2 '                 [--disable-ssl]'
 }
 
+>config.h
+
 while [ $# -gt 0 ]; do
 	if [ x"$1" = x'--enable-sanitizers' ]; then
 		cat >>config.mk <<-EOF
