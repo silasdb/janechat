@@ -747,6 +747,7 @@ bool input_key_chat(int c) {
 
 void input_key_common(int c) {
 	switch (c) {
+	case 8: /* TODO: why do I need this in Alpine Linux 3.22, but not in Alpine Linux 3.21? - https://stackoverflow.com/questions/44943249/detecting-key-backspace-in-ncurses */
 	case 127: /* TODO: why do I need this in urxvt but not in xterm? - https://bbs.archlinux.org/viewtopic.php?id=56427*/
 	case KEY_BACKSPACE: {
 		if (cur_buffer->pos == 0)
