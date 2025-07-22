@@ -16,6 +16,7 @@ mimetype2extension () {
 	image/png) echo png ;;
 	video/mp4) echo mp4 ;;
 	audio/mp4) echo mp4 ;;
+	audio/mpeg) echo mpg ;;
 	*) return 1 ;;
 	esac
 }
@@ -50,7 +51,7 @@ open)
 	video/mp4)
 		mpv "$filepath" &
 		;;
-	audio/ogg|audio/ogg\;*|audio/mp4)
+	audio/ogg|audio/ogg\;*|audio/mp4|audio/mpeg)
 		${TERM} -e "mpv $filepath" &
 		;;
 	esac
