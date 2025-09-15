@@ -182,11 +182,11 @@ void do_matrix_login(void) {
 
 	puts("Logging in...");
 	const char *access_token = matrix_login_alloc(server, user, password);
-	matrix_set_token(strdup(access_token));
 	if (!access_token) {
-		fprintf(stderr, "Wrong username or password. Exit.");
+		fprintf(stderr, "Error when logging in. Exit.");
 		exit(1);
 	}
+	matrix_set_token(strdup(access_token));
 	puts("Logged in.");
 	cache_set("server", server);
 	cache_set("access_token", access_token);
