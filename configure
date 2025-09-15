@@ -12,7 +12,7 @@ usage () {
 >config.h
 
 while [ $# -gt 0 ]; do
-	if [ x"$1" = x'--enable-sanitizers' ]; then
+	if [ x"$1" = x'--enable-debug' ]; then
 		cat >>config.mk <<-EOF
 			CFLAGS += -g
 			LDFLAGS += -g
