@@ -992,6 +992,8 @@ const char *matrix_login_alloc(
 	json_decref(root);
 	Str *res = matrix_send_sync_alloc(HTTP_POST,
 		"/_matrix/client/v3/login", s);
+	if (!res)
+		return NULL;
 	free((void *)s);
 	json_t *jsonres = str2json_alloc(str_buf(res));
 	str_decref(res);
