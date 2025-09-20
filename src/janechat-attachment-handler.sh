@@ -41,6 +41,10 @@ save)
 	cat > "$filepath"
 	;;
 open)
+	# Prefer xdg-open
+	if xdg-open "$filepath"; then exit; fi
+
+	# If xdg-open fails (or if it is not found), try alternatives.
 	case "$mimetype" in
 	image/png|image/jpeg)
 		feh -. "$filepath" &
