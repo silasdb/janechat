@@ -41,10 +41,12 @@ save)
 	cat > "$filepath"
 	;;
 open)
-	# Prefer xdg-open
+	# Prefer run-mailcap or xdg-open
+	if run-mailcap "$filepath"; then exit; fi
 	if xdg-open "$filepath"; then exit; fi
 
-	# If xdg-open fails (or if it is not found), try alternatives.
+        # If run-mailcap and xdg-open fails (or if it is not found), try
+        # alternatives.
 	case "$mimetype" in
 	image/png|image/jpeg)
 		feh -. "$filepath" &
