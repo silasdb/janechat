@@ -772,6 +772,13 @@ void input_key_common(int c) {
 			uc.c[i] = c;
 		}
 
+		if (iscntrl(uc.c[0]))
+			break;
+
+		/* Prevent a message to start with space character. */
+		if (str_bytelen(cur_buffer->buf) == 0 && isspace(uc.c[0]))
+				break;
+
 		str_insert_utf8char_at(cur_buffer->buf, uc,
 			UTF8_INDEX(cur_buffer->pos));
 		input_cursor_inc(+1);
